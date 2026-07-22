@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HFPSS Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" crossorigin="anonymous">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="legacy-toolbar" aria-label="Chart controls">
+    <div class="legacy-toolbar-inner">
+      <label class="workspace-picker">Workspace <select id="workspace-select" aria-label="Active workspace"></select></label>
+      <div class="toolbar-divider"></div>
+      <div class="page-control">
+        <label for="page-select">Page (r):</label>
+        <button id="page-previous" class="toolbar-step" title="Previous page ([)">&lsaquo;</button>
+        <select id="page-select" aria-label="Spectral sequence page"></select>
+        <button id="page-next" class="toolbar-step" title="Next page (])">&rsaquo;</button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <span class="toolbar-caption">Tools:</span>
+      <button data-tool="inspect" class="tool toolbar-tool active" title="Select and pan (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3zM13 13l6 6"/></svg><span class="tool-label">Select</span></button>
+      <button data-tool="class" class="tool toolbar-tool" title="Add generator (G)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg><span class="tool-label">Generator</span></button>
+      <button data-tool="differential" class="tool toolbar-tool" title="Add differential (D)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg><span class="tool-label">Differential</span></button>
+      <button data-tool="relation" class="tool toolbar-tool" title="Add relation (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg><span class="tool-label">Relation</span></button>
+      <button data-tool="delete" class="tool toolbar-tool" title="Delete element (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg><span class="tool-label">Delete</span></button>
+      <button data-tool="rename" class="tool toolbar-tool" title="Rename element (N)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3l-2 2M15 5l4 4"/></svg><span class="tool-label">Rename</span></button>
+      <div class="toolbar-divider"></div>
+      <button id="undo-action" class="toolbar-tool history-tool" title="Undo (Ctrl+Z)" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M5 12h8a6 6 0 0 1 6 6"/></svg>Undo</button>
+      <button id="redo-action" class="toolbar-tool history-tool" title="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m4-5h-8a6 6 0 0 0-6 6"/></svg>Redo</button>
+      <div class="toolbar-spacer"></div>
+      <button id="export-json" class="toolbar-reset" title="Download the complete Studio project JSON">Export JSON</button>
+      <button id="import-json" class="toolbar-reset" title="Preview a complete Studio project JSON before applying it">Import JSON</button>
+      <input id="import-json-file" type="file" accept=".json,application/json" hidden>
+      <button id="new-workspace" class="toolbar-reset">New workspace</button>
+      <button id="reset-view" class="toolbar-reset" title="Fit the feasible region (0)">Fit view</button>
+      <button id="export-chart" class="toolbar-reset" title="Download a custom-TikZ chart snapshot">Export chart TeX</button>
+      <button id="export-article" class="toolbar-reset" title="Download a review-safe article snapshot">Export article TeX</button>
+      <button id="clear-current-canvas" class="toolbar-reset danger-subtle" title="Archive every active dot in this workspace; preserve mathematical records and restore with Undo">Clear current canvas</button>
+      <button id="reset-demo" class="toolbar-reset danger-subtle">Reset demo</button>
+    </div>
+  </nav>
+
+  <main class="layout">
+    <aside class="left-panel">
+      <section class="panel-section">
+        <div class="eyebrow">COMPUTATION</div>
+        <h1 id="workspace-title">Loading</h1>
+        <p id="workspace-meta" class="muted"></p>
+        <p id="workspace-summary" class="workspace-summary"></p>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head"><h2>Current page</h2><span id="page-label" class="pill">E2</span></div>
+        <p id="page-status" class="hint">Loading page information.</p>
+        <p id="tool-hint" class="hint">Select a class, or drag the canvas to pan.</p>
+      </section>
+
+      <section class="panel-section atlas-section">
+        <div class="section-head"><div><div class="eyebrow">RO(Q8) ATLAS</div><h2>16 stored representatives</h2></div><span class="pill">4 × 4</span></div>
+        <div id="grading-atlas" class="grading-atlas" aria-label="Q8 grading sector atlas"></div>
+        <p id="c3-summary" class="hint">Select a sector to inspect its stored workspace and cyclic orbit.</p>
+      </section>
+
+      <section class="panel-section support-workspaces">
+        <div class="eyebrow">REFERENCE / SUPPORT</div>
+        <h2>Supporting workspaces</h2>
+        <p class="hint">Kept outside the ordinary chart selector. Opening one does not delete or merge its stored data.</p>
+        <div class="support-workspace-control"><select id="support-workspace-select" aria-label="Reference or support workspace"></select><button type="button" id="open-support-workspace">Open</button></div>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head"><h2>Classes on this page</h2><span id="class-count" class="muted"></span></div>
+        <div id="class-list" class="class-list"></div>
+      </section>
+
+      <section class="panel-section chart-key">
+        <div class="eyebrow">CHART KEY</div>
+        <h2>What the colors mean</h2>
+        <p class="hint">Dot colors report the class’s derived HFPSS fate. They do not encode algebraic order, torsion length, or coefficient size.</p>
+        <div class="chart-key-list">
+          <div><i class="dot permanent"></i><span><strong>Green</strong> — permanent cycle, backed by an accepted permanent-cycle proposition.</span></div>
+          <div><i class="dot unknown"></i><span><strong>Gray</strong> — fate unresolved; no accepted death or permanent-cycle proof.</span></div>
+          <div><i class="dot killed"></i><span><strong>Rose</strong> — supports an accepted differential and disappears on the next page.</span></div>
+          <div><i class="dot target"></i><span><strong>Purple</strong> — receives an accepted differential and disappears on the next page.</span></div>
+          <div><i class="key-line accepted"></i><span><strong>Solid charcoal arrow</strong> — accepted differential claim.</span></div>
+          <div><i class="key-line provisional"></i><span><strong>Amber dashed arrow</strong> — candidate or under-review differential.</span></div>
+        </div>
+      </section>
+
+      <section class="panel-section rules">
+        <div class="section-head"><h2>Rules</h2></div>
+        <label>Strong vanishing line<input id="vanishing-line" type="number" min="0" value="25"></label>
+        <button id="run-rules" class="wide primary">Find deductions</button>
+        <p class="shortcut-note"><strong>Shortcuts:</strong> V, G, D, R, X, N &middot; E deductions<br>Ctrl+Z / Ctrl+Y history &middot; [ / ] page &middot; 0 fit view<br>Paused while typing or using a select control.</p>
+      </section>
+
+      <section class="panel-section periodicity-tool-section">
+        <div class="eyebrow">SOURCE-BACKED TOOL</div>
+        <h2>D<sup>8</sup> periodicity</h2>
+        <div id="periodicity-tool"><p class="empty">Loading periodicity scope.</p></div>
+      </section>
+
+      <section class="panel-section">
+        <div class="eyebrow">EXPLICIT COMPUTATION</div>
+        <h2>Finite E2 presentation</h2>
+        <p class="hint">Check and materialize researcher-supplied integral generators and relations. It is not a group-cohomology or differential solver.</p>
+        <button id="open-e2-presentation" class="wide">Advanced E2 presentation</button>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <div class="canvas-header">
+        <div><span class="eyebrow">CHART</span><strong id="chart-caption">E2</strong></div>
+        <div class="legend"><span><i class="dot permanent"></i> permanent</span><span><i class="dot unknown"></i> unresolved</span><span><i class="dot killed"></i> supports</span><span><i class="dot target"></i> receives</span><span><i class="line"></i> accepted d<sub>r</sub></span><span><i class="line review"></i> provisional</span></div>
+      </div>
+      <div id="chart-shell">
+        <svg id="chart" role="img" aria-label="Spectral sequence chart"></svg>
+        <div id="toast" role="status"></div>
+      </div>
+      <div class="bottom-strip"><span>Stem</span><span id="viewport-readout">Upper half-plane · buffer: 6 cells</span><span id="zoom-readout">100%</span><span>Filtration &ge; 0</span></div>
+    </section>
+
+    <aside class="right-panel">
+      <section class="panel-section">
+        <div class="section-head"><div><div class="eyebrow">CLASS FATE</div><h2>HFPSS / Tate timeline</h2></div><span id="fate-status" class="pill">none</span></div>
+        <div id="fate-inspector" class="fate-inspector" aria-live="polite"><p class="empty">Select a class to inspect its data and two-track fate record.</p></div>
+      </section>
+
+      <section class="panel-section">
+        <div class="eyebrow">COMPARISON</div>
+        <h2>Related workspaces</h2>
+        <select id="comparison-select"><option value="">No comparison selected</option></select>
+        <p id="comparison-note" class="hint">Choose a translation, restriction, transfer, norm, or Tate comparison.</p>
+        <button id="run-comparison" class="wide">Suggest transport</button>
+      </section>
+
+      <section class="panel-section">
+        <div class="section-head"><div><div class="eyebrow">LOGIC GRAPH</div><h2>Typed evidence flow</h2></div><span id="proposition-count" class="pill">0</span></div>
+        <select id="proof-scope" aria-label="Proof tree scope"><option value="workspace">This workspace</option><option value="project">All workspaces</option></select>
+        <div id="logic-graph-shell"><svg id="logic-graph" role="img" aria-label="Typed proposition and evidence graph"></svg></div>
+        <div id="logic-node-detail" class="hint">Select a graph node to inspect its type and status.</div>
+        <div id="proof-tree" class="proof-tree"></div>
+      </section>
+
+      <section class="panel-section product-panel">
+        <div class="section-head"><div><div class="eyebrow">CROSS-GRADED PRODUCT</div><h2>Same-page multiplication</h2></div></div>
+        <form id="product-form">
+          <label>Left sector<select id="product-left-sector"></select></label>
+          <label>Left class<select id="product-left-class"></select></label>
+          <label>Right sector<select id="product-right-sector"></select></label>
+          <label>Right class<select id="product-right-class"></select></label>
+          <label>Page<input id="product-page" type="number" min="2" value="2"></label>
+          <div class="product-actions"><button type="button" id="preview-product">Preview</button><button type="submit" class="primary">Store candidate</button></div>
+        </form>
+        <div id="product-preview" class="hint">Products use semantic expressions and an explicit normalization path.</div>
+      </section>
+
+      <section class="panel-section suggestions">
+        <div class="section-head"><h2>Suggested next steps</h2><button id="clear-suggestions" class="text-button">Clear</button></div>
+        <div id="suggestion-list"><p class="empty">Run a rule to look for transparent, reviewable candidates.</p></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="class-dialog">
+    <form id="class-form">
+      <h2>Add a class</h2>
+      <label>Label<input name="label" required value="x"></label>
+      <div id="class-label-preview" class="class-label-preview" aria-live="polite">x</div>
+      <label>Semantic expression<input name="expression" required value="x"></label>
+      <div class="two-col">
+        <label>Stem<input name="stem" type="number" required></label>
+        <label>Filtration<input name="filtration" type="number" required min="0"></label>
+      </div>
+      <div class="dialog-actions"><button type="button" id="cancel-class">Cancel</button><button type="submit" class="primary" id="save-class">Add class</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="e2-presentation-dialog" class="e2-presentation-dialog">
+    <form id="e2-presentation-form">
+      <h2>Advanced E2 presentation</h2>
+      <p class="hint">Use explicit, source-cited generator grades and monic integral relations. Preview is read-only; materialize stores only the listed generator dots and relation propositions.</p>
+      <label>Presentation JSON<textarea id="e2-presentation-json" rows="19" spellcheck="false" aria-label="Finite E2 presentation JSON"></textarea></label>
+      <pre id="e2-presentation-result" class="e2-presentation-result">Choose Preview to validate the presentation.</pre>
+      <div class="dialog-actions"><button type="button" id="cancel-e2-presentation">Cancel</button><button type="button" id="preview-e2-presentation">Preview</button><button type="submit" class="primary" id="materialize-e2-presentation">Materialize explicit data</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="import-project-dialog" class="import-project-dialog">
+    <div class="import-project-content">
+      <h2>Review project JSON import</h2>
+      <p class="hint">Selecting a file only runs a read-only preview. The saved project is not replaced until you choose Apply reviewed import.</p>
+      <div id="import-project-summary" class="import-project-summary" aria-live="polite">Choose a Studio project JSON file.</div>
+      <div class="dialog-actions"><button type="button" id="cancel-project-import">Cancel</button><button type="button" class="primary" id="apply-project-import" disabled>Apply reviewed import</button></div>
+    </div>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='cell-layout.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
