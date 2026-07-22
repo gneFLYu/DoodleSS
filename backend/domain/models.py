@@ -81,8 +81,6 @@ class ClassNode:
     manual_periodicity_anchor_class_id: str | None = None
     manual_periodicity_translation: int = 0
     manual_periodicity_exponents: list[int] = field(default_factory=list)
-    manual_periodicity_rule_ids: list[str] = field(default_factory=list)
-    manual_periodicity_translation_vector: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -105,8 +103,6 @@ class Differential:
     manual_periodicity_id: str | None = None
     manual_periodicity_translation: int = 0
     manual_periodicity_exponents: list[int] = field(default_factory=list)
-    manual_periodicity_rule_ids: list[str] = field(default_factory=list)
-    manual_periodicity_translation_vector: list[int] = field(default_factory=list)
 
 
 @dataclass
@@ -282,10 +278,6 @@ class ManualPeriodicity:
     status: str = "manual-unverified"
     created_class_ids: list[str] = field(default_factory=list)
     created_differential_ids: list[str] = field(default_factory=list)
-    created_relation_proposition_ids: list[str] = field(default_factory=list)
-    operation_kind: str = "selected-anchor"
-    rule_vectors: list[dict[str, Any]] = field(default_factory=list)
-    bounds: dict[str, int] = field(default_factory=dict)
     created_proposition_ids: list[str] = field(default_factory=list)
 
 
@@ -526,14 +518,6 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         for raw in data.get("periodicity_rules", [])
     ]
 
-    manual_periodicities = [
-        ManualPeriodicity(**{
-            **_known_kwargs(ManualPeriodicity, raw),
-            "period_vector": _coerce_grade(raw.get("period_vector")),
-        })
-        for raw in data.get("manual_periodicities", [])
-    ]
-
     manual_periodicity_rules = [
         ManualPeriodicityRule(**{
             **_known_kwargs(ManualPeriodicityRule, raw),
@@ -541,6 +525,78 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         })
         for raw in data.get("manual_periodicity_rules", [])
     ]
+    known_manual_rule_ids = {item.id for item in manual_periodicity_rules}
+    # Read-only migration of the first beta draft, which stored named manual
+    # rules inside workspace settings.  The canonical representation is now
+    # project.manual_periodicity_rules; remove the duplicated settings copy.
+    for workspace in workspaces:
+        legacy_rules = workspace.settings.pop("manual_periodicity_rules", [])
+        if not isinstance(legacy_rules, list):
+            continue
+        for raw_rule in legacy_rules:
+            if not isinstance(raw_rule, dict):
+                continue
+            rule_id = str(raw_rule.get("id") or new_id("manual_rule"))
+            if rule_id in known_manual_rule_ids:
+                continue
+            manual_periodicity_rules.append(ManualPeriodicityRule(
+                id=rule_id,
+                workspace_id=workspace.id,
+                name=str(raw_rule.get("name") or "manual period").strip() or "manual period",
+                period_vector=Grade(
+                    stem=int(raw_rule.get("p", 0)),
+                    filtration=int(raw_rule.get("q", 0)),
+                ),
+                basis="Migrated local manual drawing rule; no mathematical certificate supplied.",
+                source_ref="Local manual drawing operation; no mathematical certificate supplied.",
+                status="manual-unverified",
+            ))
+            known_manual_rule_ids.add(rule_id)
+
+    manual_periodicities = []
+    for raw in data.get("manual_periodicities", []):
+        values = _known_kwargs(ManualPeriodicity, raw)
+        legacy_kind = str(raw.get("operation_kind", ""))
+        if "mode" not in raw:
+            values["mode"] = {
+                "all-rules-box": "box",
+                "differentials-only": "differentials-only",
+            }.get(legacy_kind, "anchor")
+        if "rule_ids" not in raw:
+            vectors = raw.get("rule_vectors", [])
+            if legacy_kind == "differentials-only":
+                # The old differential-only endpoint carried an ephemeral
+                # vector, not a named user rule.
+                values["rule_ids"] = []
+            elif isinstance(vectors, list):
+                legacy_rule_ids: list[str] = []
+                for index, vector in enumerate(vectors):
+                    if not isinstance(vector, dict):
+                        continue
+                    rule_id = str(vector.get("id") or f"legacy_manual_rule_{raw.get('id', 'operation')}_{index}")
+                    legacy_rule_ids.append(rule_id)
+                    if rule_id in known_manual_rule_ids:
+                        continue
+                    manual_periodicity_rules.append(ManualPeriodicityRule(
+                        id=rule_id,
+                        workspace_id=str(raw.get("workspace_id", "")),
+                        name=str(vector.get("name") or f"manual period {index + 1}").strip() or f"manual period {index + 1}",
+                        period_vector=Grade(
+                            stem=int(vector.get("p", 0)),
+                            filtration=int(vector.get("q", 0)),
+                        ),
+                        basis="Migrated local manual drawing rule; no mathematical certificate supplied.",
+                        source_ref="Local manual drawing operation; no mathematical certificate supplied.",
+                        status="manual-unverified",
+                    ))
+                    known_manual_rule_ids.add(rule_id)
+                values["rule_ids"] = legacy_rule_ids
+        if values.get("mode") == "differentials-only" and "period_vector" not in raw:
+            vectors = raw.get("rule_vectors", [])
+            if isinstance(vectors, list) and vectors and isinstance(vectors[0], dict):
+                values["period_vector"] = Grade(int(vectors[0].get("p", 0)), int(vectors[0].get("q", 0)))
+        values["period_vector"] = _coerce_grade(values.get("period_vector", raw.get("period_vector")))
+        manual_periodicities.append(ManualPeriodicity(**values))
 
     e2_presentations = []
     for raw in data.get("e2_presentations", []):

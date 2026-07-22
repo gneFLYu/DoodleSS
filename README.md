@@ -59,12 +59,39 @@ To run the smoke checks:
 python -m unittest discover -s tests -v
 ```
 
+### Vercel deployment
+
+The repository now exposes `api/index.py` as Vercel's Flask/WSGI entry point.
+`vercel.json` includes the `backend/` application bundle; its build command
+copies `backend/static/` into `public/static/` for Vercel's CDN, so the deployed
+site uses the same assets and routes as the local launcher.
+
+Install the Vercel CLI and run the following from this repository root:
+
+```powershell
+npm install --global vercel
+vercel
+vercel --prod
+```
+
+Use `vercel dev` to exercise the production entry point locally. Confirm a
+deployment with `/api/health`.
+
+The checked-in `backend/data/project.json` is the deployment seed. Vercel
+Functions have no durable local disk, so deployed edits are stored only in the
+warm function instance's temporary directory and can disappear after a restart
+or be different across instances. Set `HFPSS_DATA_PATH` only when running
+against a writable persistent volume outside Vercel; a shared production
+workspace needs an external database or object store before edits can be
+durable.
+
 ## Guides
 
 - [Chinese operational user guide](USER_GUIDE.zh-CN.md): launch, chart controls, explicit E2-presentation dialog, read-only candidate enumeration, and capability limits.
 - [Explicit E2-presentation JSON/API contract](E2_PRESENTATION_INPUT.md).
 - [Full project JSON import/export contract](PROJECT_JSON_IO.md): downloadable Studio projects, staged preview/apply replacement, validation, and history semantics.
 - [Safe workspace canvas clear API](CANVAS_CLEAR.md): archive active dots without deleting mathematics, with one-step undo.
+- [Manual drawing periodicity contract](MANUAL_PERIODICITY.md): named vectors, batched chart copies, conflict handling, JSON provenance, and limits.
 
 ## Deliberate next increments
 

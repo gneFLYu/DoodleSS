@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import tempfile
 from pathlib import Path
 from threading import Lock
 from dataclasses import asdict
@@ -31,6 +34,7 @@ from domain.manual_periodicity import (
     list_manual_rules,
     materialize_batch_preview,
     materialize_manual_periodicity,
+    prepare_manual_rule,
     preview_all_rules_to_box,
     preview_differentials_only,
     preview_manual_periodicity,
@@ -50,8 +54,33 @@ from domain.seed import demo_project
 from domain.tex_renderer import render_article_tex, render_chart_tex
 
 ROOT = Path(__file__).resolve().parent
-DATA_PATH = ROOT / "data" / "project.json"
+SEED_DATA_PATH = ROOT / "data" / "project.json"
+
+
+def _project_data_path() -> tuple[Path, str]:
+    """Choose a writable project file for local and Vercel execution.
+
+    Vercel Functions ship the repository as a read-only deployment bundle.  A
+    serverless instance therefore starts from the checked-in seed in ``/tmp``;
+    edits remain available while that instance is warm, but are intentionally
+    not presented as durable shared storage.
+    """
+    configured_path = os.environ.get("HFPSS_DATA_PATH")
+    if configured_path:
+        return Path(configured_path).expanduser(), "configured"
+    if os.environ.get("VERCEL"):
+        transient_path = Path(tempfile.gettempdir()) / "hfpss-studio" / "project.json"
+        if not transient_path.exists():
+            transient_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(SEED_DATA_PATH, transient_path)
+        return transient_path, "vercel-ephemeral"
+    return SEED_DATA_PATH, "local"
+
+
+DATA_PATH, PROJECT_STORAGE_MODE = _project_data_path()
 LOCK = Lock()
+# The Vercel build copies these local Flask assets to public/static for its
+# CDN.  Keeping Flask's normal static folder preserves run-latest.ps1 exactly.
 app = Flask(__name__)
 APP_VERSION = "2026.07.22-manual-periodicity"
 
@@ -109,6 +138,8 @@ def body_integer(body: dict, key: str, default: int) -> int:
     """Parse a JSON integer while preserving an explicit numeric zero."""
     value = body[key] if key in body else default
     if isinstance(value, bool):
+        raise ValueError(f"{key} must be an integer.")
+    if isinstance(value, float) and not value.is_integer():
         raise ValueError(f"{key} must be an integer.")
     return int(value)
 
@@ -213,7 +244,12 @@ def apply_project_import():
 @app.get("/api/health")
 def health():
     project = load_project()
-    return jsonify({"application": "HFPSS Studio", "version": APP_VERSION, "revision": project.revision})
+    return jsonify({
+        "application": "HFPSS Studio",
+        "version": APP_VERSION,
+        "revision": project.revision,
+        "storage": PROJECT_STORAGE_MODE,
+    })
 
 
 @app.get("/api/history")
@@ -782,6 +818,8 @@ def materialize_manual_periodicity_operation(workspace_id: str):
             project = load_project()
             workspace = find_workspace(project, workspace_id)
             preview = preview_manual_periodicity(workspace, body)
+            if preview["conflicts"]:
+                raise ManualPeriodicityError("Resolve preview conflicts before materializing manual drawing copies.")
             changing = any(item["action"] == "create" for item in preview["cycle_copies"] + preview["differential_copies"])
             if not changing:
                 return jsonify({
@@ -810,7 +848,7 @@ def get_drawing_periodicity_rules(workspace_id: str):
     try:
         project = load_project()
         workspace = find_workspace(project, workspace_id)
-        return jsonify({"rules": list_manual_rules(workspace), "status": "manual-unverified"})
+        return jsonify({"rules": list_manual_rules(project, workspace), "status": "manual-unverified"})
     except KeyError as error:
         return jsonify({"error": str(error)}), 404
 
@@ -822,8 +860,9 @@ def create_drawing_periodicity_rule(workspace_id: str):
             project = load_project()
             workspace = find_workspace(project, workspace_id)
             body = request.get_json(force=True)
-            checkpoint(project, f"Add manual periodicity rule {body.get('name', '')}")
-            rule = add_manual_rule(workspace, body)
+            prepared = prepare_manual_rule(project, workspace, body)
+            checkpoint(project, f"Add manual periodicity rule {prepared.name}")
+            rule = add_manual_rule(project, workspace, body, prepared_rule=prepared)
             save_project(project)
         return jsonify({"rule": rule, "revision": project.revision, **history_status(history_key())}), 201
     except (KeyError, TypeError, ValueError, ManualPeriodicityError) as error:
@@ -836,11 +875,18 @@ def remove_drawing_periodicity_rule(workspace_id: str, rule_id: str):
         with LOCK:
             project = load_project()
             workspace = find_workspace(project, workspace_id)
-            rule = next((item for item in list_manual_rules(workspace) if item["id"] == rule_id), None)
+            rule = next((item for item in project.manual_periodicity_rules if (
+                item.id == rule_id and item.workspace_id == workspace.id
+            )), None)
             if rule is None:
                 return jsonify({"error": "Unknown manual periodicity rule."}), 404
-            checkpoint(project, f"Delete manual periodicity rule {rule['name']}")
-            removed = delete_manual_rule(workspace, rule_id)
+            if rule.archived:
+                return jsonify({
+                    "deleted": {"id": rule.id, "archived": True}, "changed": False,
+                    "revision": project.revision, **history_status(history_key()),
+                })
+            checkpoint(project, f"Delete manual periodicity rule {rule.name}")
+            removed = delete_manual_rule(project, workspace, rule_id)
             save_project(project)
         return jsonify({"deleted": removed, "revision": project.revision, **history_status(history_key())})
     except (KeyError, TypeError, ValueError, ManualPeriodicityError) as error:
@@ -854,12 +900,14 @@ def _drawing_batch_response(workspace_id: str, mode: str, apply: bool):
         if not apply:
             project = load_project()
             workspace = find_workspace(project, workspace_id)
-            return jsonify(preview_function(workspace, body))
+            return jsonify(preview_function(project, workspace, body))
         with LOCK:
             project = load_project()
             workspace = find_workspace(project, workspace_id)
-            preview = preview_function(workspace, body)
+            preview = preview_function(project, workspace, body)
             summary = preview["summary"]
+            if preview["conflicts"]:
+                raise ManualPeriodicityError("Resolve preview conflicts before applying manual drawing periodicity.")
             changing = bool(
                 summary["cycles_to_create"]
                 or summary["differentials_to_create"]

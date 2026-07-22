@@ -16,6 +16,7 @@ from .models import (
     Differential,
     Grade,
     ManualPeriodicity,
+    ManualPeriodicityRule,
     Project,
     Proposition,
     Workspace,
@@ -306,6 +307,7 @@ def materialize_manual_periodicity(project: Project, workspace: Workspace, paylo
             manual_periodicity_id=manual_id,
             manual_periodicity_anchor_class_id=base.id,
             manual_periodicity_translation=plan["translation"],
+            manual_periodicity_exponents=[plan["translation"]],
         )
         workspace.classes.append(node)
         by_id[node.id] = node
@@ -369,6 +371,8 @@ def materialize_manual_periodicity(project: Project, workspace: Workspace, paylo
             period_notes="Manual drawing-period copy; no certificate supplied.",
             unperiodic_reason="Not eligible for certified propagation until separately reviewed.",
             manual_periodicity_id=manual_id,
+            manual_periodicity_translation=plan["translation"],
+            manual_periodicity_exponents=[plan["translation"]],
         )
         workspace.propositions.append(proposition)
         workspace.differentials.append(differential)
@@ -382,6 +386,7 @@ def materialize_manual_periodicity(project: Project, workspace: Workspace, paylo
     record.translations = sorted(set(record.translations + preview["translations"]))
     record.created_class_ids = list(dict.fromkeys(record.created_class_ids + all_class_ids))
     record.created_differential_ids = list(dict.fromkeys(record.created_differential_ids + all_differential_ids))
+    record.created_proposition_ids = list(dict.fromkeys(record.created_proposition_ids + created_proposition_ids))
     if existing_record is None:
         project.manual_periodicities.append(record)
 
@@ -399,16 +404,35 @@ def materialize_manual_periodicity(project: Project, workspace: Workspace, paylo
 # ---------------------------------------------------------------------------
 # ver15.3-compatible batch drawing periodicity
 
-MANUAL_RULES_KEY = "manual_periodicity_rules"
 LEGACY_TRANSLATION_LIMIT = 20
 
 
-def list_manual_rules(workspace: Workspace) -> list[dict[str, Any]]:
-    rules = workspace.settings.setdefault(MANUAL_RULES_KEY, [])
-    return [dict(item) for item in rules]
+def _rule_payload(rule: ManualPeriodicityRule) -> dict[str, Any]:
+    return {
+        "id": rule.id, "name": rule.name,
+        "p": rule.period_vector.stem, "q": rule.period_vector.filtration,
+        "status": rule.status, "basis": rule.basis, "source_ref": rule.source_ref,
+        "archived": rule.archived,
+    }
 
 
-def add_manual_rule(workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+def list_manual_rules(project: Project, workspace: Workspace, *, include_archived: bool = False) -> list[dict[str, Any]]:
+    return [
+        _rule_payload(item)
+        for item in project.manual_periodicity_rules
+        if item.workspace_id == workspace.id and (include_archived or not item.archived)
+    ]
+
+
+def prepare_manual_rule(project: Project, workspace: Workspace, payload: dict[str, Any]) -> ManualPeriodicityRule:
+    """Validate a named drawing rule without changing project state.
+
+    Routes call this before recording a history checkpoint.  Keeping this
+    operation pure is important: a rejected ``POST`` must not manufacture an
+    empty Undo entry.
+    """
+    if not isinstance(payload, dict):
+        raise ManualPeriodicityError("A manual rule request must be an object.")
     name = str(payload.get("name", "")).strip()
     stem = _integer(payload.get("p"), "p")
     filtration = _integer(payload.get("q"), "q")
@@ -416,24 +440,48 @@ def add_manual_rule(workspace: Workspace, payload: dict[str, Any]) -> dict[str, 
         raise ManualPeriodicityError("Rule must have a name.")
     if stem == 0 and filtration == 0:
         raise ManualPeriodicityError("Periodicity of (0,0) is not allowed.")
-    rule = {
-        "id": new_id("manual_rule"),
-        "name": name,
-        "p": stem,
-        "q": filtration,
-        "status": "manual-unverified",
-    }
-    workspace.settings.setdefault(MANUAL_RULES_KEY, []).append(rule)
-    return rule
+    basis = str(payload.get("basis", "Local manual drawing rule; no mathematical certificate supplied.")).strip()
+    source_ref = str(payload.get("source_ref", "")).strip()
+    if not basis:
+        raise ManualPeriodicityError("A manual rule requires a nonempty basis describing why it is being drawn.")
+    duplicate = next((item for item in project.manual_periodicity_rules if (
+        item.workspace_id == workspace.id and not item.archived and item.name == name
+        and item.period_vector == Grade(stem, filtration, {})
+    )), None)
+    if duplicate:
+        raise ManualPeriodicityError("An active manual rule with this name and vector already exists.")
+    return ManualPeriodicityRule(
+        id=new_id("manual_rule"), workspace_id=workspace.id, name=name,
+        period_vector=Grade(stem, filtration, {}), basis=basis, source_ref=source_ref,
+        status="manual-unverified",
+    )
 
 
-def delete_manual_rule(workspace: Workspace, rule_id: str) -> dict[str, Any]:
-    rules = workspace.settings.setdefault(MANUAL_RULES_KEY, [])
-    rule = next((item for item in rules if item.get("id") == rule_id), None)
+def add_manual_rule(
+    project: Project,
+    workspace: Workspace,
+    payload: dict[str, Any],
+    *,
+    prepared_rule: ManualPeriodicityRule | None = None,
+) -> dict[str, Any]:
+    """Append a rule which has already passed (or now passes) validation."""
+    rule = prepared_rule or prepare_manual_rule(project, workspace, payload)
+    if rule.workspace_id != workspace.id:
+        raise ManualPeriodicityError("The prepared manual rule belongs to another workspace.")
+    project.manual_periodicity_rules.append(rule)
+    return _rule_payload(rule)
+
+
+def delete_manual_rule(project: Project, workspace: Workspace, rule_id: str) -> dict[str, Any]:
+    rule = next((item for item in project.manual_periodicity_rules if (
+        item.id == rule_id and item.workspace_id == workspace.id
+    )), None)
     if rule is None:
         raise ManualPeriodicityError("Unknown manual periodicity rule.")
-    workspace.settings[MANUAL_RULES_KEY] = [item for item in rules if item.get("id") != rule_id]
-    return dict(rule)
+    if not rule.archived:
+        rule.archived = True
+        rule.archived_reason = "Archived by local user action; existing manual copies remain auditable."
+    return _rule_payload(rule)
 
 
 def _location_key(grade: Grade) -> str:
@@ -451,28 +499,43 @@ def _rule_factor(rules: list[dict[str, Any]], exponents: list[int]) -> str:
 
 
 def _compound_translations(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    states: dict[tuple[int, int], list[int]] = {(0, 0): []}
+    """Enumerate exponent vectors, without collapsing linearly dependent rules.
+
+    Two named rules may produce the same total grade shift.  They remain
+    distinct drawing orbits because their labels and algebraic expressions can
+    carry different meanings.  Deduplicating merely by location loses dots.
+    """
+    states: list[tuple[int, int, list[int]]] = [(0, 0, [])]
     for rule in rules:
-        next_states: dict[tuple[int, int], list[int]] = {}
-        for (stem, filtration), exponents in states.items():
+        next_states: list[tuple[int, int, list[int]]] = []
+        for stem, filtration, exponents in states:
             for exponent in range(-LEGACY_TRANSLATION_LIMIT, LEGACY_TRANSLATION_LIMIT + 1):
-                shift = (stem + exponent * rule["p"], filtration + exponent * rule["q"])
-                next_states.setdefault(shift, [*exponents, exponent])
+                next_states.append((
+                    stem + exponent * rule["p"],
+                    filtration + exponent * rule["q"],
+                    [*exponents, exponent],
+                ))
                 if len(next_states) > 25000:
                     raise ManualPeriodicityError(
-                        "These rules generate more than 25,000 distinct shifts. Reduce the rule list before previewing."
+                        "These rules generate more than 25,000 exponent vectors. Reduce the rule list before previewing."
                     )
         states = next_states
     return [
         {"stem": stem, "filtration": filtration, "exponents": exponents}
-        for (stem, filtration), exponents in states.items()
+        for stem, filtration, exponents in states
         if stem != 0 or filtration != 0
     ]
 
 
 def _active_classes(workspace: Workspace, page: int) -> list[ClassNode]:
     return sorted(
-        [item for item in workspace.classes if not item.archived and class_is_live_on_page(workspace, item.id, page)],
+        [
+            item for item in workspace.classes
+            if not item.archived
+            and not item.manual_periodicity_id
+            and item.page <= page
+            and class_is_live_on_page(workspace, item.id, page)
+        ],
         key=lambda item: item.id,
     )
 
@@ -498,10 +561,13 @@ def _current_connections(workspace: Workspace, page: int, live_ids: set[str]) ->
     return connections
 
 
-def _batch_id(workspace: Workspace, page: int, mode: str, rules: list[dict[str, Any]]) -> str:
+def _batch_id(
+    workspace: Workspace, page: int, mode: str, rules: list[dict[str, Any]], scope: dict[str, Any] | None = None,
+) -> str:
     source = json.dumps({
         "workspace": workspace.id, "page": page, "mode": mode,
         "rules": [{key: rule[key] for key in ("id", "name", "p", "q") if key in rule} for rule in rules],
+        "scope": scope or {},
     }, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return f"manual-period-{sha256(source.encode('utf-8')).hexdigest()[:16]}"
 
@@ -511,14 +577,12 @@ def _batch_builder(
     page: int,
     mode: str,
     rules: list[dict[str, Any]],
+    scope: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     active = _active_classes(workspace, page)
     active_by_id = {item.id: item for item in active}
-    existing_by_location: dict[str, ClassNode] = {}
-    for item in active:
-        existing_by_location.setdefault(_location_key(item.grade), item)
-    manual_id = _batch_id(workspace, page, mode, rules)
-    plans_by_location: dict[str, dict[str, Any]] = {}
+    manual_id = _batch_id(workspace, page, mode, rules, scope)
+    plans_by_orbit: dict[str, dict[str, Any]] = {}
     cycle_plans: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
 
@@ -530,46 +594,117 @@ def _batch_builder(
         )
         if grade.filtration < 0 and workspace_sequence_kind(workspace) != "tate":
             return None
-        location = _location_key(grade)
-        if location in plans_by_location:
-            return plans_by_location[location]
-        existing = existing_by_location.get(location)
+        exponents = list(shift["exponents"])
+        orbit_key = json.dumps([manual_id, base.id, exponents], separators=(",", ":"))
+        if orbit_key in plans_by_orbit:
+            return plans_by_orbit[orbit_key]
+        existing = next((item for item in workspace.classes if (
+            item.manual_periodicity_id == manual_id
+            and item.manual_periodicity_anchor_class_id == base.id
+            and item.manual_periodicity_exponents == exponents
+        )), None)
         factor = _rule_factor(rules, shift["exponents"])
         plan = {
-            "kind": "cycle", "plan_key": location, "base_class_id": base.id,
+            "kind": "cycle", "plan_key": orbit_key, "base_class_id": base.id,
             "label": f"{base.label}\\,{factor}",
             "expression": f"({base.expression or base.label})*({factor})",
-            "grade": asdict(grade), "exponents": list(shift["exponents"]),
-            "action": "reuse" if existing else "create",
+            "grade": asdict(grade), "exponents": exponents,
+            "action": "archived-conflict" if existing and existing.archived else "reuse" if existing else "create",
             "class_id": existing.id if existing else None,
         }
-        plans_by_location[location] = plan
+        plans_by_orbit[orbit_key] = plan
         cycle_plans.append(plan)
         return plan
 
     return {
         "active": active, "active_by_id": active_by_id,
-        "manual_id": manual_id, "plans_by_location": plans_by_location,
-        "cycles": cycle_plans, "skipped": skipped, "ensure_cycle": ensure_cycle,
+        "manual_id": manual_id, "plans_by_orbit": plans_by_orbit,
+        "cycles": cycle_plans, "endpoint_plans": {}, "skipped": skipped, "ensure_cycle": ensure_cycle,
     }
 
 
-def _existing_connection(workspace: Workspace, kind: str, source_id: str, target_id: str, page: int):
+def _visible_classes_at(workspace: Workspace, page: int, grade: Grade) -> list[ClassNode]:
+    """All visible dots at a grade, including deliberate manual copies."""
+    key = _location_key(grade)
+    return [
+        item for item in workspace.classes
+        if not item.archived and item.page <= page
+        and class_is_live_on_page(workspace, item.id, page)
+        and _location_key(item.grade) == key
+    ]
+
+
+def _existing_endpoint_plan(builder: dict[str, Any], node: ClassNode) -> dict[str, Any]:
+    key = f"existing:{node.id}"
+    existing = builder["endpoint_plans"].get(key)
+    if existing:
+        return existing
+    plan = {
+        "kind": "existing-endpoint", "plan_key": key, "base_class_id": node.id,
+        "label": node.label, "expression": node.expression, "grade": asdict(node.grade),
+        "exponents": [], "action": "reuse", "class_id": node.id,
+    }
+    builder["endpoint_plans"][key] = plan
+    return plan
+
+
+def _connection_action(
+    workspace: Workspace,
+    kind: str,
+    source_id: str,
+    target_id: str,
+    page: int,
+    manual_id: str,
+    anchor_connection_id: str,
+    exponents: list[int],
+) -> tuple[str, str | None, str | None]:
+    """Return create/reuse/conflict without folding unrelated arrows together."""
     if kind == "differential":
-        return next((item for item in workspace.differentials if (
+        candidates = [item for item in workspace.differentials if (
             item.source_id == source_id and item.target_id == target_id and item.page == page
+        )]
+        exact = next((item for item in candidates if (
+            item.manual_periodicity_id == manual_id
+            and item.anchor_differential_id == anchor_connection_id
+            and item.manual_periodicity_exponents == exponents
         )), None)
-    return next((item for item in workspace.propositions if (
-        item.kind == "relation"
-        and item.conclusion.get("source_id") == source_id
-        and item.conclusion.get("target_id") == target_id
-        and int(item.conclusion.get("page", 2)) == page
-    )), None)
+    else:
+        candidates = [item for item in workspace.propositions if (
+            item.kind == "relation"
+            and item.conclusion.get("source_id") == source_id
+            and item.conclusion.get("target_id") == target_id
+            and int(item.conclusion.get("page", 2)) == page
+        )]
+        exact = next((item for item in candidates if (
+            item.conclusion.get("manual_periodicity_id") == manual_id
+            and item.conclusion.get("anchor_connection_id") == anchor_connection_id
+            and item.conclusion.get("manual_periodicity_exponents") == exponents
+        )), None)
+    if exact:
+        return "reuse", exact.id, None
+    if candidates:
+        return (
+            "conflict", None,
+            "An unrelated existing connection has these endpoints; review it instead of merging drawing records.",
+        )
+    return "create", None, None
 
 
-def preview_all_rules_to_box(workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+def _application_metadata(payload: dict[str, Any]) -> tuple[str, str]:
+    basis = str(payload.get("basis", "Manual drawing operation; no mathematical certificate supplied.")).strip()
+    source_ref = str(payload.get("source_ref", "Local manual drawing operation; no mathematical certificate supplied.")).strip()
+    if not basis:
+        raise ManualPeriodicityError("A manual drawing application requires a nonempty basis.")
+    return basis, source_ref
+
+
+def preview_all_rules_to_box(project: Project, workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ManualPeriodicityError("A box request must be an object.")
     page = _integer(payload.get("page", workspace.page), "page")
-    rules = list_manual_rules(workspace)
+    if page < 2:
+        raise ManualPeriodicityError("page must be at least 2.")
+    rules = list_manual_rules(project, workspace)
     if not rules:
         raise ManualPeriodicityError("Define at least one manual periodicity rule first.")
     bounds = {
@@ -582,8 +717,9 @@ def preview_all_rules_to_box(workspace: Workspace, payload: dict[str, Any]) -> d
         raise ManualPeriodicityError("Invalid coordinate bounds.")
     if (bounds["p_max"] - bounds["p_min"] + 1) * (bounds["q_max"] - bounds["q_min"] + 1) > 50000:
         raise ManualPeriodicityError("The drawing box may contain at most 50,000 cells.")
+    basis, source_ref = _application_metadata(payload)
     shifts = _compound_translations(rules)
-    builder = _batch_builder(workspace, page, "all-rules-box", rules)
+    builder = _batch_builder(workspace, page, "box", rules, {"bounds": bounds, "limit": LEGACY_TRANSLATION_LIMIT})
     in_box = lambda grade: (
         bounds["p_min"] <= grade.stem <= bounds["p_max"]
         and bounds["q_min"] <= grade.filtration <= bounds["q_max"]
@@ -622,40 +758,48 @@ def preview_all_rules_to_box(workspace: Workspace, payload: dict[str, Any]) -> d
                     "exponents": shift["exponents"], "reason": "translated endpoint has negative filtration",
                 })
                 continue
-            existing = None
+            action = "create"
+            connection_id = None
+            conflict_reason = None
             if source_plan["class_id"] and target_plan["class_id"]:
-                existing = _existing_connection(
+                action, connection_id, conflict_reason = _connection_action(
                     workspace, base_connection["kind"], source_plan["class_id"], target_plan["class_id"], page,
+                    builder["manual_id"], base_connection["id"], list(shift["exponents"]),
                 )
             connections.append({
                 "kind": base_connection["kind"], "base_connection_id": base_connection["id"],
                 "source_plan_key": source_plan["plan_key"], "target_plan_key": target_plan["plan_key"],
                 "source_grade": source_plan["grade"], "target_grade": target_plan["grade"],
                 "page": page, "exponents": list(shift["exponents"]),
-                "action": "reuse" if existing else "create",
-                "connection_id": existing.id if existing else None,
+                "action": action, "connection_id": connection_id, "conflict_reason": conflict_reason,
             })
 
     return _finish_batch_preview(
-        workspace, page, "all-rules-box", rules, builder, connections, bounds,
-        "All rules are compounded exactly as drawing instructions; no period theorem is asserted.",
+        workspace, page, "box", rules, builder, connections, bounds,
+        "All named rules are compounded as manual drawing instructions; no period theorem is asserted.",
+        basis, source_ref,
     )
 
 
-def preview_differentials_only(workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+def preview_differentials_only(project: Project, workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise ManualPeriodicityError("A differential-only request must be an object.")
     page = _integer(payload.get("page", workspace.page), "page")
+    if page < 2:
+        raise ManualPeriodicityError("page must be at least 2.")
     stem = _integer(payload.get("p"), "p")
     filtration = _integer(payload.get("q"), "q")
     if stem == 0 and filtration == 0:
         raise ManualPeriodicityError("Periodicity of (0,0) is not allowed.")
     rules = [{"id": "differential-only-vector", "name": f"({stem},{filtration})", "p": stem, "q": filtration}]
-    builder = _batch_builder(workspace, page, "differentials-only", rules)
+    basis, source_ref = _application_metadata(payload)
+    builder = _batch_builder(
+        workspace, page, "differentials-only", rules,
+        {"p": stem, "q": filtration, "limit": LEGACY_TRANSLATION_LIMIT},
+    )
     live_ids = set(builder["active_by_id"])
-    existing_by_location = {
-        _location_key(item.grade): item for item in builder["active"]
-    }
     connections: list[dict[str, Any]] = []
-    seen_connections: set[tuple[str, str, int]] = set()
+    seen_connections: set[tuple[str, str, str, int]] = set()
     base_differentials = [item for item in workspace.differentials if (
         item.page == page and item.source_id in live_ids and item.target_id in live_ids
     )]
@@ -668,51 +812,63 @@ def preview_differentials_only(workspace: Workspace, payload: dict[str, Any]) ->
             shift = {"stem": translation * stem, "filtration": translation * filtration, "exponents": [translation]}
             source_grade = _translated_grade(source_base, Grade(stem, filtration, {}), translation)
             target_grade = _translated_grade(target_base, Grade(stem, filtration, {}), translation)
-            existing_source = existing_by_location.get(_location_key(source_grade))
-            existing_target = existing_by_location.get(_location_key(target_grade))
-            if not existing_source and not existing_target:
+            existing_sources = _visible_classes_at(workspace, page, source_grade)
+            existing_targets = _visible_classes_at(workspace, page, target_grade)
+            if not existing_sources and not existing_targets:
                 builder["skipped"].append({
                     "kind": "differential", "base_connection_id": base.id,
                     "translation": translation, "reason": "both translated endpoints are absent",
                 })
                 continue
-            source_plan = (
-                builder["ensure_cycle"](source_base, shift) if existing_source or existing_target else None
-            )
-            target_plan = (
-                builder["ensure_cycle"](target_base, shift) if existing_source or existing_target else None
-            )
+            if len(existing_sources) > 1 or len(existing_targets) > 1:
+                connections.append({
+                    "kind": "differential", "base_connection_id": base.id,
+                    "page": page, "translation": translation, "exponents": [translation],
+                    "action": "conflict", "connection_id": None,
+                    "conflict_reason": "A translated endpoint has multiple visible dots; choose an explicit anchor operation.",
+                    "endpoint_case": "ambiguous-existing-endpoint",
+                })
+                continue
+            source_plan = (_existing_endpoint_plan(builder, existing_sources[0]) if existing_sources
+                           else builder["ensure_cycle"](source_base, shift))
+            target_plan = (_existing_endpoint_plan(builder, existing_targets[0]) if existing_targets
+                           else builder["ensure_cycle"](target_base, shift))
             if not source_plan or not target_plan:
                 builder["skipped"].append({
                     "kind": "differential", "base_connection_id": base.id,
                     "translation": translation, "reason": "translated endpoint has negative filtration",
                 })
                 continue
-            identity = (source_plan["plan_key"], target_plan["plan_key"], page)
+            identity = (base.id, source_plan["plan_key"], target_plan["plan_key"], page)
             if identity in seen_connections:
                 continue
             seen_connections.add(identity)
-            existing = None
-            if source_plan["class_id"] and target_plan["class_id"]:
-                existing = _existing_connection(
-                    workspace, "differential", source_plan["class_id"], target_plan["class_id"], page,
+            source_id = source_plan.get("class_id")
+            target_id = target_plan.get("class_id")
+            action = "create"
+            connection_id = None
+            conflict_reason = None
+            if source_id and target_id:
+                action, connection_id, conflict_reason = _connection_action(
+                    workspace, "differential", source_id, target_id, page,
+                    builder["manual_id"], base.id, [translation],
                 )
             connections.append({
                 "kind": "differential", "base_connection_id": base.id,
                 "source_plan_key": source_plan["plan_key"], "target_plan_key": target_plan["plan_key"],
                 "source_grade": source_plan["grade"], "target_grade": target_plan["grade"],
                 "page": page, "translation": translation, "exponents": [translation],
-                "action": "reuse" if existing else "create",
-                "connection_id": existing.id if existing else None,
+                "action": action, "connection_id": connection_id, "conflict_reason": conflict_reason,
                 "endpoint_case": (
-                    "both-exist" if existing_source and existing_target
-                    else "create-missing-target" if existing_source
+                    "both-exist" if existing_sources and existing_targets
+                    else "create-missing-target" if existing_sources
                     else "create-missing-source"
                 ),
             })
     return _finish_batch_preview(
         workspace, page, "differentials-only", rules, builder, connections, {},
         "Both endpoints absent is skipped; exactly one absent endpoint is created; both present are connected.",
+        basis, source_ref,
     )
 
 
@@ -725,22 +881,30 @@ def _finish_batch_preview(
     connections: list[dict[str, Any]],
     bounds: dict[str, int],
     behavior: str,
+    basis: str,
+    source_ref: str,
 ) -> dict[str, Any]:
     cycles = builder["cycles"]
+    endpoint_plans = list(builder["endpoint_plans"].values())
+    conflicts = [item for item in cycles if item["action"] == "archived-conflict"]
+    conflicts.extend(item for item in connections if item["action"] == "conflict")
     return {
         "operation": "manual-drawing-periodicity", "mode": mode,
         "status": "manual-unverified", "workspace_id": workspace.id, "page": page,
         "manual_periodicity_id": builder["manual_id"], "rules": rules, "bounds": bounds,
+        "basis": basis, "source_ref": source_ref,
         "warning": "Preview only. These are distinguishable drawing candidates, not certified periodicity.",
-        "behavior": behavior, "cycle_copies": cycles, "connection_copies": connections,
+        "behavior": behavior, "cycle_copies": cycles, "existing_endpoint_copies": endpoint_plans,
+        "connection_copies": connections, "conflicts": conflicts,
         "skipped": builder["skipped"],
         "summary": {
             "cycles_to_create": sum(item["action"] == "create" for item in cycles),
             "cycles_to_reuse": sum(item["action"] == "reuse" for item in cycles),
+            "existing_endpoints": len(endpoint_plans),
             "differentials_to_create": sum(item["kind"] == "differential" and item["action"] == "create" for item in connections),
             "relations_to_create": sum(item["kind"] == "relation" and item["action"] == "create" for item in connections),
             "connections_to_reuse": sum(item["action"] == "reuse" for item in connections),
-            "skipped": len(builder["skipped"]),
+            "skipped": len(builder["skipped"]), "conflicts": len(conflicts),
         },
     }
 
@@ -748,6 +912,8 @@ def _finish_batch_preview(
 def materialize_batch_preview(project: Project, workspace: Workspace, preview: dict[str, Any]) -> dict[str, Any]:
     if preview.get("workspace_id") != workspace.id:
         raise ManualPeriodicityError("The preview belongs to another workspace.")
+    if preview.get("conflicts"):
+        raise ManualPeriodicityError("Resolve preview conflicts before materializing manual drawing copies.")
     manual_id = preview["manual_periodicity_id"]
     by_id = {item.id: item for item in workspace.classes}
     resolved: dict[str, ClassNode] = {}
@@ -755,10 +921,20 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
     created_differentials: list[str] = []
     created_relations: list[str] = []
     created_propositions: list[str] = []
+    for plan in preview.get("existing_endpoint_copies", []):
+        node = by_id.get(plan.get("class_id"))
+        if node is None or node.archived:
+            raise ManualPeriodicityError("A preview endpoint no longer exists; preview again before materializing.")
+        resolved[plan["plan_key"]] = node
     for plan in preview["cycle_copies"]:
         if plan["action"] == "reuse":
-            resolved[plan["plan_key"]] = by_id[plan["class_id"]]
+            node = by_id.get(plan["class_id"])
+            if node is None or node.archived:
+                raise ManualPeriodicityError("A preview copy no longer exists; preview again before materializing.")
+            resolved[plan["plan_key"]] = node
             continue
+        if plan["action"] != "create":
+            raise ManualPeriodicityError("The preview contains a blocked class copy.")
         base = by_id[plan["base_class_id"]]
         exponents = list(plan.get("exponents", []))
         node = ClassNode(
@@ -780,7 +956,11 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
             id=new_id("prop"), kind="manual-periodicity-drawing",
             statement=f"Draw {node.label} as a manual periodic copy; no period theorem is asserted.",
             status="candidate",
-            conclusion={"class_id": node.id, "anchor_class_id": base.id, "manual_periodicity_id": manual_id},
+            conclusion={
+                "class_id": node.id, "anchor_class_id": base.id,
+                "manual_periodicity_id": manual_id,
+                "manual_periodicity_exponents": exponents,
+            },
             rule="ManualDrawingPeriodicity", confidence=0.0,
             notes="Generated by the ver15.3-compatible manual drawing tool.",
             source_ref="Local manual drawing operation; no mathematical certificate supplied.",
@@ -793,6 +973,8 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
     for plan in preview["connection_copies"]:
         if plan["action"] == "reuse":
             continue
+        if plan["action"] != "create":
+            raise ManualPeriodicityError("The preview contains a conflicting connection.")
         source = resolved[plan["source_plan_key"]]
         target = resolved[plan["target_plan_key"]]
         exponents = list(plan.get("exponents", []))
@@ -801,7 +983,11 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
                 id=new_id("prop"), kind="differential",
                 statement=f"Manual drawing candidate: d_{plan['page']}({source.label}) = {target.label}.",
                 status="candidate",
-                conclusion={"source_id": source.id, "target_id": target.id, "page": plan["page"], "manual_periodicity_id": manual_id},
+                conclusion={
+                    "source_id": source.id, "target_id": target.id, "page": plan["page"],
+                    "manual_periodicity_id": manual_id, "anchor_connection_id": plan["base_connection_id"],
+                    "manual_periodicity_exponents": exponents,
+                },
                 rule="ManualDrawingPeriodicity", confidence=0.0,
                 notes="Copied as a drawing candidate; nonzero behavior is not certified.",
                 source_ref="Local manual drawing operation; no mathematical certificate supplied.",
@@ -827,7 +1013,11 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
                 id=new_id("prop"), kind="relation",
                 statement=f"Manual periodic drawing relation: {source.label} ~ {target.label}.",
                 status="candidate",
-                conclusion={"source_id": source.id, "target_id": target.id, "page": plan["page"], "manual_periodicity_id": manual_id},
+                conclusion={
+                    "source_id": source.id, "target_id": target.id, "page": plan["page"],
+                    "manual_periodicity_id": manual_id, "anchor_connection_id": plan["base_connection_id"],
+                    "manual_periodicity_exponents": exponents,
+                },
                 rule="ManualDrawingPeriodicity", confidence=0.0,
                 notes="Copied as a drawing relation; no algebraic equality is certified.",
                 source_ref="Local manual drawing operation; no mathematical certificate supplied.",
@@ -842,20 +1032,22 @@ def materialize_batch_preview(project: Project, workspace: Workspace, preview: d
         record = next((item for item in project.manual_periodicities if item.id == manual_id), None)
         if record is None:
             first_rule = preview["rules"][0]
+            is_box = preview["mode"] == "box"
             record = ManualPeriodicity(
                 id=manual_id, workspace_id=workspace.id, anchor_class_id="",
+                mode=preview["mode"],
+                rule_ids=[item["id"] for item in preview["rules"] if item["id"] != "differential-only-vector"],
                 cycle_label=first_rule["name"],
-                period_vector=Grade(first_rule["p"], first_rule["q"], {}),
+                period_vector=Grade() if is_box else Grade(first_rule["p"], first_rule["q"], {}),
                 page=preview["page"], status="manual-unverified",
-                basis="ver15.3-compatible manual drawing operation",
-                source_ref="Local manual drawing operation; no mathematical certificate supplied.",
-                operation_kind=preview["mode"], rule_vectors=[dict(item) for item in preview["rules"]],
+                basis=preview["basis"], source_ref=preview["source_ref"],
                 bounds=dict(preview.get("bounds", {})),
+                translation_limit=LEGACY_TRANSLATION_LIMIT,
             )
             project.manual_periodicities.append(record)
         record.created_class_ids = list(dict.fromkeys(record.created_class_ids + created_classes))
         record.created_differential_ids = list(dict.fromkeys(record.created_differential_ids + created_differentials))
-        record.created_relation_proposition_ids = list(dict.fromkeys(record.created_relation_proposition_ids + created_relations))
+        record.created_proposition_ids = list(dict.fromkeys(record.created_proposition_ids + created_propositions))
     return {
         "changed": changed, "manual_periodicity_id": manual_id,
         "created_class_ids": created_classes, "created_differential_ids": created_differentials,

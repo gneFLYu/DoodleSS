@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import subprocess
 import unittest
 
@@ -91,7 +92,7 @@ class InteractionContractTest(unittest.TestCase):
     def test_manual_connections_have_visible_lines_and_pointer_preview(self):
         self.assertIn("function visibleRelations", self.script)
         self.assertIn('proposition.kind !== "relation"', self.script)
-        self.assertIn('class="relation-line ${relationVisualState(relation)}"', self.script)
+        self.assertIn('class="relation-line ${relationVisualState(relation)} ${manualDrawing}"', self.script)
         self.assertIn('id="connection-preview"', self.script)
         self.assertIn("state.connectionPointer", self.script)
         self.assertIn('preview.setAttribute("x2", state.connectionPointer.x)', self.script)
@@ -105,6 +106,111 @@ class InteractionContractTest(unittest.TestCase):
         self.assertIn("throwOnError: false", self.script)
         self.assertIn("trust: false", self.script)
         self.assertIn(".class-label-preview", self.styles)
+
+    def test_filtration_zero_uses_axis_boundary_not_center_shifted_fractional_grade(self):
+        self.assertIn("const localY = event.clientY - rect.top", self.script)
+        self.assertIn("function generatorGradeAtChartPoint", self.script)
+        self.assertIn("if (!allowNegative && localY > metrics.axisY) return null", self.script)
+        self.assertIn("generatorGradeAtChartPoint(", self.script)
+        self.assertIn("Math.floor((m.axisY - y) / m.cell)", self.script)
+        click_handler = self.script[self.script.index('chart.addEventListener("click"'):self.script.index('chart.addEventListener("wheel"')]
+        self.assertNotIn("gradeFloatAt", click_handler)
+        self.assertIn("filtration_min", click_handler)
+
+        start = self.script.index("function generatorGradeAtChartPoint")
+        end = self.script.index("\n}\n", start) + 3
+        helper = self.script[start:end]
+        node_script = f"""
+{helper}
+const m = {{ axisX: 0, axisY: 100, cell: 20 }};
+const values = [
+  generatorGradeAtChartPoint(10, 90, m, 0, false),
+  generatorGradeAtChartPoint(10, 99, m, 0, false),
+  generatorGradeAtChartPoint(10, 100, m, 0, false),
+  generatorGradeAtChartPoint(10, 100.01, m, 0, false),
+  generatorGradeAtChartPoint(10, 81, m, 0, false),
+  generatorGradeAtChartPoint(10, 110, m, -2, true),
+  generatorGradeAtChartPoint(10, 141, m, -2, true),
+];
+process.stdout.write(JSON.stringify(values));
+"""
+        completed = subprocess.run(["node", "-e", node_script], capture_output=True, text=True, timeout=20)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        values = json.loads(completed.stdout)
+        self.assertEqual([item["filtration"] if item else None for item in values], [0, 0, 0, None, 0, -1, None])
+
+    def test_manual_drawing_periodicity_replicates_all_three_ver153_blocks(self):
+        for label in (
+            "Define New Rule",
+            "Class Name (LaTeX)",
+            "Add Periodicity Rule",
+            "Apply All Rules to Box",
+            "Apply Periodicity to Differentials Only",
+            "Both endpoints present: connect them. Exactly one missing: create it. Both missing: skip.",
+        ):
+            self.assertIn(label, self.markup)
+        for element_id in (
+            "drawing-period-name", "drawing-period-p", "drawing-period-q",
+            "drawing-periodicity-rules-list", "drawing-period-p-min", "drawing-period-p-max",
+            "drawing-period-q-min", "drawing-period-q-max", "preview-drawing-period-box",
+            "apply-drawing-period-box", "drawing-diff-period-p", "drawing-diff-period-q",
+            "preview-drawing-diff-period", "apply-drawing-diff-period",
+        ):
+            self.assertIn(f'id="{element_id}"', self.markup)
+        self.assertIn("manual-unverified drawing candidate", self.markup)
+        self.assertIn("ADVANCED / CERTIFIED", self.markup)
+        self.assertIn('id="certified-periodicity-details"', self.markup)
+        self.assertIn(".drawing-periodicity-block", self.styles)
+        self.assertIn("record.item.manual_periodicity_id", self.script)
+        self.assertIn("item.diff.manual_periodicity_id", self.script)
+        self.assertIn("manual-drawing-periodic", self.script)
+        self.assertIn(".class-point.manual-drawing-periodic", self.styles)
+        self.assertIn(".differential.manual-drawing-periodic", self.styles)
+        self.assertIn("function renderDrawingPeriodicityTool", self.script)
+        self.assertIn("state.project?.manual_periodicity_rules", self.script)
+        self.assertIn("function previewDrawingPeriodicity", self.script)
+        self.assertIn("function applyDrawingPeriodicity", self.script)
+        self.assertIn('addEventListener("click", addDrawingPeriodicityRule)', self.script)
+        self.assertIn('previewDrawingPeriodicity("box")', self.script)
+        self.assertIn('previewDrawingPeriodicity("differentials")', self.script)
+        self.assertIn("drawingPeriodicityPreviewSvg", self.script)
+        self.assertIn("manual-period-preview", self.script)
+        self.assertIn("Preview this exact drawing-periodicity operation before applying it", self.script)
+        self.assertIn("current?.data?.conflicts?.length", self.script)
+        self.assertIn("cycles_to_reuse", self.script)
+        self.assertIn("connections_to_reuse", self.script)
+        self.assertIn("existing_endpoint_copies", self.script)
+        for path in (
+            'drawingPeriodicityPath("rules")',
+            '"box/preview"', '"box/apply"',
+            '"differentials/preview"', '"differentials/apply"',
+        ):
+            self.assertIn(path, self.script)
+
+    def test_same_cell_drawing_preview_uses_shared_adaptive_packing(self):
+        self.assertIn("function drawingPeriodicityPreviewInstances", self.script)
+        self.assertIn("[...instances, ...extraInstances]", self.script)
+        self.assertIn("{ baseYOffset: 0.16 }", self.script)
+        self.assertIn("connection.source_plan_key", self.script)
+        self.assertIn("connection.target_plan_key", self.script)
+        self.assertIn("packedPreviewInstances", self.script)
+        node_script = f"""
+const layout = require({json.dumps(str(ROOT / "backend" / "static" / "cell-layout.js"))});
+const records = [
+  {{key: "persisted", cellKey: "1:0", label: "x", shape: "circle", size: 5.5}},
+  {{key: "preview-a", cellKey: "1:0", label: "xP", shape: "circle", size: 5.5, preview: true}},
+  {{key: "preview-b", cellKey: "1:0", label: "xQ", shape: "circle", size: 5.5, preview: true}},
+];
+const packed = layout.packInstances(records, 28, {{baseYOffset: 0.16}});
+process.stdout.write(JSON.stringify(packed));
+"""
+        completed = subprocess.run(["node", "-e", node_script], capture_output=True, text=True, timeout=20)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        packed = json.loads(completed.stdout)
+        self.assertEqual(len(packed), 3)
+        self.assertEqual(len({(item["dx"], item["dy"]) for item in packed}), 3)
+        self.assertTrue(all(item["baseYOffset"] == 0.16 for item in packed))
+        self.assertEqual(sum(bool(item.get("preview")) for item in packed), 2)
 
     def test_project_json_import_requires_preview_and_explicit_apply(self):
         self.assertIn('id="export-json"', self.markup)
@@ -149,7 +255,8 @@ class InteractionContractTest(unittest.TestCase):
 
     def test_persistent_periodicity_tool_guides_source_backed_d8_materialization(self):
         self.assertIn('id="periodicity-tool"', self.markup)
-        self.assertIn("D<sup>8</sup> periodicity", self.markup)
+        self.assertIn("Source-backed D<sup>8</sup>", self.markup)
+        self.assertIn("ADVANCED / CERTIFIED", self.markup)
         self.assertIn("function renderPersistentPeriodicityTool", self.script)
         self.assertIn("renderPersistentPeriodicityTool()", self.script)
         self.assertIn('id="preview-periodicity"', self.script)

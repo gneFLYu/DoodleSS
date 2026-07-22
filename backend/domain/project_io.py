@@ -232,14 +232,22 @@ def _validate_project_references(project: Project) -> None:
             raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} has a missing anchor differential.")
         if any(rule_id not in manual_rules_by_id for rule_id in manual.rule_ids):
             raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} refers to a missing manual rule.")
+        if any(manual_rules_by_id[rule_id].workspace_id != manual.workspace_id for rule_id in manual.rule_ids):
+            raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} refers to a rule in another workspace.")
+        if manual.mode == "box" and not manual.rule_ids:
+            raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} requires at least one named rule for box mode.")
         if manual.mode != "box":
             _validate_nonzero_grade(manual.period_vector, f"manual periodicity {manual.id}")
+        if isinstance(manual.translation_limit, bool) or not isinstance(manual.translation_limit, int) or manual.translation_limit < 0:
+            raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} has an invalid translation limit.")
         if manual.mode == "anchor" and (not manual.translations or any(
             isinstance(value, bool) or not isinstance(value, int) or value == 0 for value in manual.translations
         )):
             raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} has invalid translations.")
         if any(item not in class_ids for item in manual.created_class_ids) or any(item not in differential_ids for item in manual.created_differential_ids):
             raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} refers to a missing generated copy.")
+        if any(item not in all_proposition_id_set for item in manual.created_proposition_ids):
+            raise ProjectImportValidationError(f"Manual periodicity {manual.id!r} refers to a missing generated proposition.")
     for workspace in project.workspaces:
         class_ids = {item.id for item in workspace.classes}
         differential_ids = {item.id for item in workspace.differentials}
@@ -251,12 +259,16 @@ def _validate_project_references(project: Project) -> None:
                 raise ProjectImportValidationError(f"Class {node.id!r} refers to a missing manual periodicity declaration.")
             if node.manual_periodicity_anchor_class_id not in class_ids:
                 raise ProjectImportValidationError(f"Class {node.id!r} has a missing manual periodicity anchor.")
+            if any(isinstance(value, bool) or not isinstance(value, int) for value in node.manual_periodicity_exponents):
+                raise ProjectImportValidationError(f"Class {node.id!r} has invalid manual periodicity exponents.")
         for differential in workspace.differentials:
             if not differential.manual_periodicity_id:
                 continue
             manual = manual_by_id.get(differential.manual_periodicity_id)
             if manual is None or manual.workspace_id != workspace.id or differential.anchor_differential_id not in differential_ids:
                 raise ProjectImportValidationError(f"Differential {differential.id!r} has an invalid manual periodicity reference.")
+            if any(isinstance(value, bool) or not isinstance(value, int) for value in differential.manual_periodicity_exponents):
+                raise ProjectImportValidationError(f"Differential {differential.id!r} has invalid manual periodicity exponents.")
         for proposition in workspace.propositions:
             for premise in proposition.premise_ids:
                 if premise not in all_proposition_id_set:

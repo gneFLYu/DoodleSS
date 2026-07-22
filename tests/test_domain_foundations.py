@@ -97,7 +97,7 @@ class FoundationMigrationTest(unittest.TestCase):
         original = ensure_foundations(self.make_project())
         restored = ensure_foundations(project_from_dict(project_to_dict(original)))
 
-        self.assertEqual(restored.schema_version, 5)
+        self.assertEqual(restored.schema_version, 6)
         self.assertEqual(restored.research_brief, original.research_brief)
         self.assertEqual(restored.workspaces[0].classes[0].expression, "u_1")
         self.assertEqual(restored.workspaces[0].classes[0].coefficient_context_id, "q8-witt-f4")

@@ -100,10 +100,57 @@
         <p class="shortcut-note"><strong>Shortcuts:</strong> V, G, D, R, X, N &middot; E deductions<br>Ctrl+Z / Ctrl+Y history &middot; [ / ] page &middot; 0 fit view<br>Paused while typing or using a select control.</p>
       </section>
 
-      <section class="panel-section periodicity-tool-section">
-        <div class="eyebrow">SOURCE-BACKED TOOL</div>
-        <h2>D<sup>8</sup> periodicity</h2>
-        <div id="periodicity-tool"><p class="empty">Loading periodicity scope.</p></div>
+      <section class="panel-section drawing-periodicity-section">
+        <div class="eyebrow">MANUAL DRAWING</div>
+        <h2>Periodicity Tool</h2>
+        <p class="hint">ver15.3-compatible cycle and connection copies. Every result remains a manual-unverified drawing candidate.</p>
+
+        <div class="drawing-periodicity-block">
+          <h3>Define New Rule</h3>
+          <label>Class Name (LaTeX)<input id="drawing-period-name" value="x"></label>
+          <div class="periodicity-coordinate-row">
+            <label>p-grading<input id="drawing-period-p" type="number" value="4"></label>
+            <label>q-grading<input id="drawing-period-q" type="number" value="0"></label>
+          </div>
+          <button type="button" id="add-drawing-period-rule" class="wide">Add Periodicity Rule</button>
+          <div id="drawing-periodicity-rules-list" class="drawing-periodicity-rules"><p class="empty">No rules defined.</p></div>
+        </div>
+
+        <div class="drawing-periodicity-block">
+          <h3>Apply All Rules to Box</h3>
+          <p class="hint">Compounds every defined rule across current-page cycles and connections.</p>
+          <div class="periodicity-coordinate-row">
+            <label>p<sub>min</sub><input id="drawing-period-p-min" type="number" value="0"></label>
+            <label>p<sub>max</sub><input id="drawing-period-p-max" type="number" value="20"></label>
+          </div>
+          <div class="periodicity-coordinate-row">
+            <label>q<sub>min</sub><input id="drawing-period-q-min" type="number" value="0"></label>
+            <label>q<sub>max</sub><input id="drawing-period-q-max" type="number" value="10"></label>
+          </div>
+          <div class="periodicity-actions"><button type="button" id="preview-drawing-period-box">Preview</button><button type="button" id="apply-drawing-period-box" class="primary" disabled>Apply All Rules to Box</button></div>
+          <div id="drawing-period-box-preview" class="drawing-periodicity-preview">Preview has not been run.</div>
+        </div>
+
+        <div class="drawing-periodicity-block">
+          <h3>Apply Periodicity to Differentials Only</h3>
+          <p class="hint">Both endpoints present: connect them. Exactly one missing: create it. Both missing: skip.</p>
+          <div class="periodicity-coordinate-row">
+            <label>p-grading<input id="drawing-diff-period-p" type="number" value="4"></label>
+            <label>q-grading<input id="drawing-diff-period-q" type="number" value="0"></label>
+          </div>
+          <div class="periodicity-actions"><button type="button" id="preview-drawing-diff-period">Preview</button><button type="button" id="apply-drawing-diff-period" class="primary" disabled>Apply to Differentials</button></div>
+          <div id="drawing-diff-period-preview" class="drawing-periodicity-preview">Preview has not been run.</div>
+        </div>
+      </section>
+
+      <section class="panel-section periodicity-tool-section certified-periodicity-section">
+        <details id="certified-periodicity-details">
+          <summary><span><span class="eyebrow">ADVANCED / CERTIFIED</span> Source-backed D<sup>8</sup></span></summary>
+          <div class="certified-periodicity-content">
+            <p class="hint">Certificate-scoped propagation, separate from the manual drawing tool above.</p>
+            <div id="periodicity-tool"><p class="empty">Loading certified periodicity scope.</p></div>
+          </div>
+        </details>
       </section>
 
       <section class="panel-section">
