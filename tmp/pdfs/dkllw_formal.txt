@@ -1,0 +1,3131 @@
+Peking Mathematical Journal
+https://doi.org/10.1007/s42543-024-00087-7
+
+ORIGINAL ARTICLE
+
+
+
+RO(G)-Graded Homotopy Fixed Point Spectral Sequence for
+Height 2 Morava E-Theory
+
+Zhipeng Duan1 · Hana Jia Kong2 · Guchuan Li3                      · Yunze Lu4 ·
+Guozhen Wang5
+
+
+Received: 8 September 2022 / Revised: 22 December 2023 / Accepted: 3 March 2024
+© Peking University 2024
+
+
+
+Abstract
+We consider G = Q 8 , SD16 , G 24 , and G 48 as finite subgroups of the Morava stabilizer
+group which acts on the height 2 Morava E-theory E2 at the prime 2. We completely
+compute the G-homotopy fixed point spectral sequences of E2 . Our computation uses
+recently developed equivariant techniques since Hill, Hopkins, and Ravenel. We also
+compute the (∗ − σi )-graded Q 8 - and SD16 -homotopy fixed point spectral sequences,
+where σi is a non-trivial one-dimensional representation of Q 8 .
+
+Keywords Morava E-theory · Topological modular forms · R O(G)-graded
+homotopy groups
+
+Mathematics Subject Classification 55P42 · 20J06 · 55Q91 · 55P60
+
+
+
+
+B Guchuan Li
+    liguchuan@math.pku.edu.cn
+    Zhipeng Duan
+    zhipeng@njnu.edu.cn
+    Hana Jia Kong
+    hana.jia.kong@gmail.com
+    Yunze Lu
+    yul248@ucsd.edu
+    Guozhen Wang
+    wangguozhen@fudan.edu.cn
+
+1   School of Mathematical Sciences, Nanjing Normal University, Nanjing, China
+2   School of Mathematical Sciences, Zhejiang University, Hangzhou, China
+3   School of Mathematical Sciences, Peking University, Beijing, China
+4   Department of Mathematics, University of California San Diego, San Diego, USA
+5   Shanghai Center for Mathematical Sciences, Fudan University, Shanghai, China
+
+
+                                                                                    123
+                                                                               Z. Duan et al.
+
+
+1 Introduction and Main Results
+
+1.1 Motivation and Main Results
+
+Chromatic homotopy theory studies large-scale phenomena in the stable homotopy
+category using the algebraic geometry of smooth 1-parameter formal groups [42, 43].
+The moduli stack of formal groups has a stratification by heights, which in the stable
+homotopy category corresponds to localizations with respect to the Morava E-theories
+En of height n ≥ 0.
+   We fix a prime p. Let n be the p-typical height-n Honda formal group law
+over F p and let Sn be the automorphism group of n (extended to F pn ). Let
+Gn = Sn Gal(F pn /F p ) be the (extended) Morava stabilizer group. Goerss–Hopkins–
+Miller showed that the continuous action of Gn on π∗ En can be refined to a unique
+E∞ -action of Gn on En [17, 40, 46].
+   At a prime p, one can assemble the information of En with the Gn -action of height n
+for all n ≥ 0 to recover the p-local sphere. More precisely, the chromatic convergence
+theorem due to Hopkins and Ravenel [45] exhibits the p-local sphere spectrum S(0p)
+as the homotopy inverse limit of the En -local spheres (in the sense of Bousfield [13])
+
+                  · · · −→ L En S 0 −→ · · · −→ L E1 S 0 −→ L E0 S 0 .
+
+Furthermore, these localizations can be built inductively via the following homotopy
+pullback square (the chromatic fracture square)
+
+                            L En S 0            L K (n) S 0
+
+
+                           L En−1 S 0       L En−1 L K (n) S 0 ,
+
+where L K (n) denotes the localization functor with respect to K (n), the n th Morava K-
+theory. From this perspective, the K (n)-local spheres L K (n) S 0 are the building blocks
+of the p-local stable homotopy category. Devinatz and Hopkins showed that L K (n) S 0
+is equivalent to the homotopy fixed point spectrum EnhGn [15].
+   A framework for building the K (n)-local sphere from more computable spectra is
+developed in [18, 24]. The more computable spectra are of the form EnhG for various
+finite subgroups G of the Morava stabilizer group Gn . This generalizes the height 1
+resolution
+
+                          L K (1) S 0 ≃ E1hG1 → E1hG → E1hG
+
+where G is a certain finite subgroup of G1 (see [18, 34]). Explicit resolutions of
+the K (2)-local sphere from assembling various E2hG at the prime 2 [4, 11, 25] and
+the prime 3 [18] have led to important progress in the study of K (2)-local category
+including the chromatic splitting of the K (2)-local sphere [6, 8, 19]. From this finite
+resolution perspective, the spectra EnhG are the building blocks of the K (n)-local
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+stable homotopy category. In particular, the homotopy groups π∗ EnhG detect important
+families of classes in the stable homotopy groups of spheres [9, 29, 38]. Therefore,
+computations with EnhG constitute a central topic in chromatic homotopy theory and
+in general are extremely challenging.
+    Hewett classified all the finite subgroups of Sn [26] (see also [14]). From now on,
+we focus on the prime p = 2, which is the only prime p that there are non-cyclic finite
+p-subgroups in the Morava stabilizer group. If n = 2m−1  where  is odd, then when
+m = 2, the maximal finite 2-subgroups of Gn are isomorphic to C2m , the cyclic group
+of order 2m ; when m = 2, n is of the form 4k + 2, and the maximal finite 2-subgroups
+are isomorphic to Q 8 , the quaternion group.
+    There are breakthroughs of computations of EnhG when G is cyclic due to the recent
+development of equivariant methods [7, 23, 30, 31]. These computations are done by a
+new tool called the slice spectral sequence. The slice spectral sequence computations
+of the norm of real cobordism theories induce computations of EnhG at the prime 2 for
+the case G = C2m . As far as the authors are aware, there are no such computations for
+the case G = Q 8 due to the lack of the slice information.
+    At height 2, the group Q 8 first appears as a subgroup of the (small) Morava stabilizer
+group S2 . Maximal finite subgroups of S2 are isomorphic to G 24 = Q 8 C3 . Similarly,
+in the (extended) Morava stabilizer group G2 , there are subgroups isomorphic to SD16
+and G 48 . Homotopy fixed points of E2 with respect to the above subgroups appear in
+the finite resolution of E2hG2 , the K (2)-local sphere at the prime 2, as building blocks
+[4, 11]. Moreover, they also appear in the interplay between chromatic layer 2 and the
+theory of elliptic curves (see for example [10, 27, 32, 33]). Important examples such
+as tm f are related to computations of E2hG 48 .
+    In this paper, we use equivariant methods and a new method, which we called “the
+vanishing line method”, to compute the G-homotopy fixed point spectral sequence (G-
+HFPSS) of the height 2 Morava E-theory E2 at the prime 2 for G = Q 8 , SD16 , G 24
+and G 48 .
+    Let σi (resp., σ j , σk ) be the one-dimensional non-trivial representation of Q 8 that
+i ∈ Q 8 (resp., j, k ∈ Q 8 ) acts trivially. We compute the integer-graded as well as
+(∗ − σi )-graded G-HFPSS for E2 . By symmetry, the (∗ − σi )-graded G-HFPSS gives
+the (∗ − σ j )-graded and the (∗ − σk )-graded G-HFPSS for E2 .
+
+Theorem A (1) The integer-graded Q 8 -HFPSS for E2 has differentials as listed in
+   Table 8 (also see Figs. 5, 6, 7, 8). The E ∞ -page with all 2 extensions is presented
+   in Fig. 9.
+   Furthermore, we have
+
+                     SD16 -HFPSS(E2 ) ⊗Z2 W(F4 ) = Q 8 -HFPSS(E2 ),
+
+    where the tensor products happen on Er and dr for every 2 ≤ r ≤ ∞.
+(2) The (∗ − σi )-graded Q 8 -HFPSS for E2 has differentials in Table 9 (also see
+    Figs. 13, 14, 15, 16) and the E ∞ -page is presented as Fig. 17.
+    Furthermore, we have
+
+                     SD16 -HFPSS(E2 ) ⊗Z2 W(F4 ) = Q 8 -HFPSS(E2 ),
+
+                                                                                123
+                                                                                         Z. Duan et al.
+
+
+    where the tensor products happen on Er and dr for every 2 ≤ r ≤ ∞.
+
+Theorem B The integer-graded G 24 -HFPSS for E2 is a subobject of the integer-graded
+Q 8 -HFPSS for E2 which consists of classes with D m where 3 | m, and the differen-
+tials are the same. The E ∞ -page with all 2 extensions is presented as in Fig. 10.
+Furthermore, we have
+
+                   G 48 -HFPSS(E2 ) ⊗Z2 W(F4 ) = G 24 -HFPSS(E2 ),
+
+where the tensor products happen on Er and dr for every 2 ≤ r ≤ ∞.
+
+   Theorem A gives the complete computation of the Q 8 -HFPSS of E2 for the integer-
+graded part,1 and the (∗ − σi )-graded part.2
+   Our methods for Q 8 -HFPSS computations are independent of previous compu-
+tations and can potentially work for higher heights. The first method is the recently
+developed equivariant method which uses the restriction, transfer, and norm structures
+of the spectral sequence to deduce differentials and hidden extensions. More precisely,
+we deduce differentials and hidden extensions in the Q 8 -HFPSS for E2 from differ-
+entials in the C4 -HFPSS for E2 (computed in [7, 30]) via restrictions, transfers, and
+norms. For example, the restriction functor from Q 8 to C4 implies a hidden 2-extension
+from a class at (54, 2) to a class at (54, 10) in the Q 8 -HFPSS for E2 (see Lemma 4.23)
+which is crucial to deduce the d13 -differential proved in Proposition 4.25. This exempts
+us from using the Toda-bracket-shuffling method as in [3, Proposition 8.5 (3)]. More-
+over, R O(G)-gradings have been proven to be helpful in computations [7, 30]. For
+example, for groups H ⊂ G, the norm map from the H -HFPSS to the G-HFPSS on
+the E 2 -page is only defined after extending to R O(G)-gradings [30, 41, 49]. Norm
+maps allow us to pull back and push forward known differentials for new differential
+information. For example, our computation of the (∗ − σi )-graded G-HFPSS for E2
+gives an alternative proof of the existence of a d9 -differential in the integer-graded
+Q 8 -HFPSS for E2 using the norm method (see Proposition 4.43).
+   We also introduce a new method: “the vanishing line method”. The vanishing line
+result [16, Theorem 6.1] states that at the prime 2, the G-HFPSS for En admits a strong
+vanishing line of filtration N , an explicit number depending on height n and G. Recall
+that having a strong horizontal vanishing line of filtration f means that the spectral
+sequence collapses after the E f -page, and any element of filtration greater than or equal
+to f supports a differential or is hit. In the case for n = 2 and G = Q 8 , the number N
+is 25 and, therefore, all permanent cycles in filtration ≥ 25 must be hit, which forces
+differentials to happen in many cases. For example, in Proposition 4.14, the vanishing
+line method forces three differentials, including the longest d23 -differentials, just from
+the E 2 -page information.
+   Along the way, we proved the following theorem for general heights.
+
+1 While the integer-graded result can be deduced from the tm f computation [3] and should be known to
+experts, it was not written down in the literature as far as the authors are aware.
+2 The Q -representation σ is not a restriction of any G -representation.
+       8                 i                             24
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Theorem C (Theorem 4.8) The Q 8 -HFPSS for E4k+2 admits a strong vanishing line
+of filtration 24k+5 − 9.
+
+   The above theorem improves the number N of the vanishing result in [16, Theo-
+rem 6.1] for the Q 8 case at all possible heights. This improvement makes the vanishing
+line sharp for all known cases.
+   We conclude this introduction with two questions related to the computation of
+Q 8 -HFPSS for E4k+2 at higher heights. The equivariant methods and “the vanishing
+line method” work for higher heights. Nevertheless, a computable description of the
+Q 8 -action on π∗ E4k+2 like (2.3) for k = 0 is not known for k ≥ 1.
+
+Question 1.1 How to give a computable description of the Q 8 -action on Morava E-
+theory E4k+2 for k ≥ 1?
+
+Question 1.2 Is the vanishing line result Theorem C of Q 8 -HFPSS for Morava E-
+theory E4k+2 sharp for k ≥ 1?
+
+1.2 Summary of the Contents
+
+This paper is organized as follows. Section 2 provides a necessary background for the
+computational tools for the R O(G)-graded homotopy fixed point spectral sequence,
+and the input for the computation of the Q 8 -HFPSS for E2 . In particular, we review
+the norm structure in R O(G)-graded homotopy fixed point spectral sequences (The-
+orem 2.8) and the interplay between the homotopy fixed point spectral sequences
+and the Tate spectral sequences in general (Lemma 2.1). We briefly review the Q 8 -
+action on π∗ E2 (2.3) and the computation of R O(C4 )-graded Mackey-functor-valued
+C4 -HFPSS for E2 (Sect. 2.4). We take these as the input for the Q 8 -HFPSS for E2 .
+In Sect. 3, we compute the E 2 -page of the integer-graded and (∗ − σi )-graded Q 8 -
+HFPSS(E2 ) by Bockstein spectral sequences.
+   In Sect. 4, we derive all differentials in the integer-graded Q 8 -HFPSS for E2 via
+equivariant methods and the method of Theorem 4.8. In Sect. 4.1, we prove the prop-
+erties of the Q 8 -HFPSS for E2 that we need for our computation. The vanishing line
+(Theorem 4.8) works for general heights and is of its own interest. In Sect. 4.2, we
+give a complete computation of all differentials in the logical order. The vanishing line
+method gives some difficult differentials (for example Proposition 4.14). In Sect. 4.3,
+we solve all 2 extensions. In Sect. 4.4, we present alternative ways to compute some
+differentials.
+   In Sect. 5, we also apply equivariant methods and the vanishing line method to
+compute the (∗−σi )-graded Q 8 -HFPSS for E2 . In particular, this computation gives an
+alternative proof of a d9 -differential in the integer-graded part. In Sect. 6, we list figures
+that present our computation. In Appendix A, we explain algebraic computations of
+the Q 8 group cohomology. In addition, we explain how the Hurewicz image of E2hC4
+helps to compute the restriction map from Q 8 -HFPSS to C4 -HFPSS.
+
+
+
+
+                                                                                   123
+                                                                               Z. Duan et al.
+
+
+2 Preliminaries
+
+2.1 RO(G)-Graded Homotopy Fixed Point Spectral Sequences and Tate Spectral
+    Sequences
+
+Let X be a (genuine) G-spectrum. Denote the ring of real orthogonal virtual repre-
+sentations of the group G by R O(G). The equivariant homotopy groups of X can be
+organized into an R O(G)-graded Mackey functor π  X as follows
+
+
+
+                        π V (X )(G/H ) = πVH (X ) = [S V , X ] H
+
+
+where V is a virtual G-representation and [S V , X ] H denotes the genuine H -equivariant
+homotopy classes of maps (see [7, Section 2.1]).
+   We briefly review the Tate diagram of a G-spectrum X from [21]. Recall the cofree
+replacement map X → F(E G + , X ) and the isotropy separation sequence E G + →
+S 0 → Ẽ G. Smashing them together gives the following diagram:
+
+
+
+             E G+ ∧ X                       X                      Ẽ G ∧ X
+
+                    ≃
+
+        E G + ∧ F(E G + , X )         F(E G + , X )          Ẽ G ∧ F(E G + , X )
+
+
+where the left vertical map is an underlying weak equivalence. Taking G-fixed points
+gives us the following Tate diagram:
+
+
+
+                            X hG          XG          G X
+                                ≃
+
+                            X hG         X hG         XtG.
+
+
+
+The Adams isomorphism [1, Theorem 5.4] shows that the fixed point (E G + ∧ X )G is
+weak equivalent to the homotopy orbit X hG = (E G + ∧ X )/G. The left bottom map is
+the norm map and its cofiber X t G is the Tate construction. Moreover, the right square
+is a homotopy pullback square which relates the information of the homotopy fixed
+point X hG , the geometric fixed point G X and the Tate construction X t G with the
+actual fixed point X G . This diagram is useful in both theoretical and computational
+applications (see for examples [20, 21]).
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+  We shall consider an analog of the Tate diagram for the slice tower of X as in [16,
+Section 2]. Let P • X = {P n X }n∈Z be the slice tower of X . The diagram of the towers
+
+          E G+ ∧ P• X                    P• X                    Ẽ G ∧ P • X
+
+                   ≃
+
+    E G + ∧ F(E G + , P • X )      F(E G + , P • X )       Ẽ G ∧ F(E G + , P • X )
+
+induces a Tate diagram of spectral sequences for computing each entry in the Tate
+diagram
+
+                   HOSS(X )        SliceSS(X )         LSliceSS(X )
+                            =                                                     (2.1)
+                   HOSS(X )        HFPSS(X )           TateSS(X ).
+
+We now explain the above notations. We use ∗ to denote an integer and  to denote
+an R O(G)-grading. We denote the underling homotopy group π0e (X ∧ S − ) as a
+G-module by π (X ).
+ • The spectral sequence associated to the tower E G + ∧ P • X is the R O(G)-graded
+   homotopy orbit point spectral sequence (HOSS) of X with the E 2 -page as
+
+                                    H ∗ (G, π (X ))
+
+   which converges to π −∗ E G + ∧ X . In particular, in integer-graded part and
+   G/G-level, this spectral sequence converges to π∗G E G + ∧ X = π∗ X hG .
+ • The spectral sequence associated to the tower P • X is the slice spectral sequence
+   (SliceSS) of X with the E 2 -page as
+
+                                                ||
+                                     π −∗ P|| X
+
+                                         ||
+   which converges to π −∗ X . Here P|| X is the fiber of P || X → P ||−1 X and
+   || is the underlying dimension of . In particular, in integer-graded part and
+   G/G-level, this spectral sequence converges to π∗G X = π∗ X G .
+ • The spectral sequence associated to the tower F(E G + , P • X ) is the R O(G)-
+   graded homotopy fixed point spectral sequence (HFPSS) of X [12, Section 2] with
+   the E 2 -page as
+
+                                    H ∗ (G, π (X ))
+
+    which converges to π −∗ F(E G + , X ). In particular, in integer-graded part and
+    G/G-level, this spectral sequence converges to π∗G F(E G + , X ) = π∗ X hG .
+
+                                                                            123
+                                                                              Z. Duan et al.
+
+
+ • The spectral sequence associated to the tower Ẽ G ∧ P • X is the R O(G)-graded
+   localized slice spectral sequence (LSliceSS) of X introduced in [42]. In many
+   cases, including G = Q 8 , smashing with Ẽ G is equivalent to inverting a certain
+   Euler class aV (see Definition 2.2 for the definition of Euler classes) for a specific
+   G-representation V . Therefore, the E 2 -page of this spectral sequence is
+
+                                                 ||
+                                     π −∗ aV−1 P|| X
+
+   which converges to π −∗ aV−1 X . In particular, in integer-graded part and G/G-
+   level, this spectral sequence converges to π∗G aV−1 X = π∗ G X .
+ • The spectral sequence associated to the tower Ẽ G ∧ F(E G + , P • X ) is the R O(G)-
+   graded Tate spectral sequence (TateSS) of X with the E 2 -page as
+
+                                     ∗ (G, π (X ))
+                                     H
+
+   which converges to π −∗ Ẽ G ∧ F(E G + , X ). In particular, in integer-graded part
+   and G/G-level, this spectral sequence converges to π∗G Ẽ G ∧ F(E G + , X ) =
+   π∗ X t G .
+   The natural map P • X → F(E G + , P • X ) induces a comparison map between
+spectral sequences SliceSS(X ) and HFPSS(X ). The following lemma states that this
+comparison map is an isomorphism in a certain range ([49, Theorem 9.4] for the
+integer-graded part and [16, Theorem 3.3] for R O(G)-gradings).
+
+Lemma 2.1 [16, 49] The map from the R O(G)-graded slice spectral sequence to the
+R O(G)-graded homotopy fixed point spectral sequence
+
+                             |V |                           |V |
+                     πVG−s P|V | X       πVG−s F(E G + , P|V | X )
+
+
+                        πVG−s X             πVG−s F(E G + , X )
+
+
+induces an isomorphism on the E 2 -page in the region defined by the inequality
+
+             τ (V − s − 1) > |V |, τ (V ) :=       min     |H | · dim V H .
+                                                {e}H ⊂G
+
+
+Furthermore, the map induces a one-to-one correspondence between the differentials
+in this isomorphism region.
+
+   We recall two kinds of distinguished classes in the R O(G)-graded homotopy groups
+that are useful for naming the relevant classes on the E 2 -page of the slice spectral
+sequence (see [29, Section 3.4] and [31, Section 2.2]) and the homotopy fixed point
+spectral sequence.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Definition 2.2 Let V be a G-representation. We denote the inclusion of the fixed points
+S 0 → S V by aV . This is a class in π−VG S 0 . For a ring spectrum X with G-action, we
+
+abuse notation to denote the image of aV by aV under the map S 0 → X . We will also
+denote the class on the E 2 -page of the G-HFPSS(S 0 ) or the G-HFPSS(X ) that detects
+the image of aV by aV .
+   By construction, we have the following property.
+Proposition 2.3 With the above notation, the class aV on the E 2 -page of the G-
+HFPSS(X ) is a permanent cycle.
+   If the representation V has non-trivial fixed points (i.e., V G = {0}), then aV = 0.
+Moreover, for any two G-representations V and W , we have the relation aV ⊕W =
+aV aW in π−VG
+               −W (S ). When X = H Z, the a V -class in π−V (H Z) is always a torsion
+                     0                                      G
+
+class, according to [30, Lemma 3.6]
+
+                                     |G/G V |aV = 0
+
+where G V is the isotropy subgroup of V .
+  For an orientable G-representation V , a choice of orientation for V gives an iso-
+             G (S V ; Z) ∼ Z. In particular, the restriction map
+morphism H|V   |         =
+
+                                                     |V |
+                                | (S , Z) −→ H|V | (S , Z)
+                              G     V
+                            H|V                                                        (2.2)
+
+is an isomorphism.
+Definition 2.4 Let V be an orientable G-representation. We define the orientation class
+of V u V ∈ H|VG (S V ; Z) to be the generator that maps to 1 under the above restriction
+               |
+isomorphism (2.2).
+   The orientation class u V is stable in V in the sense that if 1 is the trivial representa-
+tion, then u V ⊕1 = u V . If V and W are two orientable G-representations, then V ⊕ W
+is also orientable with the direct sum orientation, and u V ⊕W = u V u W .
+   Norms of aV classes and u V classes are given as follows.
+Proposition 2.5 [29, Lemma 3.13] Let H ⊂ G be a subgroup and V is a G-
+representation
+
+                                 N HG (aV ) = aInd V ;
+                                u Ind |V | N HG (u V ) = u Ind V
+
+where Ind means Ind G
+                    H.
+   Given a G-oriented representation V and a G-equivariant commutative ring spec-
+trum X , by [29, Corollary 4.54] and the unit map S 0 → X , Hill–Hopkins–Ravenel
+defines the u V classes on the E 2 -page of the slice spectral sequence for X via the
+following map on 0th slices
+
+                                 H Z = P00 S 0 → P00 X .
+
+                                                                                  123
+                                                                                   Z. Duan et al.
+
+
+With Lemma 2.1, we can define u V classes in the R O(G)-graded HFPSS for X .
+   The computation of the TateSS and the HFPSS are closely related. In any R O(G)-
+graded page the natural map from HFPSS(X ) to TateSS(X ) is an isomorphism in
+positive filtration ([16, Theorem 3.6]. See also [12, Lemma 2.12]).
+Lemma 2.6 The map from the R O(G)-graded homotopy fixed point spectral sequence
+to the R O(G)-graded Tate spectral sequence induces an isomorphism on the E 2 -
+page for classes in filtration s > 0, and a surjection for classes in filtration s = 0.
+Furthermore, there is a one-to-one correspondence between differentials whose source
+is in non-negative filtrations.
+   One advantage of considering Tate spectral sequences is that they are whole-plane
+spectral sequences with more invertible classes. This feature makes the calculations
+more accessible.
+   If V is a G-representation such that its fixed point set V H is trivial for any non-trivial
+subgroup H of G, then S ∞V is a geometric model for Ẽ G. If X is a G-spectrum, we
+have
+
+                            Ẽ G ∧ X ≃ S ∞V ∧ X = aV−1 X .
+
+This implies that for such representation V , the class aV is invertible in the Tate spectral
+sequence.
+Method 2.7 When X is a commutative ring spectrum, its G-TateSS is multiplicative,
+which is extremely useful for proving permanent cycles and determining differentials
+in its G-HFPSS.
+     Assume that we find a non-trivial differential dr (a) = b in the G-HFPSS. Then there
+is a corresponding differential dr (a  ) = b in the G-TateSS by Lemma 2.6. We can
+move this differential by some r -cycle c in the G-TateSS such that dr (c a  ) = c b
+is a differential with the source c a  in a negative filtration and the target c b in a
+non-negative filtration. (One can choose c = aV−k for proper integer k where aV is
+an invertible class as above.) Then c b is a permanent cycle in the G-TateSS and
+hence the corresponding class of c b in the G-HFPSS is also a permanent cycle
+by Lemma 2.6. This method allows us to identify permanent cycles at Er -page for
+r < ∞. Moreover, if c is an invertible permanent cycle in the G-TateSS for X , then
+the class c b will survive to the Er -page and the differential dr (c a  ) = c b happens
+on the Er -page in the G-TateSS. If it is not, then there is a shorter differential, say
+dr  (d) = c b , which kills the class c b on the Er -page for r  < r . Then the Leibniz
+rule forces dr  ((c )−1 d) = b , which is a contradiction. Furthermore, if this differential
+dr (c a  ) = c b completely locates in filtration greater than 0, then Lemma 2.6 shows
+that there is a corresponding differential dr (ca) = cb in G-HFPSS.
+   Now we focus on G = Q 8 and its subgroups. We will use the following notations
+for representations of C2 , C4 and Q 8 .
+ • When G = C2 , R O(C2 ) = Z{1, σ2 } where σ2 is the sign representation.
+ • When G = C4 , R O(C4 ) = Z{1, σ, λ}. The representation σ is the sign repre-
+   sentation and λ is the 2-dimensional representation by rotating the plane R2 by
+   π
+   2.
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+ • When G = Q 8 , R O(Q 8 ) = Z{1, σi , σ j , σk , H}. The representations σi , σ j , and
+   σk are one-dimensional representations whose kernels are C4 i, C4  j, and C4 k,
+   i.e., the three C4 subgroups generated by i, j and k, respectively. The representation
+   H is a four-dimensional irreducible representation, obtained by the action of Q 8
+   on the quaternion algebra H = R ⊕ Ri ⊕ R j ⊕ Rk by left multiplication.
+   By the above discussion, S ∞H is a model of Ẽ Q 8 . Therefore, the class aH is
+invertible in any Q 8 -Tate spectral sequence.
+
+2.2 Norm Differentials and Strong Vanishing Lines in Spectral Sequences
+
+The Hill–Hopkins–Ravenel norm structure holds in nice equivariant spectral sequences.
+Let H ⊂ G be a subgroup. Consider the following diagram of G-spectra
+
+                            · · · → P n+1 → P n → P n−1 → · · ·
+
+Recall that Pnm denotes the fiber of P m → P n−1 and Pn = Pn∞ .
+                                                                  n,
+   We denote the spectral sequence associated to this tower by {Er , dr }, where
+n denotes the filtration and the second grading denotes the R O(G)-graded stem.
+We say the spectral sequence has a norm structure if there are two types of maps
+                                        |G/H |n
+N HG Pn → P|G/H |n and N HG Pnn → P|G/H |n such that the following two diagrams
+commute up to homotopy.
+
+                 N HG Pn            P|G/H |n         N HG Pn         P|G/H |n
+
+
+
+                N HG Pn−1                                              |G/H |n
+                                  P|G/H |(n−1)      N HG Pnn         P|G/H |n
+
+The norm structure induces a map between the towers
+
+    ···       N HG Pn                                                       N HG Pn−1    ···
+
+    ···      P|G/H |n       P|G/H |n−1    ···      P|G/H |(n−1)+1      P|G/H |(n−1)      ···
+                                                                                         ∗,
+which induces a map from the E 2 -page of the H -level spectral sequence H -E 2                to
+                                                   ∗,
+the E 2 -page of the G-level spectral sequence G-E 2 as follows
+
+                                                             H V +|G/H |n
+                                                 |G/H |n,Ind G
+                    N HG : H -E 2n,V +n −→ G-E 2                            .
+
+It is proved in [41] that if X is a commutative G-ring spectrum then its slice spectral
+sequence, homotopy fixed point spectral sequence, and Tate spectral sequence (at least
+for H = e) have a norm structure.
+    One consequence of having a norm structure is that we can predict differentials in
+the G-level from differentials in the H -level.
+
+                                                                                        123
+                                                                             Z. Duan et al.
+
+
+Theorem 2.8 [49, Proposition I.5.17] [30, Theorem 4.7] In a spectral sequence with
+norm structures, if we have a differential dr (x) = y in the spectral sequence of a
+H -spectrum X , then in the spectral sequence for Y = N HG (X ) there is a predicted
+differential
+
+                        d|G/H |(r −1)+1 (aρ̄ N HG (x)) = N HG (y)
+
+where ρ = Ind G
+              H (1) and ρ̄ is the reduced representation of ρ.
+
+   In [16] the authors use the norm structures to show that every class in G-TateSS(En )
+is hit before a specific page depending on n and G.
+Theorem 2.9 [16, Theorem 5.1] At the prime 2, for any height n and any G ⊂ Gn
+a finite subgroup, let H be a Sylow 2-subgroup of G. All the classes in the R O(G)-
+graded Tate spectral sequence of En vanish after the E Nn,H -page. Here Nn,H is a
+positive integer defined as follows:
+ • when (n, H ) = (2m−1 , C2m ), Nn,H = 2n+m − 2m + 1;
+ • when (n, H ) = (4k + 2, Q 8 ), Nn,H = 2n+3 − 7.
+  The isomorphism range of the natural map G-HFPSS(En ) → G-TateSS(En )
+implies there is a strong horizontal vanishing line in E ∞ -page of G-HFPSS(En ).
+
+Theorem 2.10 [16, Theorem 6.1] At the prime 2, for any height n and any G ⊂ Gn
+a finite subgroup, let H be a Sylow 2-subgroup of G. There is a strong horizontal
+vanishing line of filtration Nn,H in the R O(G)-graded homotopy fixed point spectral
+sequence of En .
+
+   It turns out that the existence of such horizontal vanishing lines is extremely help-
+ful for determining higher differentials in homotopy fixed point spectral sequences. In
+particular, for our computation in Q 8 -HFPSS(E2 ), the vanishing line gives an inde-
+pendent proof of several higher differentials in the integer gradings. Moreover, this
+vanishing line plays a crucial role in the computation of (∗ − σi )-graded Q 8 -HFPSS
+for E2 .
+
+2.3 Morava E-Theory E2 with G24 -Action
+
+We fix a pair (F pn , n ) where n is the height-n Honda formal group law over F p
+extended to F pn . Then Lubin and Tate [39] show that there is a universal deformation
+Fn defined over a complete local ring
+
+                              W(F pn )[[u 1 , . . . , u n−1 ]]
+
+where W(F pn ) is the p-typical ring of Witt vectors of F pn . The Landweber exactness
+theorem shows that this ring can be realized by a complex-oriented ring spectrum En .
+   Let Sn be the automorphism group of n , namely the small n th Morava stabilizer
+group. Let Gn = Sn  Gal(F pn /F p ) be the automorphism group of (F pn , n ), namely
+the (extended) n th Morava stabilizer group. By universality, π∗ En admits a Gn -action.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+The Goerss–Hopkins–Miller theorem [17, 40, 46] lifts this action uniquely to an E∞ -
+action on En .
+   We are interested in computing π∗ EnhG for G a finite subgroup of Gn via G-
+homotopy fixed point spectral sequences. For these computations, the action of the
+Galois group Gal(F pn /F p ) will not change the differential pattern. More precisely,
+we review the following result.
+
+Lemma 2.11 [11, Lemma 1.32] [8, Lemma 2.2.6, Lemma 2.2.7] Let F ⊂ Gn be a
+closed subgroup and let F0 = F ∩ Sn . Suppose the following canonical map is an
+isomorphism
+
+                             F/F0 → Gn /Sn ∼
+                                           = Gal(F pn /F p ).
+
+Then there is a commutative diagram of homotopy fixed point spectral sequences
+
+
+                W(F pn ) ⊗Z p H ∗ (F, π∗ En )           W(F pn ) ⊗Z p π∗ Enh F
+                                   ∼
+                                   =                                 ∼
+                                                                     =
+
+                        H ∗ (F0 , π∗ En )                      π∗ Enh F0 .
+
+
+   In this paper, we will focus on the case p = 2 and n = 2. The Galois group
+Gal(F4 /F2 ) is isomorphic to C2 and we write W for the Witt vectors W(F4 ). There
+are finite subgroups Q 8 and G 24 ∼    = Q 8  C3 in the small Morava stabilizer group
+S2 and SD8 = Q 8  Gal and G 48 ∼        = G 24  Gal in the extended Morava stabilizer
+group G2 . The subgroups Q 8 , G 24 are unique up to conjugacy in S2 [14] (see also [8,
+Remark 2.4.5]). Therefore, there is no ambiguity of the notation π∗ E2h Q 8 or π∗ E2hG 24 .
+The subgroup Q 8 and complex orientation coordinates can be chosen specifically from
+the theory of elliptic curves at the prime 2 so that the action has explicit formulas as
+follows (see [5, Section 2] for more details).
+   We recall the action of G 24 on π∗ E2 [5, Lemma A.1]. The coefficient ring is a
+complete local ring π∗ E2 = W[[u 1 ]][u ±1 ] with |u| = 2, |u i | = 0 and a maximal ideal
+I = (2, u 1 ). Denote u 1 u −1 by v1 , the generator of the quaternion group Q 8 by i, j, k
+and the generator of C3 by ω. We regard the third root of unity ζ as a class in the Witt
+vectors W. The G 24 -actions on u −1 and v1 are
+
+                   ω∗ (u −1 ) = ζ 2 u −1 ,        ω∗ (v1 ) = v1 ,
+                                v1 − u −1                    v1 + 2u −1
+                   i ∗ (u −1 ) =           ,     i ∗ (v1 ) =             ,
+                                 ζ −ζ
+                                   2                           ζ2 − ζ
+                                ζ v1 − u −1                  v1 + 2ζ 2 u −1          (2.3)
+                   j∗ (u −1 ) =              ,    j∗ (v1 ) =                 ,
+                                  ζ −ζ
+                                     2                          ζ2 − ζ
+                                ζ 2 v1 − u −1                v1 + 2ζ u −1
+                   k∗ (u −1 ) =                , k ∗ (v1 ) =               .
+                                   ζ2 − ζ                       ζ2 − ζ
+
+                                                                                 123
+                                                                                        Z. Duan et al.
+
+                                             −1 ) which is Q -invariant. Then (E ) could be
+  We define D to be         g∈Q 8 /C2 g∗ (u                  8                   2 ∗
+expressed as
+
+                              π∗ E2 ∼
+                                    = (W[v1 , u −1 ][D −1 ])∧I ,
+
+which is more convenient for the Q 8 -cohomology computation.
+
+Lemma 2.12 There is an isomorphism
+
+                  H ∗ (Q 8 , π∗ E2 ) ∼
+                                     = (H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ])∧J
+
+where J = (2, v14 ).
+                                                                                        √         √
+Proof We observe that two ideals I and J share the same radical ideal, i.e.,                I =       J.
+Therefore, we have the isomorphism
+
+           H ∗ (Q 8 , W[v1 , u −1 ][D −1 ]∧I ) ∼
+                                               = H ∗ (Q 8 , W[v1 , u −1 ][D −1 ]∧J ).
+
+Because D is Q 8 -invariant, we have
+
+            H ∗ (Q 8 , W[v1 , u −1 ][D −1 ]) ∼
+                                             = H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ].
+
+Moreover, the ideal J is actually Q 8 -invariant, since
+
+                                              Q
+                                  v14 ≡ NC28 (v1 )     mod 2
+
+according to (2.3). It implies H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ] is a J -module. Note that
+W[v1 , u −1 ][D −1 ] is finitely generated as a W-algebra. Therefore, the completion is
+an exact functor [2, Theorem 10.12] [35, Theorem A.1] and we have
+
+                  H ∗ (Q 8 , π∗ E2 ) ∼
+                                     = (H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ])∧J .
+
+                                                                                                      
+                                                                                                      
+
+2.4 Mackey Functor C4 -Homotopy Fixed Point Spectral Sequence for E2
+
+In this subsection, we recall some results on the Mackey-functor-valued C4 -HFPSS for
+E 2 in [7]. See also the slice spectral sequence computation of the truncated C4 -normed
+Real Brown–Petersen spectrum B P ((C4 ))1 [30, 31].
+Proposition 2.13 [7, Proposition 5.6] There is an isomorphism
+
+                 H ∗ (C2 , π E2 ) ∼
+                                   = W[[μ0 ]][r̄1±1 , aσ2 , u ±1
+                                                              2σ2 ]/(2aσ2 ),
+
+where the ( − ∗, ∗)-degree of the classes is given by |μ0 | = (0, 0), |r̄1 | = (ρ2 , 0),
+|aσ2 | = (−σ2 , 1), and |u 2σ2 | = (2 − 2σ2 , 0).
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+   We partially rewrite the names of classes on the E 2 -page of C4 -HFPSS(E2 ) in
+[7, Proposition 5.10] with slice names. For slice names, see [30, 31] for details. One
+advantage of using slice names is that it is better to organize differentials by the slice
+differential theorem [29, Theorem 9.9].
+Proposition 2.14 [7, Proposition 5.10] There is an isomorphism
+
+              H ∗ (C4 , π E2 ) ∼
+                                = W[[μ]][T2 , η, η , aλ , aσ ][d̄±1    ±1 ±1
+                                                                  1 , u λ , u 2σ ]/ ∼
+
+where μ = trC                             C4 2                              C4
+            C2 (μ0 ), T2 = s̄1 u 2σ2 = tr C2 (r̄1 u 2σ2 ), η = s̄1 aσ2 = tr C2 (r̄1 aσ2 ) and
+              4              2
+
+η = s̄1 u σ aσ2 = trC
+                     C2 (r̄1 aσ2 u σ ). Although σ is not an oriented C 4 -representation, we
+                       4
+
+apply u σ here indicating that η is transferred from r̄1 aσ2 from integer-graded part
+in C2 -level to (1 − σ )-page in C4 -level. The relation ∼ is the ideal generated by the
+following relations
+
+        2η = 2η = 2aσ = 4aλ = 0,                   T22 =    1 ((μ − 2)
+                                                                          2
+                                                                              + 4),
+        η u 2σ = η
+          2           2
+                           = T2 u −1
+                                  λ u 2σ aλ ,
+                                                        
+                                                    T2 η = d̄1 μηu λ u 2σ ,
+        T2 η = d̄1 μη u λ ,                        ηη = μu 2σ aλ ,
+        u λ a2σ = 2aλ u 2σ ,                        μaσ = ηaσ = η aσ = T2 aσ = 0.
+
+                                                                  hC4
+        1 = d̄1 u 2λ u 2σ at (8, 0) is an invertible class in π∗ E2 .
+Here          2
+
+Remark 2.15 Propositions 2.13 and 2.14 give a full description of the Mackey functor
+H ∗ (C4 , π E2 ) by the Frobenius relation [7, Remark 5.17] and the multiplicative
+property of restriction.
+Remark 2.16 A warning is that one needs to be careful about the isomorphism range
+(see Lemma 2.1) to translate between the slice spectral sequence and the homo-
+topy spectral sequence. For example, in the C4 -SliceSS(B P ((C4 ))1), the class u 2σ
+supports a non-trivial d5 -differential [31, Theorem 3.4], while in the correspond-
+ing C4 -HFPSS(E2 ), the class u 2σ actually supports a non-trivial d7 -differential [7,
+Remark 5.23].
+   The computation of the Mackey-functor-valued C4 -homotopy fixed point spectral
+sequence for E2 is explained in detail in [7, Section 5] and presented by [7, Figure 5.8]
+and [7, Figure 5.14].
+   The R O(G)-graded Mackey functor computation is useful even if one only cares
+about the computation of the integer-graded part π∗ EnhG . The following discussion of
+hidden extensions is a good example. We can use exotic operations (exotic transfers,
+exotic restrictions, and so on) in Mackey-functor-valued spectral sequences to deduce
+differentials and hidden extensions inside the spectral sequences. For more detailed
+definitions and properties of such phenomena, one could refer to [41, Section 3.3].
+   In [30, Lemma 4.2], the authors introduce a useful trick to determine exotic restric-
+tions and transfers on the E ∞ -page of Mackey-functor-valued G-HFPSS.
+Lemma 2.17 [30, Lemma 4.2] Let G be a cyclic 2-group and G  be its index 2 subgroup.
+Then in π  (F(E G + , X )) we have
+
+                                                                                        123
+                                                                                           Z. Duan et al.
+
+
+ • ker(resG G  ) = im(aσ ),
+         G  ) = ker(aσ ),
+ • im(tr G
+where σ is the sign representation of G.
+
+   The following hidden 2 extension in stem 22 is a good example showing that equiv-
+ariant structures provide extra integer-graded information (see a similar 2 extension
+in stem 2 in [41, Remark 5.15]). In [30, Figure 15] and [7, Figure 5.6], they drew all
+exotic restrictions and transfers in the E ∞ -page of the Mackey functor valued C4 -
+HFPSS(E2 ). The 2 extension follows from an exotic transfer and an exotic restriction
+in the 22 stem. We spell out the details in Lemma 2.18.
+
+Lemma 2.18 In the Mackey-functor-valued C4 -HFPSS for E2 , there is an exotic
+restriction in stem 22 from d̄61 u 6λ u 4σ a2σ to d̄41 r̄16 u 8σ2 a6σ2 and there is an exotic transfer
+in stem 22 from d̄41 r̄16 u 8σ2 a6σ2 to d̄81 u 4λ u 6σ a4λ a2σ . As a consequence, there is a hidden
+2 extension from d̄61 u 6λ u 4σ a2σ to d̄81 u 4λ u 6σ a4λ a2σ .
+
+Proof According to the computations in [7, 30], in stem 22 there are only three classes
+who survive: d̄61 u 6λ u 4σ a2σ and d̄81 u 4λ u 6σ a4λ a2σ in C4 -level and d̄41 r̄16 u 8σ2 a6σ2 in C2 -
+level. We first claim the class d̄61 u 6λ u 4σ a2σ is not in the image of multiplication by
+aσ . If there is some x such that aσ x is d̄61 u 6λ u 4σ a2σ , then x is detected by classes at
+(22 + σ, 1) or (22 + σ, 0). There is only one class at (22 + σ, 1) which is d̄41 u 4λ u 4σ aσ
+on E 2 -page. According to [31, Theorem 3.11], this class supports a d13 -differential
+
+                   d13 (d̄41 u 4λ u 4σ aσ ) = d̄41 u 4σ d13 (u 4λ aσ ) = d̄71 u 8σ a7λ .
+
+There is no non-trivial class at (22 + σ, 0). Therefore, in homotopy the class
+d̄61 u 6λ u 4σ a2σ is not in the image of multiplication by aσ . By Lemma 2.17, this class
+must have a non-trivial restriction in C4 -Mackey functor π ∗ (E2 ), and the desired
+exotic restriction follows from degree reasons.
+     On the other hand by the gold relation u λ a2σ = 2u 2σ aσ and 2aσ = 0 we know on
+E 2 -page
+
+                                   d̄81 u 4λ u 6σ a4λ a2σ · aσ = 0.
+
+Moreover, according to the computation on (∗ − σ )-page of C4 -HFPSS(E2 ) [7], there
+is no hidden aσ -extension from d̄81 u 4λ u 6σ a4λ a2σ by degree reasons. Since we have
+      G  ) = ker(aσ ), the class d̄1 u 4λ u 6σ a4λ a2σ must be a transfer of a class from
+im(tr G                               8
+
+C2 -level. Then the desired exotic transfer follows from degree reasons.
+    According to [7], E 2 , as a C4 -spectrum, its Mackey functor valued homotopy groups
+π ∗ E2 satisfy
+
+                                           tr ◦ res(1) = 2.
+
+Then the exotic transfer and restriction that we proved show the existence of the hidden
+2 extension from d̄61 u 6λ u 4σ a2σ to d̄81 u 4λ u 6σ a4λ a2σ .                        
+                                                                                       
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Remark 2.19 For degree reasons, the class d̄61 u 6λ u 4σ a2σ cannot be in the image of the
+transfer from C2 . However, by the gold relation, the product of this class and aσ is
+zero on the E 2 -page. Therefore, this class must have a hidden aσ extension.
+
+Remark 2.20 The hidden 2 extension in Lemma 2.18 will play a crucial role in deducing
+several higher differentials in Q 8 -HFPSS(E2 ) (see Lemma 4.23, Proposition 4.25). A
+similar 2 extension can also be seen in the homotopy groups of tm f in stem 54. The
+proof of this hidden 2 extension in [3, Proposition 8.5 (3)] uses shuffling arguments of
+4-fold Toda brackets. In our Q 8 -HFPSS(E2 ) computation, the corresponding hidden 2
+extension follows directly from the C4 -computation by restriction (see Lemma 4.23).
+
+2.5 RO(G)-Graded Periodicity
+
+When computing HFPSS, another advantage of expanding to R O(G)-gradings is
+having more periodicities. These periodicities have their own theoretical importance.
+They can also move integer-graded calculations to certain R O(G)-gradings where
+the calculations might be simpler. In either the slice spectral sequence for B P ((C4 ))1
+[31] or the C4 -homotopy fixed point spectral sequence for E2 [7, 30], we have the
+following periodicities in the R O(G)-gradings.
+
+Lemma 2.21 The following permanent cycles in C4 -HFPSS(E2 ) [7, 30] are periodic
+classes.
+ • The class d̄1 gives (1 + σ + λ)-periodicity.
+ • The class u 8λ gives (16 − 8λ)-periodicity.
+ • The class u 4σ gives (4 − 4σ )-periodicity.
+ • The class u 4λ u 2σ gives (10 − 4λ − 2σ )-periodicity.
+
+   Since the norm functor is symmetric monoidal, we can apply it to the above
+three invertible permanent cycles, which gives some R O(Q 8 )-periodicities in Q 8 -
+HFPSS(E2 ). The quaternion group Q 8 has three C4 subgroups C4 i, C4  j and
+C4 k generated by i, j and k respectively. For each C4 copy we have the associated
+C4 -periodicities and their norms give R O(Q 8 )-periodicities as follows.
+
+Corollary 2.22 We have the following R O(Q 8 )-periodicities in Q 8 -HFPSS(E2 ).
+       Q
+ • NC48 (d̄1 ) :
+
+                                  1 + σi + σ j + σk + H.
+
+ • NCQ48 (u 4σ ) :
+
+                                   4 + 4σi − 4σ j − 4σk ,
+                                   4 + 4σ j − 4σi − 4σk ,
+                                   4 + 4σk − 4σi − 4σ j .
+
+
+                                                                                123
+                                                                                                      Z. Duan et al.
+
+       Q
+ • NC48 (u 4λ u 2σ ) :
+
+                                     10 + 10σi − 2σ j − 2σk − 4H,
+                                     10 + 10σ j − 2σi − 2σk − 4H,
+                                     10 + 10σk − 2σ j − 2σi − 4H.
+
+       Q
+ • NC48 (u 8λ ) :
+
+                                                16 + 16σi − 8H,
+                                                16 + 16σ j − 8H,
+                                                16 + 16σk − 8H.
+
+Corollary 2.23 There are periodicities of 4 − 4σi , 4 − 4σ j and 4 − 4σk in Q 8 -
+HFPSS(E2 ).
+
+Proof It suffices to show that 4 − 4σi is a periodicity. This periodicity is given by the
+following product:
+
+NC 8 j (u 4λ u 2σ )NC 8k (u 4λ u 2σ )NC 8i (u 8λ )−1 NC 8i (u 4σ )2 NC 8 j (u 4σ )−1 NC 8k (u 4σ )−1 .
+  Q                   Q                   Q                  Q               Q                  Q
+   4                   4                    4                 4                4                  4
+
+
+                                                                                                                 
+                                                                                                                 
+
+Remark 2.24 The above multiplication equals to u 4σi by [29, Lemma 3.13], in other
+words, the classes u 4σi , u 4σ j and u σk are permanent cycles in the R O(Q 8 )-graded
+HFPSS for E2 .
+
+
+3 E2 -Page of the Q8 -HFPSS(E2 )
+
+In this section, we recollect the computation of the E 2 -page of the integer-graded
+Q 8 -HFPSS for E2 by the 2-Bockstein spectral sequence (2-BSS) from [3, 5]. Then we
+compute the E 2 -page of the (∗ − σi )-graded part by the same method. By Lemma 2.12
+we can compute H ∗ (Q 8 , π∗ E2 ), the E 2 -page of the Q 8 -HFPSS for E2 , by first com-
+puting H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ].
+
+3.1 2-BSS, Integer-Graded
+
+The integer-graded 2-Bockstein spectral sequence for computing H ∗ (Q 8 , W[v1 , u −1 ])
+[D −1 ] is
+
+           H ∗ (Q 8 , F4 [v1 , u −1 ])[D −1 ][h 0 ] ⇒ H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ],
+
+where h 0 detects 2. The computation of the E 1 -page, H ∗ (Q 8 , F4 [v1 , u −1 ])[D −1 ], is
+from [5, Appendix A]. We follow the notation in [5], except that we use h 1 for η and
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+h 2 for ν. The differentials of this 2-BSS are essentially from [3, Section 7] and we list
+them in Table 1.
+    More precisely, H ∗ (G 48 , F4 [v1 , u −1 ]) is computed in explicit generators and rela-
+tions in [5, Theorem A.20] (the coefficient in [5] is denoted by S∗ (ρ)). Further, we
+have H ∗ (G 24 , F4 [v1 , u −1 ]) ∼
+                                  = F4 ⊗F2 H ∗ (G 48 , F4 [v1 , u −1 ]).
+                             ∗
+    We will show that H (Q 8 , F4 [v1 , u −1 ])[D −1 ] is 3 copies of the H ∗ (G 24 , F4 [v1 ,
+  −1
+u ])[ −1 ] as follows, where = D 3 .
+
+Lemma 3.1 H ∗ (Q 8 , F4 [v1 , u −1 ])[D −1 ] is a free H ∗ (G 24 , F4 [v1 , u −1 ])[   −1 ]-module
+
+of rank 3 with generators 1, D and D 2 .
+
+Proof We denote the coefficient F4 [v1 , u −1 ] in the group cohomology by A for sim-
+plicity. Because the coefficient A is 2-local, the Lyndon–Hochschild–Serre spectral
+sequence for the group extension
+
+                               1 → Q 8 → G 24 → C3 → 1
+
+collapses at the E 2 -page. Therefore, we have
+
+                               H ∗ (G 24 , A) = H ∗ (Q 8 , A)C3 .
+
+Note that D is Q 8 -invariant and hence in H 0 (Q 8 , A). This gives an H ∗ (G 24 , A)-
+module map
+
+        H ∗ (G 24 , A) ⊕ H ∗ (G 24 , A){D} ⊕ H ∗ (G 24 , A){D 2 } → H ∗ (Q 8 , A).
+
+We first prove the injectivity. Note that the C3 -action on D is given by
+
+                                       ω∗ (D) = ζ 2 D.
+
+Hence the three copies above have different eigenvalues so the images of these three
+copies must intersect trivially. We then prove the surjectivity after inverting . In
+H ∗ (Q 8 , A), we have = D 3 , so D is also inverted after inverting . We first show
+that H ∗ (Q 8 , A) is a direct sum of the above eigenspaces with respect to the C3 -action.
+Note that F4 [Q 8 ] as a C3 -module is a direct sum of eigenspaces with eigenvalues
+1, ζ, ζ 2 , so are the entries of the bar resolution of F4 as F4 [Q 8 ]-modules. Moreover,
+the coefficient F4 [v1 , u −1 ] is also a direct sum of eigenspaces with eigenvalues 1, ζ 2 by
+(2.3). Therefore, every entry in the cochain complex for computing group cohomology
+H ∗ (Q 8 , A) is a direct sum of eigenspaces with eigenvalues 1, ζ, ζ 2 . So is H ∗ (Q 8 , A).
+After inverting D and , H ∗ (G 24 , A), H ∗ (G 24 , A){D}, and H ∗ (G 24 , A){D 2 } give the
+eigenspaces of eigenvalues 1, ζ 2 , ζ respectively. Therefore, the map is also surjective.
+                                                                                             
+                                                                                             
+
+  The lemma above and the computation of H ∗ (G 24 , F4 [v1 , u −1 ]) in [5, Theorem
+A.20] give the Q 8 case as follows.
+
+                                                                                        123
+                                                                                         Z. Duan et al.
+
+
+Proposition 3.2 The bigradings of generators of H ∗ (Q 8 , F4 [v1 , u −1 ])[D −1 ] are:
+
+             |v1 | = (2, 0), |D| = (8, 0), |k| = (−4, 4), |h 1 | = (1, 1),
+             |h 2 | = (3, 1), |x| = (−1, 1), |y| = (−1, 1).
+
+The relations (∼) are generated by
+
+(1) in filtration 1:
+
+                                            v1 h 2 , v12 x, v1 y;
+
+(2) in filtration 2:
+
+                       h 1 h 2 , h 2 x − v1 h 1 x, h 1 y − v1 x 2 , x y, Dy 2 − h 22 ;
+
+(3) in filtration 3:
+
+                                      h 21 Dx − h 32 , Dx 3 − h 22 y;
+
+(4) in filtration 4:
+
+                                                h 41 − v14 k.
+
+  The differentials in the integer-graded 2-BSS for the cohomology H ∗ (Q 8 , W[v1 ,
+ −1
+u ])[D −1 ] are essentially from [3, Section 7] which are determined by the ones in
+Table 1 and the multiplicative structure.
+  The 2-Bockstein computation gives the following result (see also [3, Section 7]).
+
+Theorem 3.3 Tables 2 and 3 present the E ∞ -page of the integer-graded 2-Bockstein
+spectral sequence (also see Figs. 2 and 3), which is the associated graded algebra of
+H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ].
+
+Remark 3.4 According to the properties of Tate cohomology, we know the class k is
+invertible in the associated Tate cohomology for Q 8 with the same coefficient.
+
+Remark 3.5 We note that in H ∗ (Q 8 , W[v1 , u −1 ])[D −1 ], there is a hidden h 2 extension
+
+                                         h 2 · x 2 h 2 = 4k D
+
+by [3, Equation (7.13)] which is useful in later computations. See Figs. 2 and 3 for the
+information of h 2 extensions.
+
+   We refer readers to Sect. 6 for charts of the E 1 -page and the E ∞ -page.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Table 1 2-BSS differentials,
+                                      (s, f )                            x                           r                       dr (x)
+integer-graded
+                                      (4k + 2, 0)                       v12k+1                       1                       2v12k h 1
+                                      (7, 1)                             Dx                          1                       2h 22
+                                      (−1, 1)                            x                           1                       2y 2
+                                      (−1, 1)                            y                           1                       2x 2
+                                      (4, 0)                            v12                          2                       4h 2
+                                      (5, 3)                             yh 22                       3                       8k D
+
+
+
+Table 2 E ∞ -page,
+                                      (s, f )                                    x                                          2-torsion
+multiplicative generators,
+integer-graded                        (−4, 4)                                    k                                          Z/8
+                                      (−2, 2)                                    x2                                         Z/2
+                                      (−2, 2)                                    y2                                         Z/2
+                                      (0, 2)                                     xh 1                                       Z/2
+                                      (1, 1)                                     h1                                         Z/2
+                                      (3, 1)                                     h2                                         Z/4
+                                      (5, 1)                                     v12 h 1                                    Z/2
+                                      (8, 0)                                     D                                          Z
+                                      (8, 0)                                     v14                                        Z
+
+
+
+Table 3 E ∞ -page, relations, integer-graded
+
+f                                      Relations
+
+1                                      v14 h 2
+2                                      h 1 h 2 , v12 h 1 · h 2 , Dy 2 − h 22 , xh 1 · v14 , x 2 · v14 , y 2 · v14
+3                                      xh 1 · h 2 , xh 1 · v12 h 1 , x 2 · v12 h 1 , y 2 h 1 , y 2 · v12 h 1 , D · xh 1 · h 1 − h 32
+4                                      h 41 − v14 k, (xh 1 )2 , (x 2 )2 , (y 2 )2 , h 42 , x 2 · xh 1 , y 2 · xh 1 , x 2 · y 2 ,
+                                       xh 1 · h 21 , x2 · h 21 , y 2 · h 21 , h 22 · x 2 − 4k D, y 2 · h 22 , xh 1 · h 22
+
+
+
+
+3.2 2-BSS, (∗ − i )-Graded
+
+We discuss the R O(G)-graded case and restrict it to the (∗ − σi )-graded case. A vari-
+ation of Lemma 2.12 still holds in this case. Thus we can compute H ∗ (Q 8 , π∗−σi E2 )
+by first computing the (∗ − σi )-graded 2-BSS and taking the completion. Note that
+after modulo 2, the representation σi is oriented and the orientation class u σi gives an
+isomorphism between π∗ E2 /2 and π∗+1−σi E2 /2 as Q 8 -modules. Therefore, the E 1 -
+page of the (∗−σi )-graded 2-BSS is abstractly isomorphic to that of the integer-graded
+part. We denote the E 1 -page by
+
+                               H ∗ (Q 8 , F4 [v1 , u −1 ])[D −1 ]{u σi }[h 0 ]
+
+                                                                                                                    123
+                                                                                    Z. Duan et al.
+
+
+where u σi denotes a generator of the class at (1 − σi , 0).
+Proposition 3.6 In the 2-BSS, there is a differential
+
+                                 d1 (u σi ) = 2xu σi + 2yu σi .
+
+Proof The group cohomology computation shows that H 1 (Q 8 , π1−σi E2 ) is 2-torsion
+according to Proposition A.7. Hence in the 2-BSS, there must be a d1 -differential
+hitting the bigrading (−σi , 1). Then u σi in the 2-BSS must support a non-trivial d1 -
+differential by degree reasons. Assume that d1 (u σi ) = 2axu σi + 2byu σi where a, b
+are either 0 or 1. By the Leibniz rule, we have d1 (v1 u σi ) = 2h 1 u σi + 2axv1 u σi . Since
+h 1 is a permanent cycle, the Leibniz rule implies that h 1 u σi also supports a non-trivial
+d1 -differential. Therefore, the d1 -target of v1 u σi cannot be 2h 1 u σi . We deduce that
+a = 1.
+    On the other hand, if b = 0, then the Leibniz rule implies
+
+                      d1 (yu σi ) = d1 (y)u σi + yd1 (u σi ) = 2x 2 u σi ,
+
+which means the class x 2 u σi is a 1-cycle. However, x 2 is a 1-cycle in the integral
+2-BSS. Then the Leibniz rule also implies that
+
+                    d1 (x 2 u σi ) = x 2 d1 (u σi ) = x 2 (2xu σi ) = 2x 3 u σi .
+
+This is a contradiction. Therefore b must be 1, and the claimed d1 -differential follows.
+                                                                                       
+                                                                                       
+
+Remark 3.7 The careful reader may observe that there are some Koszul sign rule-
+related concerns here; however, we opt to overlook them as they will have no bearing
+on our subsequent calculations.
+
+  The remaining (∗ − σi )-graded 2-BSS d1 -differentials can be determined by the
+Leibniz rule and the differential on u σi in Proposition 3.6.
+
+Proposition 3.8 There is a 2-BSS differential
+
+                                   d2 (xh 21 u σi ) = 4kv12 u σi .
+
+Proof By Example A.5, the class at (1−σi , 4) is 4-torsion in the E ∞ -page. This forces
+the desired d2 -differential.                                                         
+                                                                                      
+
+Lemma 3.9 There is a hidden h 1 extension from k m x 2 h 1 D n u σi to 2k m+1 v12 D n u σi , and
+a hidden h 2 extension from k m x 3 D n u σi to 2k m+1 v12 D n u σi for any m ∈ N, n ∈ Z.
+
+Proof It suffices to prove the case for m = n = 0. We have the following differentials
+by Propositions 3.6, 3.8 and the Leibniz rule
+
+                                   d1 (xh 1 u σi ) = 2x 2 h 1 u σi ,
+                                   d2 (xh 21 u σi ) = 4kv12 u σi .
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Table 4 2-BSS differentials,
+                                  (s, f )               x               r       dr (x)
+(∗ − σi )-graded
+                                  (1 − σi , 0)         u σi             1       2xu σi + 2yu σi
+                                  (−σi , 1)             xu σi           1       2x 2 u σi + 2y 2 u σi
+                                  (3 − σi , 0)         v1 u σi          1       2h 1 u σi + 2xv1 u σi
+                                  (4 − σi , 1)         h 2 u σi         1       2xh 2 u σi + 2yh 2 u σi
+                                  (2 − σi , 3)          xh 21 u σi      2       4kv12 u σi
+
+
+
+This implies that in the associated 2-inverted 2-BSS, there are
+
+                                d1 (2−1 xh 1 u σi ) = 2x 2 h 1 u σi ,
+                                d2 (2−1 xh 21 u σi ) = 4kv12 u σi .
+
+Denote W[v1 , u −1 ][D −1 ]{u σi } by A. Consider the long exact sequence on Q 8 group
+cohomology induced by the short exact sequence on the coefficients
+
+                                   A → A[1/2] → A/2∞ .
+
+In H ∗ (Q 8 , A/2∞ ) we have h 1 multiplication from 2−1 xh 1 u σi to 2−1 xh 21 u σi . Then
+the differentials
+
+                                 d1 (2−1 xh 1 u σi ) = x 2 h 1 u σi ,
+                                 d2 (2−1 xh 21 u σi ) = 2kv12 u σi
+
+imply that the boundary map in the long exact sequence sends the two classes
+2−1 xh 1 u σi and 2−1 xh 21 u σi in H ∗ (Q 8 , A/2∞ ) to the two classes x 2 h 1 u σi and 2kv12 u σi
+in H ∗ (Q 8 , A) respectively. And there is an h 1 extension from x 2 h 1 u σi to 2kv12 u σi .
+   As for the h 2 extension, we apply the similar argument to the differentials
+
+                                     d1 (y 2 u σi ) = x 3 u σi ,
+                                     d2 (xh 21 u σi ) = 4kv12 u σi .
+
+                                                                                                        
+                                                                                                        
+   We list non-trivial differentials on classes of the form {multiplicative generators}u σi
+in Table 4.
+Theorem 3.10 Tables 5 and 6 present the E ∞ -page the (∗ − σi )-graded 2-Bockstein
+spectral sequence (also see Figs. 4 and 13 with hidden h 1 and h 2 extensions), which
+is the associated graded algebra of H ∗ (Q 8 , W[v1 , u −1 ] ⊗ σi )[D −1 ].
+Proof The result follows from the 2-BSS computation.                                                    
+                                                                                                        
+  We refer the readers to Sect. 6 for charts of the E 1 -page and the E ∞ -page.
+  By Lemma 2.12, in both the integer-graded and the (∗ − σi )-graded case, the E 2 -
+page of Q 8 -HFPSS(E 2 ) follows from Theorems 3.3 and 3.10.
+
+                                                                                             123
+                                                                                                                           Z. Duan et al.
+
+
+Table 5 E ∞ -page, module
+                                              (s, f )                             x                                            2-torsion
+generators, (∗ − σi )-graded
+                                              (−2, 2)                             {x 2 + y 2 }u σi                             Z/2
+                                              (−1, 1)                             {x + y}u σi                                  Z/2
+                                              (1, 1)                              {h 1 + xv1 }u σi                             Z/2
+                                              (0, 2)                              v12 u σi                                     Z
+
+
+
+Table 6 E ∞ -page, relations, (∗ − σi )-graded
+
+f       Relation generators
+
+1       {h 1 + xv1 }u σi · v14 − v12 u σi · v12 h 1 , v12 u σi · h 2 , {x + y}u σi · v14
+2       {h 1 + xv1 }u σi · h 2 , {h 1 + xv1 }u σi · v12 h 1 − v12 u σi · h 21 ,
+        v12 u σi · x 2 , v12 u σi · y 2 , v12 u σi · xh 1 , v12 u σi · h 22 , {x + y}u σi · v12 h 1 , {x 2 + y 2 }u σi · v14
+3       {h 1 + xv1 }u σi · x 2 − {x 2 + y 2 }u σi · h 1 , {h 1 + xv1 }u σi · y 2 , {x 2 + y 2 }u σi · v12 h 1 ,
+        {x + y}u σi · h 21 − {h 1 + xv1 }u σi · xh 1 , {x + y}u σi · x 2 − {x + y}u σi · y 2
+4       {x 2 + y 2 }u σi · h 21 , {x 2 + y 2 }u σi · h 22 , {x 2 + y 2 }u σi · x 2 , {x 2 + y 2 }u σi · y 2 , {x 2 + y 2 }u σi · xh 1 ,
+        {h 1 + xv1 }u σi · h 31 − v12 u σi , 4v12 u σi · k
+
+
+
+
+Remark 3.11 The E 2 -page of TateSS(E2 ) follows by further inverting the class k from
+that of Q 8 -HFPSS(E2 ), and replacing the 0-line with the cokernel of the norm map.
+
+
+4 Computation of the Integer-Graded Q8 -HFPSS(E2 )
+
+In this section, we derive all differentials in the integer-graded Q 8 -HFPSS for E2 via
+the following two methods.
+1. Equivariant methods: apply the restrictions, transfers, and norms to deduce differ-
+   entials in the Q 8 -HFPSS for E2 from the C4 -HFPSS for E2 ;
+2. The vanishing line method: use the fact that the Q 8 -HFPSS for E2 admits a strong
+   vanishing line of filtration 23 (Theorem 4.8, for general cases, see [16, Theorem
+   6.1]) to force differentials.
+We also solve all hidden 2 extensions via equivariant methods and investigation of the
+Tate spectral sequence.
+   We will rename several classes on the E 2 -page of the Q 8 -HFPSS for E2 as follows.
+The advantage is that these names are compatible with the tm f computation and the
+                       hQ
+Hurewicz images in E2 8 (see [3], also compare to [37]). For example, we rename
+the class k D 3 by g, which is compatible with [3] and suggests that this class detects
+the Hurewicz image of κ̄ (see Lemma 4.9).
+   When we talk about the restriction map from Q 8 to C4 , the subgroup C4 usually
+indicates the subgroup C4 i generated by i if there is no further specification. Some
+of the arguments in the proofs of this section are easier to see when accompanied by
+charts in Sect. 6.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Table 7 Distinguished classes
+                                     Classes                      Bauer’s notation                        Bigrading
+
+                                      Dxh 1                       c                                       (8, 2)
+                                      D2 x 2                      d                                       (14, 2)
+                                     k D3                         g                                       (20, 4)
+
+
+
+4.1 General Properties of the Q8 -HFPSS for E4k+2
+
+It is a result of Shi–Wang–Xu, using the Slice Differential Theorem and the norm
+                                                                              h Q8
+functor of Hill–Hopkins–Ravenel [29], that the homotopy fixed point spectrum E4k+2
+is 24k+6 -periodic.
+                         hQ
+    The periodicity of E2 8 is known by computation to be 64 classically. Here we
+                    h Q8
+give a proof that E2 is 64-periodic before computing it using Q 8 -HFPSS.
+                                                                             hQ
+Proposition 4.1 The homotopy groups of the spectrum E2 8 is 64-periodic and the
+periodicity class can be given by the class D 8 .
+
+Proof The product
+
+             NCQ48 (d̄1 )8 NCQ48i (u 4σ )2 NCQ48i (u 8λ )NCQ48 j (u 4σ )4 NCQ48k (u 4σ )4
+
+                                    hQ
+gives the 64 periodicity of E2 8 . This product is in bigrading (64, 0) and is invertible.
+On the other hand, the generator D 8 of π64 E2 is Q 8 -invariant and invertible. Therefore,
+this periodicity class is D 8 up to a unit.                                              
+                                                                                         
+                                                                                      hQ
+   From now on we can simply view D 8 as a periodicity class of E2 8 . In the following
+property, we show that the Q 8 -HFPSS for E2 splits into three parts such that there are
+no differentials across different parts.
+   Note that the universal space E G 24 can be viewed as a model for E Q 8 . The transfer
+                                                                                                    res    hQ       tr
+and the restriction of the spectrum F(E G 24 , E2 ) give a sequence E2hG 24 −→ E2 8 −
+                                                                                    →
+ hG 24
+E2 , which is compatible with the filtration of the HFPSS.
+
+Proposition 4.2 The composition
+
+                                               res    hQ     tr
+                                                    → E2hG 24
+                                    E2hG 24 −→ E2 8 −
+
+is an equivalence. In particular, the G 24 -HFPSS for E2 splits as a summand of the
+Q 8 -HFPSS for E2 .
+
+Proof The composition tr ◦ res is multiplication by |G 24 |/|Q 8 | = 3. All spectra are
+2-local and 3 is coprime to 2 so this composition is an equivalence.                 
+                                                                                     
+
+   We identify the E 2 -page of Q 8 -HFPSS(E2 ) as a free module over the E 2 -page of
+G 24 -HFPSS(E2 ) generated by {1, D, D 2 }.
+
+                                                                                                          123
+                                                                                  Z. Duan et al.
+
+
+Corollary 4.3 Let a, b be two classes on the E 2 -page of G 24 -HFPSS(E2 ). View a, b as
+classes in Q 8 -HFPSS(E2 ) and consider classes a D ka , bD kb where ka , kb ∈ {0, 1, 2}.
+Then there is a differential dr (a D ka ) = bD kb in the Q 8 -HFPSS(E2 ) iff there is a
+differential dr (a) = b in the G 24 -HFPSS(E2 ) and ka = kb .
+
+Proof When ka = 0, this follows from Proposition 4.2. For ka = 1, note that the
+Q 8 -HFPSS for E2 is D 8 -periodic by Proposition 4.1. The two differentials
+
+                 (1) dr (a D) = bD kb and (2) dr (a D 9 ) = bD kb +8
+
+imply each other. We observe that the class a D 9 is a class in G 24 -HFPSS(E2 ). Then
+by the case ka = 0, the differential (2) happens in G 24 -HFPSS(E2 ). This implies the
+desired result. The case ka = 2 is similar.                                          
+                                                                                     
+
+   As a consequence, the computation of the Q 8 -HFPSS for E2 splits into three copies
+with the same differential patterns and there are no differentials across different copies.
+In particular, the G 24 -HFPSS for E2 is 192-periodic.
+
+Remark 4.4 A similar statement holds for general height 4k + 2. A maximal finite
+subgroup in S4k+2 is Q 8  C3(22k+1 −1) ∼
+                                        = G 24 × C(22k+1 −1) [26] [14, Section 4.3]. The
+computation of the Q 8 -HFPSS for E 4k+2 also splits into copies of the computation of
+the Q 8  C3(22k+1 −1) -HFPSS for E4k+2 .
+
+Remark 4.5 The G 24 -HFPSS for E2 computation is essentially the same as the 2-local
+tm f computation [3]. However, our computation only relies on the C4 computation
+of E2 and hence is an independent computation of the classical tm f computations.
+
+   In Theorem 4.8, we will improve the horizontal vanishing line result of the Q 8 -
+HFPSS for E4k+2 in Theorem 2.10. In the case of the Q 8 -HFPSS for E2 , the improved
+vanishing line of filtration 23 turns out to be sharp by computation. We start with the
+following fact.
+
+Proposition 4.6 Let H Z be the Eilenberg–Mac Lane spectrum with trivial Q 8 -action.
+Then on the E 2 -page of Q 8 -HFPSS(H Z), the product aσi aσ j aσk is trivial.
+
+Proof We prove a stronger statement that the whole group H 3 (Q 8 , π3−σi −σ j −σk (H Z)),
+where the class aσi aσ j aσk lies in, is trivial. According to Proposition A.7, the group
+H 3 (Q 8 , Z) is trivial. We observe that the homotopy group π3−σi −σ j −σk (H Z) as a Q 8 -
+module is a copy of Z with trivial Q 8 -action (σi ⊗σ j ⊗σk is a trivial Q 8 -representation).
+Then we have
+
+             H 0 (Q 8 , π3−σi −σ j −σk (H Z)) = (π3−σi −σ j −σk (H Z)) Q 8 ∼
+                                                                           = Z.
+
+Similarly we also have
+
+           H 0 (Q 8 , π−3+σi +σi +σk (H Z)) = (π−3+σi +σi +σk (H Z)) Q 8 ∼
+                                                                         = Z.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Let u be a generator of H 0 (Q 8 , π3−σi −σ j −σk (H Z)). Then the class u is invertible on
+the E 2 -page of HFPSS for H Z by the following paring
+
+                     π3−σi −σ j −σk (H Z) ⊗ π−3+σi +σi +σk (H Z) ∼
+                                                                 = Z.
+
+Therefore, the class u induces an isomorphism H 3 (Q 8 , π3−σi −σ j −σk (H Z)) ≃
+H 3 (Q 8 , Z), the latter of which is trivial.                                 
+                                                                               
+
+Remark 4.7 We thank Guillou for confirming and explaining Proposition 4.6. This
+proposition also follows from Guillou and Slone’s computation of quaternionic
+Eilenberg–Mac Lane spectra [22].
+
+Theorem 4.8 Let k denote a non-negative integer.
+1. The R O(Q 8 )-graded Q 8 -TateSS for E4k+2 vanishes after E 24k+5 −9 -page.
+2. The R O(Q 8 )-graded Q 8 -HFPSS for E4k+2 admits a strong vanishing line of
+   filtration 24k+5 − 9.
+
+Proof (1) Denote the height 4k + 2 by h. We briefly review the proof of the vanishing
+line of filtration 2h+3 − 7 in [16, Theorem 6.1] and explain the filtration improvement
+by 2. By Theorem 2.8, in the Q 8 -TateSS(Eh ), there is a predicted differential
+
+                                                2 −1 1−2
+                        d2h+3 −7 (NC28 (v̄h−1 u 2σ
+                                    Q          h           h+1
+                                                  2
+                                                    aσ2          )aρ̄ ) = 1.         (4.1)
+
+By naturality, the unit 1 has to be hit by a differential dr with r ≤ 2h+3 − 7. Note that
+since 1 is hit, the spectral sequence vanishes at Er -page.
+    The ring map Z → π∗ Eh induces a map between E 2 -pages of the Q 8 -HFPSS
+for H Z and Eh . Then the naturality forces the source of (4.1) to be trivial since
+aρ̄ = aσi aσ j aσk = 0 by Proposition 4.6. For degree reasons, we conclude r ≤ 2h+3 −9.
+So every class in the Q 8 -TateSS(E h ) will disappear on or before the E 2h+3 −9 -page.
+    (2) It follows from Lemma 2.6.                                                      
+                                                                                        
+
+Lemma 4.9 In the Q 8 -HFPSS for E2 , the class h 1 , h 2 , g are permanent cycles.
+
+Proof Consider the following maps
+
+                                     unit   h Q 8 res
+                                 S 0 −−→ E 2       −→ E 2hC2 .
+
+By [38, Theorem 1.8], the class κ̄ ∈ π20 S 0 maps to a non-trivial class in E2hC2 in
+                                                                    hQ
+filtration 4 in the C2 -HFPSS for E 2 . Thus the image of κ̄ in π∗ E2 8 is non-trivial. For
+degree reasons, it is detected by the class g in Q 8 -HFPSS(E 2 ). The proofs for h 1 and
+h 2 are similar.                                                                         
+                                                                                         
+
+   We only use the Hurewicz image of E2hC2 as the input. This has been systematically
+studied in [38]. Our method does not assume the knowledge of the Hurewicz image
+of E2hC4 .
+
+                                                                                123
+                                                                                              Z. Duan et al.
+
+
+4.2 Differentials in the Integer-Graded Pages
+
+We suggest readers refer to the charts while reading the proofs in this section.
+   All statements about differentials in this subsection are differentials in integer-
+graded Q 8 -HFPSS(E2 ) if there is no specification.
+
+Proposition 4.10 The class v16 in (12, 0) supports a d3 -differential
+
+                                        d3 (v16 ) = v14 h 31 .
+
+                                          Q                       Q
+Proof By construction, we have resC48 (v16 ) = T23 , resC48 (h 1 ) = η. In C4 -HFPSS(E2 ),
+[7, Proposition 5.21] implies that we have
+
+                                       d3 (T23 ) = T22 η3 .
+
+The result now follows by naturality.                                                                    
+                                                                                                         
+
+Corollary 4.11 The class v12 h 1 at (5, 1) supports a d3 -differential
+
+                                        d3 (v12 h 1 ) = h 41 .
+
+Proof By Proposition 4.10, we have d3 (v16 h 1 ) = v14 h 41 . Note that v14 is a 3-cycle. This
+forces the desired d3 -differential.                                                        
+                                                                                            
+
+   Proposition 4.10 produces a family of d3 -differentials by the Leibniz rule:
+
+     d3 (D m g s v14l+2 h n1 ) = D m g s v14l h n+3
+                                                1   and      d3 (D m g s v12 h n1 ) = D m g s h n+3
+                                                                                                1
+
+for any (m, s, l, n) ∈ Z × Z≥0 × Z≥1 × Z≥1 .
+    For degree reasons (and the following proposition), these are all the non-trivial
+d3 -differentials.
+
+Proposition 4.12 The following classes survive to the E ∞ -page.
+
+             2D m v14l+2 , D m v14l , D m v14l h 1 , D m v14l h 21 , (m, l) ∈ Z × Z≥1 .
+
+Proof The classes D m v14l , D m v14l h 1 , D m v14l h 21 cannot be hit by degree reasons. They
+are permanent cycles by Lemma 2.6 and the Q 8 -TateSS(E2 ) d3 -differentials
+
+        d3 (D m+3 g −1 v14l−2 h n+4    m 4l n+3
+                                1 ) = D v1 h 1 , m, l ∈ Z, l  = 0, n ≥ −3.
+
+
+As for the classes 2D m v14l+2 , we consider the additive norm map
+
+                                                 N
+                                               → H 0 (Q 8 , π∗ E2 )
+                             H0 (Q 8 , π∗ E2 ) −
+
+123
+RO(G)-Graded HFPSS for E2
+
+                  
+where N (x) =         g∈Q 8 g(x). By the Q 8 -action formulas (2.3), we have
+                                 
+     N (v12l+1 (u −1 )2l+1 ) =           g(v12l+1 (u −1 )2l+1 )
+                                 g∈Q 8
+                                                                2l+1            2l+1
+                                                     v1 + 2u −1          v1 − u −1
+                            = 2v12l+1 (u −1 )2l+1 + 2
+                                                       ζ2 − ζ              ζ2 − ζ
+                                                2l+1              2l+1
+                                  v1 + 2ζ 2 u −1         ζ v1 − u −1
+                             +2
+                                     ζ2 − ζ                 ζ2 − ζ
+                                              2l+1                2l+1
+                                  v1 + 2ζ u −1         ζ 2 v1 − u −1
+                             +2                                            .
+                                     ζ2 − ζ                ζ2 − ζ
+
+The leading term of the above formula on the E ∞ -page of the 2-BSS for
+H ∗ (Q 8 , W[v1 , u −1 ]) is 2v14 l+2 for l ≥ 1. Then we have
+                                                  
+         N (D m v12l+1 (u −1 )2l+1 ) = D m                g(v12l+1 (u −1 )2l+1 ) = 2D m v14l+2
+                                                  g∈Q 8
+
+
+since D is Q 8 -invariant. As the additive norm map is the d1 -differential on E 1 -page
+of the Q 8 -TateSS for E2 , we have the classes 2D m v14l+2 are permanent cycles who
+survive to the E ∞ -page by Lemma 2.6.                                                 
+                                                                                       
+
+Remark 4.13 All the classes supporting or receiving non-trivial d3 -differentials and all
+classes in Proposition 4.12 are sometimes referred to as the bo-pattern. They match
+the pattern of (many copies of) π∗ K O, the homotopy groups of the real K -theory. See
+[11, Definition 2.1] for more details.
+
+   The following result is the first example of the strong vanishing line method (The-
+orem 4.8). The method gives differentials of three lengths (including the longest
+d23 -differential) all at once (see Fig. 1).
+
+Proposition 4.14 There are differentials
+(1) d5 (D −13 g 5 dh 2 ) = 4D −16 g 7 ;
+(2) d13 (D −7 g 3 ch 1 ) = 2D −16 g 7 ;
+(3) d23 (D −1 gh 1 ) = D −16 g 7 .
+
+Proof We suggest readers compare the arguments with Fig. 1. The class D −16 g 7 is
+a permanent cycle in filtration 28, which is above the vanishing line (Theorem 4.8).
+Therefore, the classes D −16 g 7 , 2D −16 g 7 and 4D −16 g 7 must receive differentials.
+According to Corollary 4.3, Q 8 -HFPSS(E2 ) splits into three parts. On the E 2 -page,
+these three parts are modules over the E 2 -page of G 24 -HFPSS(E2 ), and all differentials
+do not cross different copies. In Fig. 1, we highlight the relevant copy. By inspection,
+we obtain the desired d5 , d13 and d23 -differentials.                                   
+                                                                                         
+
+
+                                                                                             123
+                                                                          Z. Duan et al.
+
+Fig. 1 d5 , d13 , d23 -differentials
+
+
+
+
+Corollary 4.15 The class D at (8, 0) supports a d5 -differential
+
+                                       d5 (D) = D −2 gh 2 .
+
+Proof Note that D 8 is an invertible permanent cycle (Proposition 4.1), and g 5 is a
+permanent cycle (Lemma 4.9). By Proposition 4.14 (1) and the Leibniz rule, there is
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+a d5 -differential
+
+                                       d5 (D 3 dh 2 ) = 4g 2 .                       (4.2)
+
+The relation dh 22 = 4g (see Remark 3.5 under 2BSS names) forces the following
+d5 -differential
+
+                                        d5 (D 3 d) = gdh 2 .                         (4.3)
+
+   With (4.3), it suffices to show that D 2 d is a 5-cycle. In fact, the only possible d5
+target of D 2 d supports a differential
+
+                                    d5 (D −1 gdh 2 ) = 4D −4 g 3
+
+by multiplying D −4 gh 2 with (4.3). Note that D −4 is a 5-cycle since D is a 3-cycle. 
+                                                                                       
+
+    All the remaining d5 -differentials follow from the Leibniz rule. There are no more
+d5 -differentials by degree reasons and Corollary 4.3.
+    We also get a d9 -differential from the d13 -differential in Proposition 4.14 (2).
+Corollary 4.16 The class Dc at (16, 2) supports a d9 -differential
+
+                                     d9 (Dc) = D −5 g 2 dh 1 .
+
+Proof We observe that in Q 8 -HFPSS(E2 ) there is an h 1 extension from Dc to Dch 1 .
+We prove this by contradiction. Suppose that Dc does not support the claimed
+d9 -differential. Then for degree reasons, Dc becomes a 13-cycle. However, this con-
+tradicts Proposition 4.14 since Dch 1 supports a non-trivial d13 -differential.   
+                                                                                  
+
+Proposition 4.17 The classes 4D and 2D 2 at (16, 0) support the following d7 -
+differentials
+(1) d7 (4D) = D −2 gh 31 ;
+(2) d7 (2D 2 ) = D −1 gh 31 .
+
+Proof By Corollary 4.15 and the hidden 2 extension from 2h 2 to h 31 (see [48]), D −2 gh 31
+has to be hit by a differential. For degree reasons and Corollary 4.3, the only possible
+source is 4D. The second d7 -differential follows similarly from d5 (D 2 ) = 2D −1
+gh 2 .                                                                                  
+                                                                                        
+
+   The d7 -differential on D 4 (which we prove in Proposition 4.28) turns out to be a
+hard one, as it does not follow from primary relations like the Leibniz rule or (hidden)
+extensions. We will first prove several d9 , d13 -differentials, and the d7 -differential
+follows from the vanishing line method.
+
+Proposition 4.18 The class D 5 ch 1 at (49, 3) and the class D 5 c at (48, 2) support the
+following differentials.
+(1) d13 (D 5 ch 1 ) = 2D −4 g 4 ;
+
+                                                                                123
+                                                                                    Z. Duan et al.
+
+
+(2) d9 (D 5 c) = D −1 g 2 dh 1 .
+Proof By a similar argument as in Corollary 4.16, it is enough to show (1). We first
+observe that the class 2D −4 g 4 is in the image of the transfer map from C4 -HFPSS(E2 )
+since
+
+                      tr ◦ res(D −4 g 4 ) = [Q 8 : C4 ]D −4 g 4 = 2D −4 g 4 .
+
+Since the class D −4 g 4 is order 8, its restriction to C4 -HFPSS for E2 is non-trivial and
+of order 4. Then according to the computations in [7] (see [7, Figure 5.3]), on bigrading
+(48, 16), the class res(D −4 g 4 ) receives a d13 -differential in C4 -HFPSS(E2 ). The nat-
+urality forces that 2D −4 g 4 dies on or before the the E 13 -page in Q 8 -HFPSS(E2 ). The
+only possibility is the desired d13 -differential by Corollary 4.3 and degree reasons.   
+Remark 4.19 Since C4 -HFPSS(E2 ) is 32-periodic with the periodicity class 41 =
+d̄81 u 8λ u 8σ [7, 30], the same argument in the proof of Proposition 4.18 gives an alter-
+native proof of Proposition 4.14 (2) and Corollary 4.16.
+Lemma 4.20 The class D 3 h 1 is a permanent cycle.
+Proof By Corollary 4.3, it suffices to show that D 3 h 1 is a permanent cycle in G 24 -
+HFPSS(E2 ). For degree reasons, D 3 h 1 can only possibly hit D −3 gc or 2D −12 g 6 in
+G 24 -HFPSS(E2 ). Because D −8 , g are permanent cycles, Proposition 4.18 implies
+
+             d13 (D −3 g 2 ch 1 ) = 2D −12 g 6 and d9 (D −3 gc) = D −9 g 3 dh 1 .
+
+Therefore, the class D 3 h 1 has to be a permanent cycle.                                      
+                                                                                               
+Remark 4.21 It turns out that D 3 h 1 is hit by a d23 -differential in the Tate spectral
+sequence by Corollary 4.22.
+Corollary 4.22 There are non-trivial d23 -differentials
+(1) d23 (D 2 h 21 ) = D −13 g 6 h 1 ;
+(2) d23 (D 5 h 31 ) = D −10 g 6 h 21 .
+Proof The claimed d23 -differentials follow from Proposition 4.14 (3) and Lemma 4.20.
+                                                                                   
+                                                                                   
+Lemma 4.23 There is a hidden 2 extension from D 6 h 22 to g 2 d.
+Proof According to Lemma 2.18, there is a hidden 2 extension in stem 54 from
+  1 1 6λ 4σ 2σ to 1 d̄1 u 4λ u 6σ a4λ a2σ in the C 4 -HFPSS(E2 ) since it is 1 -periodic.
+  4 d̄6 u u a          4 8                                                     4
+
+Note that the restriction of D to the E 2 -page of the C4 -HFPSS(E2 ) is invertible then it
+                                                                            Q
+equals 1 up to a unit in W(F4 ), in other words up to a unit we have resC48 (D) = 1 .
+In Appendix A we show that the restriction of the classes h 2 , d and g are non-trivial.
+Then in stem 54 of Q 8 -HFPSS(E2 ), we have the following two restrictions up to units
+                                    Q
+                                resC48 (D 6 h 22 ) =     1 d̄1 u 6λ u 4σ a2σ ,
+                                                         4 6
+
+                                    Q
+                                resC48 (g 2 d) =       1 d̄1 u 4λ u 6σ a4λ a2σ .
+                                                       4 8
+
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Note that in G 24 -HFPSS(E2 ), there are no other classes between these two filtrations.
+Then the naturality forces a hidden 2 extension from D 6 h 22 to g 2 d in G 24 -HFPSS(E2 ).
+This hidden 2 extension also happens in Q 8 -HFPSS(E2 ) by Corollary 4.3.                
+                                                                                         
+
+   As the C4 -HFPSS for E2 is 32-periodic, a similar proof gives the following hidden
+2 extension in stem 22 in the Q 8 -HFPSS for E2 . In the rest of this paper, when we
+refer to restricting a class, we always mean the restriction up to a unit in W(F4 ).
+
+Corollary 4.24 There is a hidden 2 extension from D 2 h 22 to D −4 g 2 d.
+
+Proposition 4.25 The classes 2Dh 2 at (11, 1) and 2D 5 h 2 at (43, 1) support d13 -
+differentials
+(1) d13 (2Dh 2 ) = D −8 g 3 d;
+(2) d13 (2D 5 h 2 ) = D −4 g 3 d.
+
+Proof (1) By Lemma 4.23 and the E ∞ -page class g, there is a hidden 2 extension
+from D −2 gh 22 to D −8 g 3 d in stem 10 of the Q 8 -HFPSS for E2 . By Corollary 4.15, we
+have
+
+                                    d5 (Dh 2 ) = D −2 gh 22 .
+
+Then the hidden 2 extension forces D −8 g 3 d to be hit by a differential of length at
+most 13. Note that there is a 2 extension 2(2Dh 2 ) = Dh 31 . Then Dh 31 cannot support a
+shorter differential than 2Dh 2 . In particular, Dh 31 cannot support a d11 -differential to
+D −8 g 3 d. This rules out the only possibility that the target D −8 g 3 d is hit by a shorter
+differential. Therefore, we proved the desired non-trivial differential.
+   (2) It follows similarly from the hidden 2 extension from D 2 g 2 h 22 to D −4 g 3 d by
+Corollary 4.24.                                                                             
+                                                                                            
+
+Remark 4.26 In Bauer’s computation for tm f [3], the hidden 2 extension in
+Lemma 4.23 is proved using four-fold Toda brackets. In our approach, the hidden
+2 extension follows from the restriction and the C4 -HFPSS hidden 2 extension, which
+again is forced by the exotic restrictions and transfers in Lemma 2.18.
+
+Lemma 4.27 The class Dh 31 is a permanent cycle.
+
+Proof The class Dh 31 is a 5-cycle. By Corollary 4.3 and degree reasons, Dh 31 can
+only possibly hit D −8 g 3 d and D −14 g 6 h 21 . According to Proposition 4.25 the former
+class is hit by a non-trivial d13 -differential. Moreover, according to Corollary 4.22 and
+Method 2.7, the class D −14 g 6 h 21 supports a non-trivial d23 -differential (D −14 g 6 h 21 =
+D −16 g 6 D 2 h 21 ). Therefore, these two potential targets cannot receive differentials from
+Dh 31 . The result thereby follows.                                                           
+                                                                                              
+
+Proposition 4.28 The class D 4 at (32, 0) supports a d7 -differential
+
+                                      d7 (D 4 ) = Dgh 31 .
+
+                                                                                   123
+                                                                                   Z. Duan et al.
+
+
+Proof Note that g and D −8 are permanent cycles. Then by Lemma 4.27 the class
+D −15 h 31 g 6 at (3, 27) is also a permanent cycle. This class has to be hit by a differential
+via the vanishing line method (Theorem 4.8). By Corollary 4.3, the potential source
+is either D −3 gc or D −12 g 5 . The former supports a d9 by Proposition 4.18. Therefore,
+the only possibility is the d7 -differential
+
+                                   d7 (D −12 g 5 ) = D −15 h 31 g 6 .
+
+Since D −8 g 5 is a permanent cycle, the result follows.                                      
+                                                                                              
+
+   All d7 -differentials follow from Propositions 4.17, 4.28 and the Leibniz rule.
+   Before proving the next two d9 -differentials in Corollary 4.32, we need to first prove
+a permanent cycle in Corollary 4.29 and two d11 -differentials in Proposition 4.30.
+
+Lemma 4.29 The class D 3 dh 1 is a permanent cycle.
+
+Proof By Corollary 4.16 in the Q 8 -TateSS for E2 , we have a d9 -differential
+
+                                     d9 (D 9 g −2 c) = D 3 dh 1 .
+
+Then D 3 dh 1 is a permanent cycle in the Q 8 -TateSS. By Lemma 2.6 it is also a
+permanent cycle in Q 8 -HFPSS(E 2 ).                                           
+                                                                               
+
+Proposition 4.30 The classes D 2 d at (30, 2) and D 6 d at (62, 2) support d11 -
+differentials
+(1) d11 (D 2 d) = D −4 g 3 h 1 ;
+(2) d11 (D 6 d) = g 3 h 1 .
+
+Proof According to Proposition A.7, the restriction of the class d from Q 8 -HFPSS(E2 )
+to C4 -HFPSS(E2 ) is non-trivial, Since the class d is order 2, the class res(D 2 d) must
+be order 2. Then according to the computations in [7] (see [7, Figure 5.3]), on bigrading
+(30, 2), the class res(D 2 d) supports a non-trivial d13 -differential. This implies the class
+D 2 d supports a non-trivial differential with a length at most 13. The desired differential
+in (1) follows by degree reasons. The proof for (2) is similar since C4 -HFPSS(E2 ) is
+32-periodic.                                                                                
+                                                                                            
+
+Corollary 4.31 The classes D 2 dh 1 at (31, 3) and D 6 dh 1 at (63, 3) support d11 -
+differentials
+(1) d11 (D 2 dh 1 ) = D −4 g 3 h 21 ;
+(2) d11 (D 6 dh 1 ) = g 3 h 21 .
+
+Corollary 4.32 The classes Dh 1 at (9, 1) and D 5 h 1 at (41, 1) support d9 -differentials
+(1) d9 (Dh 1 ) = D −5 g 2 c;
+(2) d9 (D 5 h 1 ) = D −1 g 2 c.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Proof By Corollary 4.3 and degree reasons, the class Dh 1 either supports a non-trivial
+d9 -differential or is an 11-cycle. We show that it is the first case.
+    If Dh 1 were a 11-cycle then by Proposition 4.30 and the Leibniz rule, there would
+be a d11 -differential
+
+                                   d11 (D 3 dh 1 ) = D −3 g 3 h 21 .
+
+This contradicts Lemma 4.29. Therefore, we have the desired d9 -differential in (1).
+The proof for (2) is similar.                                                     
+                                                                                  
+
+Proposition 4.33 The class D −1 h 1 is a 13-cycle.
+
+Proof Since D 8 is the periodic class, it suffices to prove that D 7 h 1 is a 13-cycle. The
+D 7 h 1 is a 7-cycle from our computation of E 9 -page. According to Corollary 4.16,
+the class Dc supports a d9 -differential. Then the class g 2 Dc supports a non-trivial
+d9 -differential by Method 2.7 since the class g = k D 3 is invertible.
+    Therefore, the class D 7 h 1 does not support a d9 -differential since the possible target
+  2
+g Dc already supports a d9 -differential. Then for degree reasons, D 7 h 1 is a 13-cycle.
+So is the class D −1 h 1 .                                                                  
+                                                                                            
+
+Corollary 4.34 The classes D 2 c at (24, 2) and D 6 c at (56, 2) support d9 -differentials
+(1) d9 (D 2 c) = D −4 g 2 dh 1 ;
+(2) d9 (D 6 c) = g 2 dh 1 .
+
+Proof Suppose D 2 c does not support a non-trivial d9 -differential. Then for degree
+reasons, it is a 13-cycle. However, since D −1 h 1 is also a 13-cycle, the Leibniz rule
+shows that Dh 1 c is also a 13-cycle. This contradicts Proposition 4.14 and proves the
+d9 -differential in (1). The d9 -differential in (2) follows similarly by Proposition 4.18.
+                                                                                         
+                                                                                         
+
+Corollary 4.35 The classes Ddh 1 at (23, 3) and D 5 dh 1 at (55, 3) support d11 -
+differentials
+(1) d11 (Ddh 1 ) = D −5 g 3 h 21 ;
+(2) d11 (D 5 dh 1 ) = D −1 g 3 h 21 .
+
+Proof According to Proposition 4.33, the class D −1 h 1 is a 13-cycle. Then these two
+d11 -differentials follow by Proposition 4.30 and the Leibniz rule.                 
+                                                                                    
+
+Lemma 4.36 The class d is a permanent cycle.
+
+Proof Proposition 4.25 shows that d is hit by a d13 -differential from 2D 9 g −3 h 2 in
+Q 8 -TateSS(E2 ). By Lemma 2.6 d is a permanent cycle.                                
+                                                                                      
+                                                                                   hQ
+Remark 4.37 The class d is in the image of the Hurewicz map S 0 → E2 8 . This
+follows from the Hurewicz image of E2hC4 [31, Figure 12] (see Proposition A.8).
+
+Proposition 4.38 The classes D 2 h 1 at (17, 1) and D 6 h 1 at (49, 1) support d9 -
+differentials
+
+                                                                                  123
+                                                                                    Z. Duan et al.
+
+
+(1) d9 (D 2 h 1 ) = D −4 g 2 c;
+(2) d9 (D 6 h 1 ) = g 2 c.
+
+Proof We prove this by contradiction. Assume D 2 h 1 does not support the desired
+differential. Then it is a 11-cycle by degree reasons. The Leibniz rule forces the class
+Dh 1 to support a non-trivial d11 -differential but this contradicts Lemma 4.36. The
+proof of (2) is similar.                                                              
+                                                                                      
+
+   Table 8 lists the differentials we have computed so far. They generate differentials
+via the Leibniz rule. By inspection, these are all non-trivial differentials since the
+remaining classes are permanent cycles by Method 2.7.
+
+4.3 Extension Problem
+
+Now we solve all the 2-extensions on the E ∞ -page.
+Theorem 4.39 All the hidden 2 extensions in the integer-graded G 24 -HFPSS(E2 ) are
+displayed in Fig. 10 by grey vertical lines.
+
+Proof Since the G 24 -HFPSS for E2 is 192-periodic, it suffices to consider the stem
+range from 0 to 192. We divide these 2 extensions into three types by their proofs.
+The first type follows from the fact that in homotopy groups of spheres, 4ν = η3 and
+h 1 detects η, h 2 detects ν (Lemma 4.9). This type of hidden 2 extensions happens in
+stem 3, 27, 51, 99, 123 and 147 in the period from 0 to 192.
+    The second type consists of the 2 extensions in stem 54 and 150. The proof of the
+first is in Lemma 4.23, and the proof of the second is similar using the 32-periodicity
+of C4 -HFPSS(E2 ) and Lemma 2.18.
+    The third type consists of three hidden 2 extensions in the first period. The first
+one is in stem 110 from D 12 d to D 6 g 3 h 21 . The other two in stem 130 and 150 (from
+filtration 10 to 22) follow from the first one by multiplying g and g 2 respectively. So
+it suffices to show that there is a 2 extension from D 12 g 2 d to D 6 g 5 h 21 . To derive this
+2 extension, we claim there are two hidden h 1 extensions from D 18 h 2 to D 15 gc and
+from D 15 gch 1 to D 6 g 5 h 21 . As for the first hidden h 1 extension, in G 24 -TateSS(E2 ),
+we have the following two differentials by Corollaries 4.15 and 4.32:
+
+                                    d5 (g −1 D 21 ) = D 18 h 2 ,
+                                    d9 (g −1 D 21 h 1 ) = D 15 gc.
+
+Now consider the cofibration
+
+                                  E2hG 24 → E2hG 24 → E2t G 24 .
+
+In the negative filtrations in G 24 -TateSS(E2 ), there is an h 1 extension from g −1 D 21 to
+g −1 D 21 h 1 , then this h 1 extension under the additive norm map gives an h 1 extension
+relation in π∗ E2hG 24 from an element detected by D 18 h 2 to some element detected by
+D 15 gc. This forces a hidden h 1 extension from D 18 h 2 to D 15 gc in G 24 -HFPSS(E2 ).
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+The similar hidden h 1 extension from D 15 gch 1 to D 6 g 5 h 21 follows from the following
+two differentials in G 24 -TateSS(E2 ) by Corollaries 4.32 and 4.22.
+
+                                d9 (g −1 D 21 h 21 ) = D 15 gch 1 ,
+                                d23 (g −1 D 21 h 31 ) = D 6 g 5 h 21 .
+
+Therefore, in π∗ E2hG 24 there is an h 31 -extension from D 18 h 2 to D 6 g 5 h 21 . On the other
+hand we know h 31 = 4h 2 , which implies D 6 g 5 h 21 must be 4a for some class a ∈
+π150 E2hG 24 . Then the degree reasons force the 2 extension D 12 g 2 d to D 6 g 5 h 21 .
+   We claim there are no further 2 extensions in G 24 -HFPSS(E2 ). By degree reasons,
+the other possible hidden 2 extensions either have sources that are h 1 divisible or have
+targets that support h 1 extensions. Therefore, the hidden 2 extensions cannot happen
+in these cases.                                                                                
+                                                                                               
+Corollary 4.40 All the hidden 2 extensions in the integer-graded Q 8 -HFPSS(E2 ) are
+displayed in Fig. 9 by gray vertical lines.
+Proof This follows from Theorem 4.39 and Proposition 4.2.                                      
+                                                                                               
+   Our result of 2 extensions via the equivariant and the Tate methods matches the tm f
+computation in [3]. In [3], because the arguments for proving differentials rely on (hid-
+den) η and ν extensions, almost all these hidden extensions are also computed (there
+is another ν extension from D 15 h 21 at (122, 2) and its κ̄ multiples [36, Lemma 5.3]).
+Here our new methods only use hidden 2 extensions and the h 1 , h 2 multiplications on
+the E 2 -page. Therefore, we do not need to work out hidden η and ν extensions and in
+our figures, we only draw h 1 , h 2 multiplications.
+
+4.4 Differentials: Alternative Methods
+
+In this subsection, we revisit several differentials in the integer-graded part via different
+approaches.
+Proposition 4.41 The class D at (8, 0) supports a d5 -differential
+
+                                     d5 (D) = D −2 gh 2 .
+
+Proof The restriction of D to the C4 -HFPSS for E2 is 1 , which supports a non-trivial
+d5 -differential according to [7, Proposition 5.24]. By naturality, D must support a non-
+trivial differential with length ≤ 5. Then by Corollary 4.3 and degree reasons, it has
+to be d5 (D) = D −2 gh 2 .                                                             
+                                                                                       
+   Moreover, given all d5 , d7 -differentials, then the vanishing line forces the d11 -
+differential in Proposition 4.30.
+Proposition 4.42 The class D 6 d at (62, 2) supports a d11 -differential
+
+                                     d11 (D 6 d) = g 3 h 1 .
+
+                                                                                     123
+                                                                                  Z. Duan et al.
+
+
+Proof It is enough to prove the d11 -differential
+
+                                 d11 (D 6 g 5 dh 1 ) = g 8 h 21
+
+since g is invertible in the Q 8 -TateSS for E2 . The target g 8 h 21 is a permanent cycle in
+filtration 34 ≥ 23. By Theorems 4.8 and 2.9 it has to be hit by a differential. Since
+D 6 g 5 dh 1 is a 7-cycle, the only possibility is the desired d11 -differential.           
+                                                                                            
+    We here present another proof of the d9 -differential in Proposition 4.38 which
+combines the partial calculations in (∗ − σi )-gradings by the norm method (see Propo-
+sition 5.16).
+Proposition 4.43 The class D 2 h 1 at (17, 1) supports a d9 -differential
+                                 d9 (D 2 h 1 ) = D −4 g 2 c.
+
+Proof Suppose the claimed d9 -differential does not happen, then D 2 h 1 is a 9-cycle.
+According to Lemma 5.6, the class {x + y}D 4 u σi is a 9-cycle. Then the Leibniz
+rule implies that {x + y}D 6 h 1 u σi is also a 9-cycle. This contradicts the fact that
+{x + y}D 6 h 1 u σi supports a non-trivial d9 -differential in Proposition 5.16.     
+                                                                                     
+
+4.5 Summary of Differentials
+
+We summarize differentials in Table 8. All differentials follow from this list by the
+Leibniz rule.
+
+5 The (∗ − i )-Graded Computation
+
+In this section, we compute the (∗−σi )-graded Q 8 -HFPSS for E2 . We use the following
+convention: a class at (n − σi , m) will be denoted as in degree (n − 1, m). Since the
+Q 8 -representation σi cannot be lifted to G 24 , in this section, we only consider the
+groups Q 8 and SD16 . We name classes by their names in the 2-BSS in Table 5, and
+also use 2-BSS names for the integer-graded classes as it makes the multiplication
+relation clearer.
+Proposition 5.1 The class v12 u σi at (4, 0) supports a d3 -differential
+                                   d3 (v12 u σi ) = h 31 u σi .
+
+Proof We consider the restriction map from (∗ − σi )-graded Q 8 -HFPSS(E2 )
+to the integer-graded C4 -HFPSS(E2 ). Note that the C4 -invariant element T2 ∈
+                                                       Q
+H 0 (C4 , π4 E2 ) equals v12 modulo 2. This implies resC48 (v12 u σi ) = T2 modulo 2. Recall
+that in the C4 -HFPSS for E2 , the class T2 supports a non-trivial d3 -differential ([7,
+Proposition 5.21]). Then the class v12 u σi must support a non-trivial differential of
+length ≤ 3. For degree reasons, we have
+                                   d3 (v12 u σi ) = h 31 u σi .
+
+                                                                                             
+                                                                                             
+
+123
+      Table 8 HPFSS differentials, integer page
+
+      (s, f )                    x                r    dr (x)           Proof
+
+      (12, 0)                    v16              3    v14 h 31         Proposition 4.10 (restriction)
+      (8, 0)                     D                5    D −2 gh    2     Corollary 4.15 (vanishing line) or Proposition 4.41 (restriction)
+      (8, 0)                     4D               7    D −2 gh 31       Proposition 4.17 (8ν = η3 )
+      (16, 0)                    2D 2             7    D −1 gh 31       Proposition 4.17
+                                                                                                                                              RO(G)-Graded HFPSS for E2
+
+
+
+
+      (32, 0)                    D4               7    Dgh 31           Proposition 4.28 (vanishing line)
+      (9, 1)                     Dh 1             9    D −5 g 2 c       Corollary 4.32
+      (41, 1)                    D5 h1            9    D −1 g 2 c       Corollary 4.32
+      (16, 2)                    Dc               9    D −5 g 2 dh 1    Corollary 4.16
+      (48, 2)                    D5 c             9    D −1 g 2 dh 1    Proposition 4.18
+      (17, 1)                    D2 h1            9    D −4 g 2 c       Proposition 4.38
+      (49, 1)                    D6 h1            9    g2 c             Proposition 4.38
+      (24, 2)                    D2 c             9    D −4 g 2 dh 1    Corollary 4.34
+      (56, 2)                    D6 c             9    g 2 dh 1         Corollary 4.34
+      (30, 2)                    D2 d             11   D −4 g 3 h 1     Proposition 4.30 (restriction)
+      (62, 2)                    D6 d             11   g3 h 1           Proposition 4.30 (restriction) or Proposition 4.42 (vanishing line)
+      (23, 3)                    Ddh 1            11   D −5 g 3 h 21    Corollary 4.35
+      (55, 3)                    D 5 dh 1         11   D −1 g 3 h 21    Corollary 4.35
+      (17, 3)                    Dch 1            13   2D −8 g 4        Proposition 4.14 (vanishing line)
+      (49, 3)                    D 5 ch 1         13   2D −4 g 4        Proposition 4.18 (transfer)
+      (11, 1)                    2Dh 2            13   D −8 g 3 d       Proposition 4.25 (hidden 2 extension)
+      (43, 1)                    2D 5 h 2         13   D −4 g 3 d       Proposition 4.25
+      (−7, 1)                    D −1 h 1         23   D −16 g 6        Proposition 4.14 (vanishing line)
+      (18, 2)                    D 2 h 21         23   D −13 g 6 h 1    Corollary 4.22
+      (43, 3)                    D 5 h 31         23   D −10 g 6 h 21   Corollary 4.22
+
+
+
+
+123
+                                                                                      Z. Duan et al.
+
+
+   Since the (∗ − σi )-graded part is a module over the integer-graded part, this d3 -
+differential implies a family of d3 -differentials as follows:
+
+                       d3 (k s D m v14l+2 h n1 u σi ) = k s D m v14l h n+3
+                                                                       1 u σi
+
+where k, m, l, n ∈ Z and l, n ≥ 0. By taking out these d3 -differentials, an argument
+similar to the proof in Proposition 4.12 shows that the following classes are permanent
+cycles
+
+                         2D m v14l−2 , D m v14l , D m v14l h 1 , D m v14l h 21
+
+where l ≥ 1 and m ≥ 0. All the classes above either support non-trivial d3 -differentials
+or are permanent cycles. Similar to the bo-pattern in the integer graded part, we do
+not need to consider this part in later computations of higher differentials.
+   However, this is not the only kind of d3 -differentials in (∗ − σi )-graded part. To
+derive the second kind of d3 -differentials, we first need to show the d5 -differential
+pattern and several other facts.
+Lemma 5.2 The class {x + y}u σi is a permanent cycle.
+Proof For degree reasons, this class is aσi on the E 2 -page defined in Definition 2.2.
+By Proposition 2.3, this class is a permanent cycle.                                 
+                                                                                     
+Corollary 5.3 The class {x + y}Du σi at (7, 1) supports a d5 -differential
+
+                       d5 ({x + y}Du σi ) = k{yh 2 + xh 1 v1 }Du σi .
+
+Proof Since the (∗ − σi )-graded part is a module over the integer-graded part, the
+                                                                                  
+claimed differential follows from Lemma 5.2, Corollary 4.15 and the Leibniz rule. 
+   Corollary 5.3 generates the first kind of d5 -differentials via the Leibniz rule.
+Lemma 5.4 The class {x 2 + y 2 }Du σi is a permanent cycle.
+Proof According to Proposition 4.38, there is a d9 -differential d9 (D 6 h 1 ) = k 2 D 7 xh 1 .
+Then the Leibniz rule implies that the class k 2 x 2 h 1 D 7 u σi = k 2 D 7 xh 1 · {x + y}u σi is
+hit by a differential of length ≤ 9. For degree reasons, it is hit by either a d9 -differential
+or a d7 -differential. In either case, the h 1 extensions force k 2 {x 2 + y 2 }D 7 u σi to be hit
+on or before the E 9 -page. Then the class {x 2 + y 2 }Du σi must be a permanent cycle;
+otherwise the class k 2 {x 2 + y 2 }D 7 u σi would support a non-trivial differential since
+
+                      k 2 {x 2 + y 2 }D 7 u σi = {x 2 + y 2 }Du σi · k 2 D 6
+
+where k 2 D 6 = g 2 is a permanent cycle that survives to E ∞ -page in the integer-graded
+part.                                                                                   
+                                                                                        
+Corollary 5.5 The class {x 2 + y 2 }u σi at (−2, 2) supports a d5 -differential
+
+                           d5 ({x 2 + y 2 }u σi ) = k{x + y}h 21 u σi .
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+   By inspection, all d5 -differentials in (∗ − σi )-graded part follows from Corollar-
+ies 5.3 and 5.5 by the Leibniz rule.
+Lemma 5.6 The class {x + y}D 4 u σi is a 11-cycle.
+
+Proof According to [7, Remark 5.23], the class u 2σ is a 5-cycle in the C4 -HFPSS
+for E2 . Therefore, Theorem 2.8 implies that NCQ48 (u 2σ )aσi is a 9-cycle. According to
+Proposition 2.5
+
+                                   Q                    u 2σ j u 2σk
+                                NC48 (u 2σ )aσi =                      aσi .
+                                                           u 2σi
+
+If we restrict this class to the subgroup C4  j, then we get the class aσ which is non-
+trivial. Hence NCQ48 (u 2σ )aσi is non-trivial on the E 2 -page. By multiplying NCQ48 (u 2σ )aσi
+with the following periodicity classes
+
+                  NC48i (u 4σ )NC48i (d̄1 )4 NC48i (u 4λ u 2σ )u 54σi u −1     −1
+                     Q               Q              Q
+                                                                              4σ j u 4σk
+
+where u 4σi , u 4σ j , u 4σk are permanent cycles by Remark 2.24, we get a non-trivial class
+at (31, 1). For degree reasons, this class must be {x + y}D 4 u σi (up to a unit). This
+implies that {x + y}D 4 u σi is also a 9-cycle. For degree reasons, {x + y}D 4 u σi is a
+11-cycle.                                                                                 
+                                                                                          
+
+Remark 5.7 We will show in Proposition 5.20 that the above class supports a non-trivial
+d13 -differential.
+
+Proposition 5.8 The class {h 1 + xv1 }u σi at (1, 1) supports a d3 -differential
+
+                                d3 ({h 1 + xv1 }u σi ) = 2kv12 u σi .
+
+Proof We argue by contradiction. Suppose this differential does not happen. Then the
+class 2kv12 u σi will survive to the E 5 -page and the Leibniz rule implies that there is a
+d5 -differential
+
+                                d5 (x 3 D 4 u σi ) = 2k 2 v12 D 4 u σi ,
+
+since there is an h 2 extension from kx 3 D 4 u σi to 2k 2 v12 D 4 u σi by Lemma 3.9.
+   On the other hand, according to Lemma 5.2, Proposition 4.28 and the Leibniz rule
+we know the class {x + y}D 4 is a 5-cycle. Moreover, the class x 2 is also a 5-cycle by
+Proposition 4.30. So the product x 3 D 4 = {x + y}D 4 u σi · x 2 is a 5-cycle. This is a
+contradiction. And the claimed d3 follows immediately.                                
+                                                                                      
+
+Remark 5.9 Proposition 5.8 shows that 2kv12 u σi is hit by a d3 -differential. Recall that
+the class kv12 u σi itself supports a non-trivial d3 -differential by Proposition 5.1.
+
+   By the above discussion and by inspection, all d3 -differentials in the (∗−σi )-graded
+part follows from Propositions 5.1, 5.8 and the Leibniz rule.
+
+                                                                                           123
+                                                                                                Z. Duan et al.
+
+
+Corollary 5.10 The classes x 3 u σi at (−3, 3) and x 3 D 4 u σi at (29, 3) support d11 -
+differentials
+(1) d11 (x 3 u σi ) = k 3 {x + y}Dh 1 u σi ;
+(2) d11 (x 3 D 4 u σi ) = k 3 {x + y}D 5 h 1 u σi .
+
+Proof According to Proposition 4.30, there is a d11 -differential in the integer-gradings
+
+                                         d11 (x 2 ) = k 3 Dh 1 .
+
+Note that {x + y}u σi and {x + y}D 4 u σi are both 11-cycles. By the Leibniz rule, we
+have
+
+                  d11 (x 3 u σi ) = {x + y}u σi d11 (x 2 ) = k 3 {x + y}Dh 1 u σi .
+
+The proof of the second d11 -differential is similar.                                                      
+                                                                                                           
+
+Proposition 5.11 The classes {h 21 + xh 1 v1 }Du σi at (10, 2) and {h 21 + xh 1 v1 }D 5 u σi
+at (42, 2) support d9 -differentials
+(1) d9 ({h 21 + xh 1 v1 }Du σi ) = k 2 {x + y}h 21 D 2 u σi ;
+(2) d9 ({h 21 + xh 1 v1 }D 5 u σi ) = k 2 {x + y}h 21 D 6 u σi .
+
+Proof Because k D 3 = g is an invertible permanent cycle in Q 8 -TateSS(E2 ), the
+d11 -differential in Corollary 5.10
+
+                              d11 (x 3 D 4 u σi ) = k 3 {x + y}h 1 D 5 u σi
+
+implies that in the (∗ − σi )-graded Q 8 -TateSS(E2 ) we have
+
+           d11 (k −1 x 3 Du σi ) = (k D 3 )−1 d11 (x 3 D 4 u σi ) = k 2 {x + y}h 1 D 2 u σi .
+
+Since k 2 {x + y}h 1 D 2 u σi is hit by a d11 -differential in Q 8 -TateSS(E2 ), its h 1 extension,
+k 2 {x + y}h 21 D 2 u σi , has to be hit on or before the E 11 -page. For degree reasons, this
+class k 2 {x + y}D 2 h 21 u σi must be hit by the claimed d9 -differential in Q 8 -TateSS(E2 ).
+By Lemma 2.6, the first claimed d9 -differential also happens in Q 8 -HFPSS(E2 ). The
+second d9 -differential follows similarly.                                                       
+                                                                                                 
+
+   We have the following d9 -differentials by the Leibniz rule and integer-graded d9 -
+differentials.
+
+Proposition 5.12 We have the following d9 -differentials
+(1) d9 ({x + y}h 1 Du σi ) = k 2 x 2 h 1 D 2 u σi ;
+(2) d9 ({x + y}h 1 D 2 u σi ) = k 2 x 2 h 1 D 3 u σi ;
+(3) d9 ({x + y}h 1 D 5 u σi ) = k 2 x 2 h 1 D 6 u σi ;
+(4) d9 ({x + y}h 1 D 6 u σi ) = k 2 x 2 h 1 D 7 u σi .
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Proof We prove the first differential, and the proofs of the rest three differentials are
+similar. According to Corollary 4.32, in the integer-graded Q 8 -HFPSS(E2 ) we have
+
+                                       d9 (Dh 1 ) = k 2 xh 1 D 2 .
+
+Note that the class {x + y}u σi is a permanent cycle by Lemma 5.2. Then the Leibniz
+rule implies
+
+              d9 ({x + y}h 1 Du σi ) = {x + y}u σi d9 (Dh 1 ) = k 2 x 2 h 1 D 2 u σi .
+
+                                                                                                            
+                                                                                                            
+
+Corollary 5.13 The classes {x +y}D 2 u σi at (15, 1) and {x +y}D 6 u σi at (47, 1) support
+d9 -differentials
+(1) d9 ({x + y}D 2 u σi ) = k 2 {x 2 + y 2 }D 3 u σi ;
+(2) d9 ({x + y}D 6 u σi ) = k 2 {x 2 + y 2 }D 7 u σi .
+
+Proof By Proposition 4.33, the class D −1 h 1 is a 9-cycle. These two d9 -differentials
+hold since otherwise the classes {x + y}Dh 1 u σi and {x + y}D 5 h 1 u σi would be 9-cycles
+by the Leibniz rule, which contradicts Proposition 5.12.                                 
+                                                                                         
+
+   To derive the last type of d9 -differential, we first need to show the following d17 -
+differential in the (∗ − σi )-graded part.
+
+Proposition 5.14 The class {h 21 + xh 1 v1 }u σi at (2, 2) supports a d17 -differential
+
+                         d17 ({h 21 + xh 1 v1 }u σi ) = k 4 {x + y}h 21 D 2 u σi .
+
+Proof Consider the class k 6 {h 21 + xh 1 v1 }D 10 u σi in filtration 26. By Theorem 4.8 this
+class cannot survive to the E ∞ -page.
+   After the E 5 -page, all the potential sources that could support a differential hitting
+the class k 6 {h 21 + xh 1 v1 }D 10 u σi are k 3 x 2 h 1 D 9 u σi , k 3 {x + y}D 9 u σi and kx 2 h 1 D 8 u σi .
+We rule out all three possibilities one by one. The class k 3 x 2 h 1 D 9 u σi is hit by the
+following d9 -differential in Proposition 5.12
+
+             d9 (kxh 1 D 9 u σi ) = k D 3 d9 ({x + y}h 1 D 6 u σi ) = k 3 x 2 h 1 D 9 u σi .
+
+The class k 3 {x + y}D 9 u σi is a permanent cycle since {x + y}u σi is a permanent cycle
+by Lemma 5.2. The class kx 2 h 1 D 8 is also a permanent cycle since it is hit by a known
+d9 -differential in the Q 8 -TateSS for E2 according to Proposition 5.12
+
+                           d9 (k −1 {x + y}D 7 h 1 u σi ) = kx 2 h 1 D 8 u σi .
+
+Therefore, the class k 6 {h 21 + xh 1 v1 }D 10 u σi must support a non-trivial differential.
+Since k D 3 = g is an invertible permanent cycle in TateSS, the class {h 21 +xh 1 v1 }u σi =
+D 8 (k D 3 )−6 k 6 {h 21 + xh 1 v1 }D 10 u σi also has to support a non-trivial differential.
+
+                                                                                                 123
+                                                                                               Z. Duan et al.
+
+
+   Therefore, the class k 6 {h 21 + xh 1 v1 }D 10 u σi has to support a non-trivial differential,
+so is the class {h 21 + xh 1 v1 }u σi . For degree reasons, there are three possible targets
+which are kx 3 D, k 4 xh 21 D 2 u σi and k 5 x 3 D 3 u σi . The class {h 21 + xh 1 v1 }D −1 u σi is a
+5-cycle for degree reasons, and the Leibniz rule implies
+
+                d5 ({h 21 + xh 1 v1 }u σi ) = {h 21 + xh 1 v1 }D −1 u σi d5 (D)
+                                            = {h 21 + xh 1 v1 }D −1 u σi · k Dh 2 = 0.
+
+So the class {h 21 + xh 1 v1 }u σi is also a 5-cycle, in other words, the class kx 3 D cannot
+receive a differential from the class kx 3 D. On the other hand, the class k 5 x 3 D 3 u σi
+supports the following d11 -differential by Corollary 5.10
+
+         d11 (k 5 x 3 D 3 u σi ) = (k D 3 )5 D −16 d11 (x 3 D 4 u σi ) = k 8 D 4 {x + y}h 1 u σi .
+
+Therefore, the class {h 21 + xh 1 v1 }u σi supports the desired d17 -differentials
+
+                        d17 ({h 21 + xh 1 v1 }u σi ) = k 4 {x + y}h 21 D 2 u σi .
+
+                                                                                                          
+                                                                                                          
+
+   It turns out that this is the only d17 -differential in one period of the (∗ − σi )-graded
+part of Q 8 -HFPSS(E 2 ).
+
+Proposition 5.15 The classes {x 2 + y 2 }D 3 u σi at (22, 2) and {x 2 + y 2 }D 7 u σi at (54, 2)
+support d9 -differentials
+(1) d9 ({x 2 + y 2 }D 3 u σi ) = k 2 x 3 D 4 u σi ;
+(2) d9 ({x 2 + y 2 }D 7 u σi ) = k 2 x 3 D 8 u σi .
+
+Proof According to Proposition A.7, the restriction of {x 2 + y 2 }u σi to the integer-
+graded C4 -HFPSS for E2 is non-trivial. It implies the following restriction by degree
+reasons
+                                Q
+                            resC48 ({x 2 + y 2 }D 3 u σi ) = d̄61 u 6λ u 4σ a2σ .
+
+We now prove that the class {x 2 + y 2 }D 3 u σi supports a non-trivial differential by
+contradiction. Suppose that the class {x 2 + y 2 }D 3 u σi is a permanent cycle that survives
+to the E ∞ -page. Note that its C4 -restriction d̄61 u 6λ u 4σ a2σ has a hidden 2 extension
+in π∗ E2hC4 by Lemma 2.18. Then {x 2 + y 2 }D 3 u σi also has a hidden 2 extension in
+the E ∞ -page. However, since hidden extensions and natural maps between spectral
+sequences will not decrease filtration, the potential target of the hidden 2 extension
+from the class {x 2 + y 2 }D 3 u σi can only be k 2 {x 2 + y 2 }D 4 u σi , k{yh 2 + xh 1 v1 }D 3 u σi
+and k{h 21 + xh 1 v1 }D 3 by degree reasons. However, the first class k 2 {x 2 + y 2 }D 4 u σi
+supports a non-trivial d5 -differential by Corollary 5.5
+
+                            d5 (k 2 {x 2 + y 2 }D 4 u σi ) = k 3 xh 21 D 4 u σi .
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+The second class k{yh 2 + xh 1 v1 }D 3 u σi is hit by a d5 -differential by Corollary 5.3
+
+                       d5 ({x + y}D 3 u σi ) = k{yh 2 + xh 1 v1 }D 3 u σi .
+
+The third class k{h 21 + xh 1 v1 }D 3 u σi supports a d17 -differential by Proposition 5.14
+
+                        d17 (k{h 21 + xh 1 v1 }D 3 u σi ) = k 5 xh 21 D 5 u σi .
+
+Therefore, all the potential targets of the hidden 2 extension from the class {x 2 +
+y 2 }D 3 u σi will not survive to the E ∞ -page. This is a contradiction. Hence the class
+{x 2 + y 2 }D 3 u σi must support a non-trivial differential.
+    After the E 5 -page, the only two potential targets are k 2 x 3 D 4 u σi and k 5 {x +
+y}h 21 D 5 u σi by degree reasons. However, the class k 5 {x + y}h 21 D 5 u σi is hit by the
+following d17 -differential by Proposition 5.14 and the Leibniz rule
+
+  d17 (k{h 21 + xh 1 v1 }D 3 u σi ) = k D 3 d17 ({h 21 + xh 1 v1 }u σi ) = k 5 {x + y}h 21 D 5 u σi .
+
+Then the first desired d9 -differential follows. The proof of the second d9 -differential
+in the statement is similar since the C4 -HFPSS for E2 is 32-periodic.                 
+                                                                                       
+
+   We can apply the norm method to get a d9 -differential directly (after the calculation
+of E 3 -page) which is independent of the d9 information in the integer-graded part.
+
+Proposition 5.16 There is a normed d9 -differential in (∗ − σi )-page
+
+                            d9 ({x + y}D 6 u σi ) = k 2 {x 2 + y 2 }D 7 u σi .
+
+Proof According to [30, Theorem 11.13], the class u 2λ supports a non-trivial d5 -
+differential in C4 -HFPSS(E2 )
+
+                                       d5 (u 2λ ) = d̄1 u λ a2λ aσ .
+
+Then Theorem 2.8 implies there is a predicted d9 -differential in Q 8 -HFPSS(E 2 )
+
+                             Q                    Q           Q
+                    d9 (NC48 (u 2λ )aσi ) = NC48 (d̄1 )NC48 (u λ )a2H aσ j aσk .
+
+We claim the target of this predicted d9 -differential is non-trivial on the E 2 -page. It
+suffices to show that the class aσ j aσk is non-trivial since NCQ48 (u λ )a2H is invertible in
+TateSS(E2 ). We observe that
+
+                                        resCQ48 (aσ j aσk ) = a2σ
+
+where a2σ is non-trivial in C4 -HFPSS(E2 ). This implies that aσ j aσk is also non-trivial.
+                                                                Q         Q
+Therefore, the non-trivial class on the E 2 -page NC48 (d̄1 )NC48 (u λ )a2H aσ j aσ j must be
+
+                                                                                             123
+                                                                                         Z. Duan et al.
+
+
+hit on or before the E 9 -page. By multiplying this class with the following periodicity
+classes
+
+                               Q                    Q
+                            NC48i (u 4λ u 2σ )NC48i (d̄1 )6 u 54σi u 4σ j u 4σk
+
+we get a non-trivial class at (46, 10), which has to be the class k 2 {x 2 + y 2 }D 7 u σi (up
+to a unit) by degree reasons. Therefore, the class k 2 {x 2 + y 2 }D 7 u σi has to be hit on or
+before the E 9 -page too. If this class is hit by a d7 -differential from the class x 2 h 1 D 6 u σi ,
+then the class k 2 x 2 h 1 D 7 u σi has to be killed on or before the E 7 -page. However, this
+is a contradiction by degree reasons. Therefore, the claimed d9 -differential follows.            
+
+   All d9 -differentials follow from Propositions 5.11, 5.12, Corollary 5.13, Proposi-
+tion 5.15 and the Leibniz rule.
+
+Proposition 5.17 The classes {x + y}h 21 D 2 u σi at (17, 3), {x + y}h 1 D 7 u σi at (56, 2)
+support d23 -differentials
+(1) d23 ({x + y}h 21 D 2 u σi ) = k 6 {x + y}h 1 D 5 u σi ;
+(2) d23 ({x + y}h 1 D 7 u σi ) = k 6 {x + y}D 10 u σi .
+
+Proof By Corollary 4.22 we have the following two d23 -differentials in the integer-
+graded part
+
+                      d23 (D 2 h 21 ) = k 6 h 1 D 5 and d23 (D 7 h 1 ) = k 6 D 10 .
+
+Note that the class {x + y}u σi is a permanent cycle by Lemma 5.2. Then the desired
+two differentials follow from these d23 -differentials and the Leibniz rule.      
+                                                                                  
+
+    All d23 -differentials follow from Proposition 5.17 and the Leibniz rule.
+
+Lemma 5.18 The four classes {h 21 + xh 1 v1 }D 2 u σi , {h 21 + xh 1 v1 }D 3 u σi , {h 21 +
+xh 1 v1 }D 6 u σi and {h 21 + xh 1 v1 }D 7 u σi are all permanent cycles.
+
+Proof After the E 5 -page, the potential targets of {h 21 + xh 1 v1 }D 7 u σi are the classes
+k 2 {x + y}h 21 D 8 u σi and k 3 x 3 D 9 u σi , since lengths of differentials in the R O(Q 8 )-
+graded Q 8 -HFPSS(E2 ) are less than or equal to 23 by Theorem 4.8. However, the
+class k 2 {x + y}h 21 D 8 u σi supports a non-trivial d23 -differential by Proposition 5.17
+and the class k 3 x 3 D 9 u σi supports a non-trivial d11 -differential by Corollary 5.10. For
+similar reasons, the rest three classes are permanent cycles.                                 
+                                                                                              
+
+Proposition 5.19 There are four non-trivial d11 -differentials
+(1) d11 (x 2 h 1 D 2 u σi ) = k 3 {h 21 + xh 1 v1 }D 3 u σi ;
+(2) d11 (x 2 h 1 D 3 u σi ) = k 3 {h 21 + xh 1 v1 }D 4 u σi ;
+(3) d11 (x 2 h 1 D 6 u σi ) = k 3 {h 21 + xh 1 v1 }D 7 u σi ;
+(4) d11 (x 2 h 1 D 7 u σi ) = k 3 {h 21 + xh 1 v1 }D 8 u σi .
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Proof We first prove (2). Consider the class k 6 {h 21 + xh 1 v1 }D 5 u σi which is a per-
+manent cycle by Lemma 5.18. Since its filtration is greater than 23, the horizontal
+vanishing line forces it to be killed. For degree reasons, after E 5 -page, there are two
+potential sources: k 3 x 2 h 1 D 4 u σi and kx 2 h 1 D 3 u σi . However, the class kx 2 h 1 D 3 u σi
+is a permanent cycle since it is killed by a d9 -differential in the associated TateSS
+according to Proposition 5.12. Therefore, we have
+
+                        d11 (k 3 x 2 h 1 D 4 u σi ) = k 6 {h 21 + xh 1 v1 }D 5 u σi .
+
+    Next, consider the class k 6 {h 21 + xh 1 v1 }D 8 u σi which is also a permanent cycle
+by Lemma 5.18. Similarly, the horizontal vanishing line forces it to be killed
+eventually. After E 5 -page, for degree reasons, there are three potential sources:
+k 3 x 2 h 1 D 7 u σi , k 3 {x + y}D 7 u σi and kx 2 h 1 D 6 u σi . The second class k 3 {x + y}D 7 u σi
+supports a d9 -differential by Proposition 5.16. The third class kx 2 h 1 D 6 u σi supports a
+d11 -differential we just proved
+
+         d11 (kx 2 h 1 D 6 u σi ) = k D 3 d11 (x 2 h 1 D 3 u σi ) = k 4 {h 21 + xh 1 v1 }D 7 u σi .
+
+Therefore, we have
+
+                        d11 (k 3 x 2 h 1 D 7 u σi ) = k 3 {h 21 + xh 1 v1 }D 8 u σi .
+
+   The rest two claimed d11 -differentials follow by similar arguments.                               
+                                                                                                      
+
+   All d11 -differentials follow from Corollary 5.10, Proposition 5.19 and the Leibniz
+rule.
+
+Proposition 5.20 The class {x + y}D 4 u σi at (31, 1) supports a d13 -differential
+
+                       d13 ({x + y}D 4 u σi ) = k 3 {h 21 + xh 1 v1 }D 5 u σi .
+
+Proof We first claim the class k 3 {h 21 + xh 1 v1 }D 5 u σi is a permanent cycle. In the Q 8 -
+TateSS for E2 , by multiplying it with k −3 D −9 · D 8 , we obtain {h 21 + xh 1 v1 }D 4 u σi ,
+which is a permanent cycle by Lemma 5.18. So k 3 {h 21 + xh 1 v1 }D 5 u σi is also a per-
+manent cycle in the Q 8 -HFPSS for E 2 .
+    Next we consider the class k 6 {h 21 + xh 1 v1 }D 6 u σi = k 3 {h 21 + xh 1 v1 }D 5 u σi · k 3 D 9 ·
+   −8
+D above the vanishing line. By Theorem 4.8 it must be hit by a differential since
+it is a permanent cycle. Then for degree reasons, the only two possible sources are
+{x + y}D 4 u σi and x 2 h 1 D 4 u σi . Note that the class x 2 h 1 D 4 is a permanent cycle since
+it is hit by a d9 -differential in Q 8 -TateSS(E2 )
+
+                               d9 (k −2 xh 1 D 3 u σi ) = x 2 h 1 D 4 u σi .
+
+Therefore, the claimed d13 -differential must happen.                                                 
+                                                                                                      
+
+   This d13 -differential can also be deduced via the norm method.
+
+                                                                                                 123
+                                                                                       Z. Duan et al.
+
+
+Second Proof of Proposition 5.20 According to [30, Theorem 11.13] and [31, Corollary
+3.14], there is a d7 -differential in the C4 -HFPSS for E2
+
+                                   d7 (u 4λ ) = d̄1 η u 2λ a3λ .
+
+Then Theorem 2.8 shows that there is a predicted d13 -differential
+
+                 d13 (NC48 (u 4λ )aσi ) = NC48 (d̄1 )NC48 (η )NC48 (u 2λ )a3H .
+                        Q                     Q          Q          Q
+
+
+
+According to [47, Proposition 11.4 (viii)], resC48 NC48 (η ) = η2 is non-trivial. Then
+                                                        Q     Q
+
+NC48 (η ) is non-trivial on the E 2 -page and so is the class NC48 (d̄1 )NC48 (η )NC48 (u 2λ )a3H .
+  Q                                                                 Q       Q         Q
+
+By multiplying the non-trivial class NC48 (d̄1 )NC48 (η )NC48 (u 2λ )a3H with the period-
+                                              Q          Q          Q
+
+icity classes in Corollary 2.22, we get a non-trivial class at (30, 14) on the E 2 -page,
+which has to be the class k 3 {h 21 + xh 1 v1 }D 5 u σi by degree reasons. Therefore, the class
+k 3 {h 21 + xh 1 v1 }D 5 u σi must be hit on or before the E 13 -page. For degree reasons, the
+desired d13 -differential follows.                                                           
+                                                                                             
+   All d13 -differentials follow from Proposition 5.20 and the Leibniz rule.
+   Table 9 lists the differentials we have computed so far. They generate differentials
+via the Leibniz rule. By inspection, these are all non-trivial differentials since the
+remaining classes are permanent cycles by Method 2.7.
+   The result is presented in Fig. 17.
+
+5.1 Summary of Differentials
+
+Differentials in (∗ − σ )-graded part are given by Table 9. All differentials follow from
+this list by multiplying permanent cycles and the Leibniz rule.
+
+
+6 Charts and Tables
+
+6.1 Keys for the Charts
+
+In all charts, lines denote multiplications and differentials. See Table 10 for keys for
+multiplications and Table 11 for the keys for classes.
+   Here, k is F2 for G = SD16 or G 48 , and is F4 for G = Q 8 or G 24 ; j is v112 D −3 for
+G 24 or G 48 , and v14 D −1 otherwise.
+Remark 6.1 We elaborate more on boxes and dots connected by vertical lines in the
+same bidegree. Such a pattern denotes a 2-adic presentation of a class. Namely, the
+bottom dot is generated by the generator and represents a 2-torsion copy, the dot or
+box just above is generated by twice the generator, and so on.
+   For example, on the E ∞ -page of the integral degrees (Fig. 9), in bigrading (32, 0)
+the bottom circle represents the class W/2[[v14 D −1 ]]{v14 D 3 } and the box above repre-
+sents W[[v14 D −1 ]]{2D 4 }; Note that there is a 2 extension. Thus the class at (32, 0) is
+W[[v14 D −1 ]]{v14 D 3 } ⊕ W{2D 4 }.
+
+123
+      Table 9 HPFSS differentials, (∗ − σi )-page
+
+      (s, f )               x                           r    dr (x)                          Proof
+
+      (1, 1)                {h 1 + xv1 }u σi            3    2kv12 u σi                      Proposition 5.8
+      (4, 0)                v12 u σi                    3    h 31 u σi                       Proposition 5.1 (restriction)
+      (7, 1)                {x + y}Du σi                5    k{yh 2 + xh 1 v1 }Du σi         Corollary 5.3 (module structure)
+                                                                                                                                                      RO(G)-Graded HFPSS for E2
+
+
+
+
+      (14, 2)               {x 2 + y 2 }D 2 u σi        5    kxh 21 D 2 u σi                 Corollary 5.5 (module structure)
+      (10, 2)               {h 21 + xh 1 v1 }Du σi      9    k 2 {x + y}h 21 D 2 u σi        Proposition 5.11
+      (42, 2)               {h 21 + xh 1 v1 }D 5 u σi   9    k 2 {x + y}h 21 D 6 u σi        Proposition 5.11
+      (8, 2)                {x + y}h 1 Du σi            9    k 2 x 2 h 1 D 2 u σi            Proposition 5.12 (module structure)
+      (40, 2)               {x + y}h 1 D 5 u σi         9    k 2 x 2 h 1 D 6 u σi            Proposition 5.12
+      (15, 1)               {x + y}D 2 u σi             9    k 2 {x 2 + y 2 }D 3 u σi        Corollary 5.13
+      (47, 1)               {x + y}D 6 u σi             9    k 2 {x 2 + y 2 }D 7 u σi        Corollary 5.13
+      (22, 2)               {x 2 + y 2 }D 3 u σi        9    k 2 x 3 D 4 u σi                Proposition 5.15 (hidden 2 extension)
+      (54, 2)               {x 2 + y 2 }D 7 u σi        9    k 2 x 3 D 8 u σi                Proposition 5.15
+      (15, 3)               x 2 h 1 D 2 u σi            11   k 3 {h 21 + xh 1 v1 }D 3 u σi   Proposition 5.19 (vanishing line)
+      (47, 3)               x 2 h 1 D 6 u σi            11   k 3 {h 21 + xh 1 v1 }D 7 u σi   Proposition 5.19
+      (23, 3)               x 2 h 1 D 3 u σi            11   k 3 {h 21 + xh 1 v1 }D 4 u σi   Proposition 5.19
+      (55, 3)               x 2 h 1 D 7 u σi            11   k 3 {h 21 + xh 1 v1 }D 8 u σi   Proposition 5.19
+      (29, 3)               x 3 D 4 u σi                11   k 3 xh 1 D 5 u σi               Corollary 5.10 (module structure)
+      (61, 3)               x 3 D 8 u σi                11   k 3 xh 1 D 9 u σi               Corollary 5.10
+      (31, 1)               {x + y}D 4 u σi             13   k 3 {h 21 + xh 1 v1 }D 5 u σi   Proposition 5.20 (vanishing line or norm differential)
+      (2, 2)                {h 21 + xh 1 v1 }u σi       17   k 4 {x + y}h 21 D 2 u σi        Proposition 5.14 (vanishing line)
+      (17, 3)               {x + y}h 21 D 2 u σi        23   k 6 {x + y}h 1 D 5              Proposition 5.17 (module structure)
+      (56, 2)               {x + y}h 1 D 7 u σi         23   k 6 {x + y}D 10 u σi            Proposition 5.17
+
+
+
+
+123
+                                                                                     Z. Duan et al.
+
+
+Table 10 Keys for
+                                 Line                                           Meaning
+multiplications
+                                 Vertical                                       2 multiplication
+                                 Slope 1                                        h 1 multiplication
+                                 Slope 1/3                                      h 2 multiplication
+                                 Dashed (only in 2BSS)                          hidden extension
+
+
+Table 11 Keys for classes
+                                 Class                                                   Meaning
+
+                                 Dot                                                     k
+                                 Fat dot                                                 k[[ j]]
+                                 Circle                                                  k[[ j]]{ j}
+                                 Square                                                  W(k)
+
+
+
+   Such presentations help to demonstrate where the differentials or extensions come
+from. For example, in Fig. 5 in bigrading (12, 0), only the generator v16 supports a
+non-trivial d3 -differential and 2v16 survives. This convention is due to Dan Isaksen.
+
+Remark 6.2 We comment on the extensions between circles and fat dots. For example,
+in the bigradings (24, 0) and (25, 1) in Fig. 9, there is an h 1 multiplication connecting a
+circle and a fat dot. The circle represents the class W/2[[v14 D −1 ]]{v14 D 2 } and the fat dot
+represents the class W/2[[v14 D −1 ]]{h 1 D 3 }. The h 1 multiplication happens whenever
+it is indicated by the class names. Note that the class W/2{h 1 D 3 } is not h 1 -divisible
+in this case since the source is missing.
+
+6.1.1 2-BSS
+
+Figures 2, 3, 4 are charts for the 2-Bockstein spectral sequences. All three charts have
+(8, 0) periodicity by multiplying D and (−4, 4) periodicity by multiplying k (except
+the v1 local classes in low filtration). We only depict part of the spectral sequence here,
+which contains a full periodic range.
+   In Fig. 2, lines of slope-1 indicate multiplications by x or y.
+   Recall the (∗ − σi )-graded part and the integer-graded part have isomorphic E 1 -
+pages. When interpret the chart as the (∗ − σi )-graded part, the name of a class at
+(s, f ) is its label multiplied by u σi , and its degree is (s + 1 − σi , f ). For example,
+the class 1 at (0, 0), when interpreted as an (∗ − σi )-graded part class, denotes u σi at
+(1 − σi , 0) in the 2BSS.
+   Figures 3 and 4 show the E ∞ -page of 2BSS, for the integer-graded part and (∗−σi )-
+graded part respectively.
+
+6.1.2 HFPSS
+
+Figures 5, 6, 7, 8, 9 depict the integer degree calculation of the integer-graded G-
+HFPSS(E2 ) for G = Q 8 or SD16 (Figs. 10, 11, 12), and Figs. 13, 14, 15, 16, 17 depict
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+
+
+Fig. 2 The E 1 -page of the integer/(∗ − σi )-graded 2BSS
+
+
+the (∗ − σi )-graded calculation. Both E 2 -pages are (8, 0) periodic by multiplying
+D, and other pages are (64, 0) periodic by multiplying D 8 . All charts are (20, 4)
+periodic by multiplying k D 3 (except the v1 local classes in low filtration). The length r
+differentials are those lines of slope −r . When the target or the source of the differential
+is out of range, we replace the line with an arrow. There are horizontal vanishing lines
+in filtration 23 on E ∞ -pages.
+
+
+
+
+Fig. 3 The E ∞ -page of the integer-graded 2BSS. The dotted lines are hidden h 2 extensions
+
+
+                                                                                              123
+                                                                                                Z. Duan et al.
+
+
+
+
+Fig. 4 The E ∞ -page of the (∗ − σi )-graded 2BSS. The dotted lines are hidden h 1 and h 2 extensions
+
+
+
+
+Fig. 5 The E 3 -page of the integer-graded Q 8 -HFPSS(E2 ). The lines of slope-3 are d3 -differentials
+
+
+123
+                                                                                                                                                           RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 6 The E 5 -page of the integer-graded Q 8 -HFPSS(E2 ). The lines of slope-5 are d5 -differentials. The lines of slope-7 are d7 -differentials
+
+
+
+
+123
+123
+      Fig. 7 The E 9 -page of the integer-graded Q 8 -HFPSS(E2 ). The lines of slope-9 are d9 -differentials
+                                                                                                               Z. Duan et al.
+                                                                                                                                                                                           RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 8 The E 11 -page of the integer-graded Q 8 -HFPSS(E2 ). The lines of slope-11 are d11 -differentials. The lines of slope-13 are d13 -differentials. The lines of slope-23 are
+      d23 -differentials
+
+
+
+
+123
+123
+      Fig. 9 The E ∞ -page of the integer-graded Q 8 /SD16 -HFPSS(E2 )
+                                                                         Z. Duan et al.
+                                                                                       RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 10 The E ∞ -page of the integer-graded G 24 /G 48 -HFPSS(E2 ) (stem 0–68)
+
+
+
+
+123
+123
+      Fig. 11 The E ∞ -page of the integer-graded G 24 /G 48 -HFPSS(E2 ) (stem 64–134)
+                                                                                         Z. Duan et al.
+                                                                                          RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 12 The E ∞ -page of the integer-graded G 24 /G 48 -HFPSS(E2 ) (stem 128–198)
+
+
+
+
+123
+                                                                                                Z. Duan et al.
+
+
+
+
+Fig. 13 The E 2 -page of the (∗ − σi )-graded Q 8 -HFPSS(E2 ). The lines of slope-3 are d3 -differentials
+
+
+
+Appendix A. Group Cohomology
+
+In this appendix, we collect and present examples of computations of group coho-
+mology. There are two main applications: one is to calculate it as the input for the
+E 2 -page of the integer- and (∗ − σi )-graded homotopy fixed points spectral sequences
+for E2 , the other is to utilize restrictions, transfers, and norm maps for proofs of dif-
+ferentials. All the rests needed for our computation of the Q 8 -HFPSS for E2 are listed
+in Proposition A.7.
+    Let Q 8 be presented as
+
+                                Q 8 = i, j | i 4 , i 2 = j 2 , i ji j −1 
+
+with its real representation ring R O(Q 8 ) = Z{1, σi , σ j , σk , H}. To calculate
+H ∗ (Q 8 , A) we will use the following 4-periodic free Z[Q 8 ]-resolution:
+
+                                       ∇        d0        d1         d2
+                            0←Z←    − X1 ←
+                               − X0 ←         − ··· ,
+                                         − X2 ←
+
+where X 0 = Z[Q 8 ]{a0 }, ∇(a0 ) = 1, and for k ≥ 0,
+
+           X 4k+1 = Z[Q 8 ]{bk,1 , bk,2 }, d(bk,1 ) = (i − 1)ak ,
+                                           d(bk,2 ) = ( j − 1)ak ,
+           X 4k+2 = Z[Q 8 ]{ck,1 , ck,2 }, d(ck,1 ) = (1 + i)bk,1 − (1 + j)bk,2 ,
+                                           d(ck,2 ) = (1 + i j)bk,1 + (i − 1)bk,2 ,
+           X 4k+3 = Z[Q 8 ]{ek },                      1)ck,1 − (i j − 1)ck,2 ,
+                                           d(ek ) = (i −
+           X 4k+4 = Z[Q 8 ]{ak+1 },        d(ak+1 ) = g∈Q 8 g · ek .
+
+123
+                                                                                                                  RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 14 The E 5 -page of the (∗ − σi )-graded Q 8 -HFPSS(E2 ). The lines of slope-5 are d5 -differentials
+
+
+
+
+123
+123
+      Fig. 15 The E 9 -page of the (∗ − σi )-graded Q 8 -HFPSS(E2 ). The lines of slope-9 are d9 -differentials
+                                                                                                                  Z. Duan et al.
+                                                                                                                                                                                          RO(G)-Graded HFPSS for E2
+
+
+
+
+      Fig. 16 The E 11 -page of the (∗ − σi )-graded Q 8 -HFPSS(E2 ). The lines of slope-11 are d11 -differentials. The lines of slope-13 are d13 -differentials. The lines of slope-17
+      are d17 -differentials. The lines of slope-23 are d23 -differentials
+
+
+
+
+123
+123
+      Fig. 17 The E ∞ -page of the (∗ − σi )-graded Q 8 /SD16 -HFPSS(E2 )
+                                                                            Z. Duan et al.
+RO(G)-Graded HFPSS for E2
+
+
+  Suppose that A is a Q 8 -module, then H ∗ (Q 8 ; A) is the cohomology of the cochain
+complex
+
+                             d0             d1       d2      d3
+                        → A⊕ A−
+                       A−           →A−
+                              → A⊕ A− → A → ···
+
+where the differentials (by abuse of notation) are given by the following matrices
+                             
+               i −1             1 + i −1 − j
+   d4k =            , d4k+1 =                 , d4k+2 = −1 + i 1 − i j ,
+               j −1            1 + i j −1 + i
+           
+and d4k+3 = g∈Q 8 g.
+  We record here the group cohomology of Q 8 with trivial Z coefficients
+
+                                  H 4k+2 (Q 8 , Z) = Z/2 ⊕ Z/2,
+                                  H 4k+4 (Q 8 , Z) = Z/8,
+                                  H 2q+1 (Q 8 , Z) = 0,
+
+where k ≥ 0, q ≥ 0, and the generator of H 4 (Q 8 , Z) gives the 4-periodicity.
+   In addition to the integer-graded Q 8 -HFPSS for E2 , we also compute the (∗ − σi )-
+graded part. For this purpose, we study the structure of π∗ E2 ⊗ σi as a Q 8 -module,
+which is given by the following analog of [28, Lemma 4.6]:
+
+Lemma A.1 Let E be a Q 8 -spectrum. Then
+
+                                  π∗e (E ∧ S 1−σi ) ∼
+                                                    = π∗e E ⊗ σi
+
+as Q 8 -modules.
+
+   Recall that we defined v1 = u 1 u −1 and its Q 8 -action was given in (2.3). By
+Lemma 2.12, we may first compute H ∗ (Q 8 , W[u −1 , v1 ]), then invert D and complete
+at I = (2, u 1 ).
+
+Remark A.2 If we define s = i ∗ (u −1 ) and denote u −1 by t, then the actions of Q 8 on
+s, t are given by
+
+                            i ∗ (s) = −t,           i ∗ (t) = s,
+                            j∗ (s) = −ζ s + ζ t,
+                                         2
+                                                    j∗ (t) = ζ s + ζ 2 t,
+                            k∗ (s) = ζ s + ζ 2 t,   k∗ (t) = ζ 2 s − ζ t.
+
+For computational purposes, it is equivalent to replacing generators u −1 , v1 by s, t,
+and the form of the action turns out to be more compact.
+
+  We first calculate the 0th cohomology ring. Behrens and Ormsby [10] have deter-
+mined the C4 i-invariants:
+
+                                                                             123
+                                                                                                   Z. Duan et al.
+
+
+Proposition A.3 Let b2 = s 2 + t 2 , b4 = s 3 t − st 3 and δ = s 2 t 2 , then
+
+                     H 0 (C4 , W[u −1 , v1 ]) = W[b2 , b4 , δ]/(b42 − b22 δ + 4δ 2 ).
+
+   The j-actions on b2 , b4 , δ are the following:
+
+                           j∗ (b2 ) = −b2 ,
+                           j∗ (b4 ) = −(2ζ + 1)b22 + 7b4 + 8(2ζ + 1)δ,
+                           j∗ (δ) = b22 + 2(2ζ + 1)b4 − 7δ.
+
+Proposition A.4 We have the 0th cohomology ring
+
+          H 0 (Q 8 , W[u −1 , v1 ]) = W[s1 , s2 , s3 ]/(s13 = 4(2ζ + 1)s12 s2 + 16s1 s22 )
+
+where s1 = b22 , s2 = b4 + (2ζ + 1)δ, and s3 = b23 + 2(2ζ + 1)b4 b2 − 8b2 δ.
+Proof Since π∗ E2 is 16-periodic as a Q 8 -module, it suffices to compute the j-invariants
+of H 0 (C4 , W[u −1 , v1 ]) in low degrees. The result follows by direct computation.  
+   In the main computations, we sometimes need to rely on explicit group cohomology
+results. The following is an example.
+Example A.5 The calculation of H 4 (Q 8 , π4 E2 ⊗ σi ) ∼
+                                                       = W/4.
+  The cochain complex at degree 4 looks like
+
+                                         d3                     d4
+                       W{s 2 , st, t 2 } −                   → W{s 2 , st, t 2 }2 .
+                                         → W{s 2 , st, t 2 } −
+
+By Lemma A.1, the actions are
+
+i ∗ (s 2 ) = t 2 ,                     i ∗ (st) = −st,                      i ∗ (t 2 ) = s 2 ,
+j∗ (s 2 ) = −ζ s 2 + 2st − ζ 2 t 2 ,   j∗ (st) = s 2 + (2ζ + 1)st − t 2 ,   j∗ (t 2 ) = −ζ 2 s 2 − 2st − ζ t 2 .
+
+Therefore, ker d4 = ker (i − 1) ∩ ker ( j − 1) = ker (i − 1) = W{s 2 + t 2 }.
+  Meanwhile, since we have
+
+                                          d3 (s 2 ) = 4(s 2 + t 2 ),
+                                          d3 (st) = 0,
+                                          d3 (t 2 ) = 4(s 2 + t 2 ),
+
+we conclude that H 4 (Q 8 , π4 E2 ⊗ σi ) ∼
+                                         = W/4.
+    We also calculate a couple of restriction maps in group cohomology. In the case of
+the integer-graded part, most calculations are easy. By Proposition A.8 we deduce that
+the generators η, ν, c, d, g have to restrict non-trivially to their C4 -counterparts, which
+lie in the Hurewicz image. For the (∗ − σi )-graded part, some chain-level calculations
+seem to be inevitable.
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+Example A.6 In the integer-graded part, calculate resC48i D −2 d = 0. This is used in
+                                                           Q
+
+the proof of Proposition 4.30.
+   The class D −2 d lies in bigrading (−2, 2). We are looking at the degree 0 part of
+W[u −1 , v1 ]. The generator of H 2 (Q 8 , W{1}) is given by the cochain
+
+                              α : Z[Q 8 ]{c0,1 , c0,2 } → W{1},
+                                    c0,1 → 1, c0,2 → 0.
+
+Restricting to C4 i, we rewrite X 2 = Z[Q 8 ]{c0,1 , c0,2 } as Z[C4 i]{c0,1 , jc0,1 , c0,2 ,
+jc0,2 }, and similarly for X 1 . Then α restricts to the cochain
+
+                       α : Z[Q 8 ]{c0,1 , jc0,1 , c0,2 , jc0,2 } → W{1},
+                             c0,1 , jc0,1 → 1, c0,2 , jc0,2 → 0.
+
+Now we check the image of d1 . Let β1 , β2 , β3 , β4 be the dual basis of b0,1 , jb0,1 , b0,2 ,
+ jb0,2 in HomC4 i (X 1 , W{1}). The image of β1 is calculated by evaluating β1 ◦ d1 at
+the C4 i-basis of X 2 . As an example, we have
+
+                 (β1 ◦ d1 )(c1,0 ) = β1 ((1 + i)b0,1 − b0,2 − jb0,2 ) = 2.
+
+Similarly, we verify that the restriction of α does not lie in the coboundary; hence the
+restriction is non-trivial.
+   Sometimes the restriction to C4 i is trivial, but it becomes non-trivial when
+                                                                    Q
+restricted to C4  j or C4 k. By similar calculations we have res j8 (x + y)u σ j = 0,
+            Q
+while res j8 (x + y)u σ j = 0.
+  Finally, we present the collection of calculated results.
+Proposition A.7 Summary of calculated group cohomology:
+ • H 3 (Q 8 , Z) = 0.
+ • H 4 (Q 8 , π4 E2 ⊗ σi ) = W/4.
+ • H 3 (Q 8 , π4 E2 ⊗ σi ) = W/2.
+ • H 2 (Q 8 , π4 E2 ⊗ σi ) = W/2 ⊕ W/2.
+ • H 1 (Q 8 , π0 E2 ⊗ σi ) = W/2.
+   Summary of calculated restrictions:
+      Q8
+ • resi h 1 = 0.
+        Q
+ • resi8 h 2 = 0.
+        Q
+ • resi8 d = 0.
+        Q
+ • resi8 g = 0.
+        Q
+ • resi8 {x 2 + y 2 }u σi = 0.
+   In fact, the restriction map from H ∗ (Q 8 , π∗ E2 ) to H ∗ (C4 , π∗ E2 ) is determined by
+the Hurewicz image of E2hC4 . The direct algebraic computation we give above could
+potentially adapt to computations of higher heights.
+
+                                                                                    123
+                                                                                                 Z. Duan et al.
+
+
+   We recall the known result of the Hurewicz image result of E2hC4 . We follow names
+introduced in Proposition 2.14.
+Proposition A.8 (see [31, Figure 12]) The following classes on the E ∞ -page of the
+C4 -HFPSS for E2 detects images of the Hurewicz map: S 0 → E2hC4 :
+ • s̄1 aσ2 at (1, 1) detects the image of η ∈ π1 S 0 .
+ • d̄1 u λ aσ at (3, 1) detects the image of ν ∈ π3 S 0 .
+ • d̄41 u 4σ a4λ at (8, 8) detects the image of  ∈ π8 S 0 .
+ • d̄41 u 4λ u 2σ a2σ at (14, 2) detects the image of κ ∈ π14 S 0 .
+ • d̄61 u 4λ u 6σ a2λ at (20, 4) detects the image of κ̄ ∈ π20 S 0 .
+
+   The unit map S 0 → E2hC4 factors as
+
+                                          unit         res
+                                     S 0 −−→ E2h Q 8 −→ E2hC4 .
+
+   There is a map of spectral sequences from the Adams–Novikov spectral sequence
+of the sphere to the C4 -HFPSS for E2 , and it factors through the Q 8 -HFPSS for E2 .
+By comparing the Adams–Novikov spectral sequence of the sphere (e.g., see [44,
+Table 2]) and the C4 -HFPSS for E2 , we see that the classes detecting η, ν, g, d with
+no filtration jump under this map. Hence in the Q 8 -HFPSS for E2 , these classes are
+detected by classes h 1 , h 2 , d, g, and the C4 -restriction of these classes are non-trivial
+as follows.
+Proposition A.9 The restriction map from the E 2 -page of the Q 8 -HFPSS for E2 to the
+E 2 -page of the C4 -HPFSS for E2 is determined by the following and the multiplicative
+structure.
+
+             resCQ48 (h 1 ) = s̄1 aσ2 ,                      resCQ48 (h 2 ) = d̄1 u λ aσ ,
+                 Q                                               Q
+             resC48 (c) = 0,                                 resC48 (d) = d̄41 u 4λ u 2σ a2σ ,
+                 Q
+             resC48 (g) = d̄61 u 4λ u 6σ a2λ .
+
+     The element  ∈ π8 S 0 is detected by a class at filtration 2 in the Adams–Novikov
+spectral sequence of the sphere. However, the image of  in π8 E2hC4 is detected by
+d̄41 u 4σ a4λ at filtration 8 in the C4 -HFPSS for E2 . There is a filtration jump by 6. For
+degree reasons, in Q 8 -HFPSS(E2 ), the image of  could be potentially detected by a
+class of filtration 2 ≤ f ≤ 8. By the fact that the unit map S 0 → E2h Q 8 further factors
+               unit
+through S 0 −−→ E2hG 24 , the image of  is detected by the class c at (8, 2) (up to a unit)
+in Q 8 -HFPSS(E2 ). Therefore, there is an exotic restriction in HFPSS from Q 8 to C4
+that maps the class c to the class d̄41 u 4σ a4λ .
+Acknowledgements The authors would like to thank Agnès Beaudry, Mark Behrens, Paul Goerss, Bert
+Guillou, XiaoLin Danny Shi, Zhouli Xu, and Mingcong Zeng for helpful conversations. We would also
+like to thank the anonymous referees for their careful reading and the many useful suggestions. The second
+author was supported by the National Science Foundation under Grant No. DMS-1926686. The third
+author is grateful to the Max Planck Institute for Mathematics in Bonn for its hospitality and financial
+support. The fifth author is partially supported by grant NSFC-12226002, the Shanghai Rising–Star Program
+
+
+123
+RO(G)-Graded HFPSS for E2
+
+
+under Agreement No. 20QA1401600, and Shanghai Pilot Program for Basic Research–Fudan University
+21TQ1400100 (21TQ002).
+
+Data availability No data was used for the research described in the article.
+
+Declarations
+Conflicts of interest The authors declare that there is no conflict of interest.
+
+
+References
+ 1. Adams, J.F.: Prerequisites (on equivariant stable homotopy) for Carlsson’s lecture. In: Algebraic Topol-
+    ogy (Aarhus, Denmark 1982), Lect. Notes in Math., vol. 1051, pp. 483–532. Springer-Verlag, Berlin
+    (1984)
+ 2. Atiyah, M.F., MacDonald, I.G.: Introduction to Commutative Algebra, Student Economy Edition.
+    Addison-Wesley Ser. Math., Westview Press, Boulder, CO (2016)
+ 3. Bauer, T.: Computation of the homotopy of the spectrum tmf. In: Groups, Homotopy and Configuration
+    Spaces, Geom. Topol. Monogr., vol. 13, pp. 11–40. Geometry & Topology Publications, Coventry
+    (2008)
+ 4. Beaudry, A.: The algebraic duality resolution at p = 2. Algebr. Geom. Topol. 15(6), 3653–3705 (2015)
+ 5. Beaudry, A.: Towards the homotopy of the K (2)-local Moore spectrum at p = 2. Adv. Math. 306,
+    722–788 (2017)
+ 6. Beaudry, A.: The chromatic splitting conjecture at n = p = 2. Geom. Topol. 21(6), 3213–3230 (2017)
+ 7. Beaudry, A., Bobkova, I., Hill, M.A., Stojanoska, V.: Invertible K (2)-local E-modules in C4 -spectra.
+    Algebr. Geom. Topol. 20(7), 3423–3503 (2020)
+ 8. Beaudry, A., Goerss, P.G., Henn, H.-W.: Chromatic splitting for the K (2)-local sphere at p = 2. Geom.
+    Topol. 26(1), 377–476 (2022)
+ 9. Behrens, M., Mahowald, M., Quigley, J.D.: The 2-primary Hurewicz image of tmf. Geom. Topol.
+    27(7), 2763–2831 (2023)
+10. Behrens, M., Ormsby, K.: On the homotopy of Q(3) and Q(5) at the prime 2. Algebr. Geom. Topol.
+    16(5), 2459–2534 (2016)
+11. Bobkova, I., Goerss, P.G.: Topological resolutions in K (2)-local homotopy theory at the prime 2. J.
+    Topol. 11(4), 918–957 (2018)
+12. Bökstedt, M., Madsen, I.: Topological cyclic homology of the integers. Astérisque 226(7–8), 57–143
+    (1994)
+13. Bousfield, A.K.: The localization of spectra with respect to homology. Topology 18(4), 257–281 (1979)
+14. Bujard, C.: Finite subgroups of extended Morava stabilizer groups. arXiv:1206.1951 (2012)
+15. Devinatz, E.S., Hopkins, M.J.: Homotopy fixed point spectra for closed subgroups of the Morava
+    stabilizer groups. Topology 43(1), 1–47 (2004)
+16. Duan, Z., Li, G., Shi, X.L.D.: Vanishing lines in chromatic homotopy theory. arXiv:2204.08600 (2022)
+17. Goerss, P.G., Hopkins, M.J.: Moduli spaces of commutative ring spectra. In: Structured Ring Spectra,
+    London Math. Soc. Lecture Note Ser., vol. 315, pp. 151–200. Cambridge Univ. Press, Cambridge
+    (2004)
+18. Goerss, P.G., Henn, H.-W., Mahowald, M., Rezk, C.: A resolution of the K (2)-local sphere at the prime
+    3. Ann. Math. (2) 162(2), 777–822 (2005)
+19. Goerss, P.G., Henn, H.-W., Mahowald, M.: The rational homotopy of the K (2)-local sphere and the
+    chromatic splitting conjecture for the prime 3 and level 2. Doc. Math. 19, 1271–1290 (2014)
+20. Greenlees, J.P.C.: Four approaches to cohomology theories with reality. In: An Alpine Bouquet of
+    Algebraic Topology, Comtemp. Math., vol. 708, pp. 139–156. AMS, Providence, RI (2018)
+21. Greenlees, J.P.C., May, J.P.: Generalized Tate Cohomology. Mem. Am. Math. Soc. 113(543), viii+178
+    pp. (1995)
+22. Guillou, B.J., Slone, C.: The slices of quaternionic Eilenberg–Mac Lane spectra. arXiv:2204.03127
+    (2022)
+23. Hahn, J., Shi, X.L.D.: Real orientations of Lubin–Tate spectra. Invent. Math. 221(3), 731–776 (2020)
+
+
+
+
+                                                                                               123
+                                                                                                 Z. Duan et al.
+
+
+24. Henn, H.-W.: On finite resolutions of K (n)-local spheres. In: Elliptic Cohomology, London Math. Soc.
+    Lecture Note Ser., vol. 342, pp. 122–169. Cambridge Univ. Press, Cambridge (2007)
+25. Henn, H.-W.: The centralizer resolution of the K (2)-local sphere at the prime 2. In: Homotopy Theory:
+    Tools and Applications, Contemp. Math., vol. 729, pp. 93–128. AMS, Providence, RI (2019)
+26. Hewett, T.: Finite subgroups of division algebras over local fields. J. Algebra 173(3), 518–548 (1995)
+27. Hill, M.A., Lawson, T.: Topological modular forms with level structure. Invent. Math. 203(2), 359–416
+    (2016)
+28. Hill, M.A., Meier, L.: The C2 -spectrum Tmf 1 (3) and its invertible modules. Algebr. Geom. Topol.
+    17(4), 1953–2011 (2017)
+29. Hill, M.A., Hopkins, M.J., Ravenel, D.C.: On the nonexistence of elements of Kervaire invariant one.
+    Ann. Math. (2) 184(1), 1–262 (2016)
+30. Hill, M.A., Hopkins, M.J., Ravenel, D.C.: The slice spectral sequence for the C4 analog of real K -
+    theory. Forum Math. 29(2), 383–447 (2017)
+31. Hill, M.A., Shi, X.L.D., Wang, G., Xu, Z.: The slice spectral sequence of a C4 -equivariant height-4
+    Lubin-Tate theory. Mem. Am. Math. Soc. 288(1429), v+119 pp. (2023)
+32. Hopkins, M.J.: Algebraic topology and modular forms. In: Proceedings of the International Congress
+    of Mathematicians, vol. I (Beijing, 2002), pp. 291–317. Higher Ed. Press, Beijing (2002)
+33. Hopkins, M.J., Mahowald, M.: From elliptic curves to homotopy theory. In: Topological Modular
+    Forms, Math. Surveys Monogr., vol. 201, pp. 261–285. AMS, Providence, RI (2014)
+34. Hopkins, M.J., Mahowald, M., Sadofsky, H.: Constructions of elements in Picard groups. In: Topol-
+    ogy and Representation Theory (Evanston, IL, 1992), Contemp. Math., vol. 158, pp. 89–126. AMS,
+    Providence, RI (1994)
+35. Hovey, M., Strickland, N.P.: Morava K -theories and localisation. Mem. Am. Math. Soc. 139(666),
+    viii+100 pp. (1999)
+36. Isaksen, D.C.: The cohomology of motivic A(2). Homol. Homotopy Appl. 11(2), 251–274 (2009)
+37. Isaksen, D.C.: The homotopy of C-motivic modular forms. arXiv:1811.07937 (2018)
+38. Li, G., Shi, X.L.D., Wang, G., Xu, Z.: Hurewicz images of real bordism theory and real Johnson–Wilson
+    theories. Adv. Math. 342, 67–115 (2019)
+39. Lubin, J., Tate, J.: Formal complex multiplication in local fields. Ann. Math. (2) 81, 380–387 (1965)
+40. Lurie, J.: Elliptic cohomology II: Orientations. https://people.math.rochester.edu/faculty/doug/
+    otherpapers/Lurie-Elliptic-II.pdf (2018)
+41. Meier, L., Shi, X.L.D., Zeng, M.: The localized slice spectral sequence, norms of Real bordism, and
+    the Segal conjecture. Adv. Math. 412, Paper No. 108804, 74 pp. (2023)
+42. Morava, J.: Noetherian localisations of categories of cobordism comodules. Ann. Math. (2) 121(1),
+    1–39 (1985)
+43. Quillen, D.: On the formal group laws of unoriented and complex cobordism theory. Bull. Am. Math.
+    Soc. 75, 1293–1298 (1969)
+44. Ravenel, D.C.: A novice’s guide to the Adams–Novikov spectral sequence. In: Geometric Applications
+    of Homotopy Theory (Proc. Conf., Evanston, Ill., 1977), II, Lecture Notes in Math., vol. 658, pp. 404–
+    475. Springer-Verlag, Berlin (1978)
+45. Ravenel, D.C.: Nilpotence and Periodicity in Stable Homotopy Theory, (Appendix C by Jeff Smith).
+    Annals of Mathematics Studies, vol. 128, Princeton University Press, Princeton, NJ (1992)
+46. Rezk, C.: Notes on the Hopkins–Miller theorem. In: Homotopy Theory via Algebraic Geometry and
+    Group Representations (Evanston, IL, 1997), Contemp. Math., vol. 220, pp. 313–366. AMS, Provi-
+    dence, RI (1998)
+47. Schwede, S.: Lectures on equivariant stable homotopy theory. http://131.220.132.179/people/schwede/
+    equivariant.pdf (2023)
+48. Toda, H.: Composition Methods in Homotopy Groups of Spheres. Annals of Mathematics Studies,
+    vol. 49. Princeton University Press, Princeton, NJ (1962)
+49. Ullman, J.R.: On the Regular Slice Spectral Sequence. Ph.D. Thesis, Massachusetts Institute of Tech-
+    nology, Cambridge, MA (2013)
+
+
+Springer Nature or its licensor (e.g. a society or other partner) holds exclusive rights to this article under
+a publishing agreement with the author(s) or other rightsholder(s); author self-archiving of the accepted
+manuscript version of this article is solely governed by the terms of such publishing agreement and applicable
+law.
+
+
+
+123
+

@@ -1,0 +1,18 @@
+[project]
+name = "hfpss-studio"
+version = "0.1.0"
+# SymPy 1.14 publishes compatibility classifiers through Python 3.13. Keep
+# Vercel from selecting a newer default interpreter until that CAS pin is
+# deliberately upgraded and tested.
+requires-python = ">=3.10,<3.14"
+dependencies = [
+  "Flask>=3.0,<4.0",
+  "sympy==1.14.0",
+]
+
+# Pin Vercel's framework detector to the compatibility entrypoint.  Importing
+# api.index installs backend/ on sys.path before exposing the Flask WSGI app,
+# so the backend's existing `domain.*` imports work in both local and Vercel
+# execution.
+[tool.vercel]
+entrypoint = "api.index:app"

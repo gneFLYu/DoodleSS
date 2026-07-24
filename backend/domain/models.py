@@ -276,6 +276,8 @@ class ManualPeriodicity:
     basis: str = ""
     source_ref: str = ""
     status: str = "manual-unverified"
+    storage_mode: str = "materialized"  # materialized | retired-compact
+    retirement_summary: dict[str, Any] = field(default_factory=dict)
     created_class_ids: list[str] = field(default_factory=list)
     created_differential_ids: list[str] = field(default_factory=list)
     created_proposition_ids: list[str] = field(default_factory=list)
@@ -294,6 +296,28 @@ class ManualPeriodicityRule:
     status: str = "manual-unverified"
     archived: bool = False
     archived_reason: str = ""
+
+
+@dataclass
+class PagePeriodCycle:
+    """A user-declared page period represented virtually, not by copied dots.
+
+    This record says which cycle the user proposes to use on a selected
+    spectral-sequence page.  It is not a theorem certificate and never
+    materializes translated classes, propositions, or differentials.
+    """
+
+    id: str
+    workspace_id: str
+    label: str
+    grade: Grade
+    declared_page: int
+    cycle_class_id: str = ""
+    invertible: bool = False
+    basis: str = ""
+    source_ref: str = ""
+    status: str = "candidate"
+    virtual: bool = True
 
 
 @dataclass
@@ -431,6 +455,7 @@ class Project:
     periodicity_rules: list[PeriodicityRule] = field(default_factory=list)
     manual_periodicities: list[ManualPeriodicity] = field(default_factory=list)
     manual_periodicity_rules: list[ManualPeriodicityRule] = field(default_factory=list)
+    page_period_cycles: list[PagePeriodCycle] = field(default_factory=list)
 
 
 T = TypeVar("T")
@@ -598,6 +623,14 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         values["period_vector"] = _coerce_grade(values.get("period_vector", raw.get("period_vector")))
         manual_periodicities.append(ManualPeriodicity(**values))
 
+    page_period_cycles = [
+        PagePeriodCycle(**{
+            **_known_kwargs(PagePeriodCycle, raw),
+            "grade": _coerce_grade(raw.get("grade")),
+        })
+        for raw in data.get("page_period_cycles", [])
+    ]
+
     e2_presentations = []
     for raw in data.get("e2_presentations", []):
         generators = [
@@ -642,4 +675,5 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         periodicity_rules=periodicity_rules,
         manual_periodicities=manual_periodicities,
         manual_periodicity_rules=manual_periodicity_rules,
+        page_period_cycles=page_period_cycles,
     )

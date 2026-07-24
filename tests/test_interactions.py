@@ -14,6 +14,7 @@ class InteractionContractTest(unittest.TestCase):
         cls.script = (ROOT / "backend" / "static" / "app.js").read_text(encoding="utf-8")
         cls.layout = (ROOT / "backend" / "static" / "cell-layout.js").read_text(encoding="utf-8")
         cls.styles = (ROOT / "backend" / "static" / "style.css").read_text(encoding="utf-8")
+        cls.guide = (ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
 
     def test_undo_redo_buttons_and_hotkeys_are_wired(self):
         self.assertIn('id="undo-action"', self.markup)
@@ -74,13 +75,15 @@ class InteractionContractTest(unittest.TestCase):
         self.assertIn(".class-instance:hover .class-point", self.styles)
         self.assertIn(".class-point.selected", self.styles)
 
-    def test_same_cell_instances_use_fate_only_adaptive_packing(self):
+    def test_same_cell_instances_use_dkllw_glyphs_independent_of_fate(self):
         self.assertIn("cell-layout.js", self.markup)
         self.assertLess(self.markup.index("cell-layout.js"), self.markup.index("app.js"))
         self.assertIn("HFPSSCellLayout.packInstances", self.script)
         self.assertIn("baseYOffset: 0.16", self.script)
-        self.assertIn('return visualStateFor(ws, item) === "permanent" ? "square" : "circle"', self.script)
-        self.assertIn("Never infer torsion", self.script)
+        self.assertIn("DKLLW class glyphs describe the coefficient/module pattern", self.script)
+        self.assertIn('item.style?.module_pattern', self.script)
+        self.assertIn('return "fat-dot"', self.script)
+        self.assertIn('return "square"', self.script)
         self.assertIn('data-class-instance=', self.script)
         self.assertIn('class="class-hit-target"', self.script)
         self.assertIn('role="button" tabindex="0"', self.script)
@@ -92,12 +95,15 @@ class InteractionContractTest(unittest.TestCase):
     def test_manual_connections_have_visible_lines_and_pointer_preview(self):
         self.assertIn("function visibleRelations", self.script)
         self.assertIn('proposition.kind !== "relation"', self.script)
-        self.assertIn('class="relation-line ${relationVisualState(relation)} ${manualDrawing}"', self.script)
+        self.assertIn("relation.conclusion?.chart_connection", self.script)
+        self.assertIn("dkllw-${chartConnection.kind}", self.script)
         self.assertIn('id="connection-preview"', self.script)
         self.assertIn("state.connectionPointer", self.script)
         self.assertIn('preview.setAttribute("x2", state.connectionPointer.x)', self.script)
         self.assertIn(".relation-line", self.styles)
         self.assertIn(".connection-preview.differential", self.styles)
+        self.assertIn(".relation-line.dkllw-vertical-two", self.styles)
+        self.assertIn(".relation-line.dkllw-hidden-extension", self.styles)
 
     def test_generator_dialog_has_live_safe_math_preview(self):
         self.assertIn('id="class-label-preview"', self.markup)
@@ -219,7 +225,8 @@ process.stdout.write(JSON.stringify(packed));
         self.assertIn('id="import-project-dialog"', self.markup)
         self.assertIn('id="apply-project-import" disabled', self.markup)
         self.assertIn('window.location.assign("/api/project/export")', self.script)
-        self.assertIn('api("/api/project/import/preview"', self.script)
+        self.assertIn("/api/project/import/preview?source_name=", self.script)
+        self.assertIn("encodeURIComponent(file.name)", self.script)
         self.assertIn('api("/api/project/import/apply"', self.script)
         self.assertIn("preview_sha256: preview.preview_sha256", self.script)
         self.assertIn("expected_revision: preview.current_revision", self.script)
@@ -227,6 +234,68 @@ process.stdout.write(JSON.stringify(packed));
         self.assertNotIn("if (file) applyProjectImport", self.script)
         self.assertIn("Review warnings", self.script)
         self.assertIn(".import-project-summary", self.styles)
+
+    def test_legacy_json_import_targets_current_page_and_export_is_lossy(self):
+        self.assertIn('metadata.format === "legacy-sseq-ver15.3"', self.script)
+        self.assertIn("target_workspace_id=", self.script)
+        self.assertIn("target_page=", self.script)
+        self.assertIn("metadata.legacy_summary", self.script)
+        for key in (
+            "generators_received", "classes_created", "connections_received",
+            "relations_created", "differentials_created", "periodicity_rules_received",
+            "manual_periodicity_rules_created",
+        ):
+            self.assertIn(key, self.script)
+        self.assertIn("warning.code", self.script)
+        self.assertIn("warning.message", self.script)
+        self.assertIn("warning.count", self.script)
+        self.assertIn("no temporary workspace will be created", self.script)
+        self.assertIn("Legacy glyph semantics are deliberately forgotten as ordinary dots", self.script)
+        self.assertIn("connections and period rules remain candidate/manual-unverified", self.script)
+        self.assertIn("legacy_canvas: state.importSource.legacyCanvas", self.script)
+        self.assertIn("source_name: state.importSource.sourceName", self.script)
+        self.assertIn("target_workspace_id: state.importSource.targetWorkspaceId", self.script)
+        self.assertIn("target_page: state.importSource.targetPage", self.script)
+        self.assertIn('button.textContent = "Applying..."', self.script)
+        self.assertIn("Applying the reviewed import...", self.script)
+        self.assertIn("button.disabled = false", self.script)
+        self.assertIn("button.textContent = idleLabel", self.script)
+        self.assertIn("result.imported_workspace_id", self.script)
+        self.assertIn("result.import?.workspace_id", self.script)
+        self.assertIn("state.workspaceId = importedWorkspaceId || null", self.script)
+        self.assertIn('id="export-legacy-json"', self.markup)
+        self.assertIn("/legacy-export?page=", self.script)
+        for phrase in (
+            "Import JSON → Preview → Apply",
+            "当前",
+            "candidate/manual-unverified",
+        ):
+            self.assertIn(phrase, self.guide)
+
+    def test_mutations_preserve_the_selected_page_and_rendering_is_coalesced(self):
+        self.assertIn("pageByWorkspace: new Map()", self.script)
+        self.assertIn("state.pageByWorkspace.set(state.workspaceId, workspace().page)", self.script)
+        self.assertIn("function scheduleChartRender", self.script)
+        self.assertIn("requestAnimationFrame", self.script)
+        self.assertIn("scheduleChartRender();", self.script)
+
+    def test_generator_label_is_the_semantic_expression_and_lists_tokens(self):
+        self.assertNotIn('name="expression"', self.markup)
+        self.assertIn('id="class-generator-preview"', self.markup)
+        self.assertIn('name="glyph"', self.markup)
+        for glyph in ("dot", "fat-dot", "circle", "square"):
+            self.assertIn(f'value="{glyph}"', self.markup)
+        self.assertIn("Basic generators:", self.script)
+        self.assertIn("expression: label", self.script)
+
+    def test_page_periods_are_virtual_and_follow_differential_survival(self):
+        self.assertIn('id="page-period-tool"', self.markup)
+        self.assertIn("function pagePeriodEligible", self.script)
+        self.assertIn("function registerPagePeriodCycle", self.script)
+        self.assertIn("/page-periods", self.script)
+        self.assertIn("item.source_id, item.target_id", self.script)
+        self.assertIn("page <= Number(cycle.declared_page)", self.script)
+        self.assertIn("Translates are viewport-only and never stored as dots", self.markup)
 
     def test_workspace_selector_separates_charts_atlas_and_support_spaces(self):
         self.assertIn('id="support-workspace-select"', self.markup)

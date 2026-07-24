@@ -37,11 +37,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "int_h2D",
@@ -65,7 +69,11 @@
           "archived_reason": "Archived by a local user action. Historical claims are retained.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "int_D2",
@@ -89,7 +97,11 @@
           "archived_reason": "Archived by a local user action. Historical claims are retained.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "int_h2D2",
@@ -113,7 +125,11 @@
           "archived_reason": "Archived by a local user action. Historical claims are retained.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "int_Dinvh1",
@@ -137,7 +153,11 @@
           "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "int_D8",
@@ -161,7 +181,11 @@
           "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_k",
@@ -181,11 +205,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_x2",
@@ -205,11 +233,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_y2",
@@ -229,11 +261,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_xh1",
@@ -253,11 +289,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_h1",
@@ -277,11 +317,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_h2",
@@ -301,11 +345,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_v12h1",
@@ -325,11 +373,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by a local user action. Historical claims are retained.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_integer_v14",
@@ -349,11 +401,15 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": true,
-          "archived_reason": "Archived by a local user action. Historical claims are retained.",
+          "archived": false,
+          "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "class_2a00e3ba4f",
@@ -379,11 +435,253 @@
           "coefficient_context_id": "q8-witt-f4",
           "convention_id": "q8-thesis-plotted-v1",
           "sector_id": "q8-ro-a0-b0",
-          "archived": false,
-          "archived_reason": "",
+          "archived": true,
+          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_28878d6631",
+          "label": "1",
+          "grade": {
+            "stem": 0,
+            "filtration": 0,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "1",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived by Clear current canvas. The class, its differential records, propositions, and provenance remain in the project and can be restored by undo.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_a9596906ad",
+          "label": "1",
+          "grade": {
+            "stem": 0,
+            "filtration": 0,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "1",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived during source audit: active local display point had no source locator or notes.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_7682c5cca9",
+          "label": "h_1",
+          "grade": {
+            "stem": 1,
+            "filtration": 1,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "h_1",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived during source audit: active local display point had no source locator or notes.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_2cde6fffa1",
+          "label": "h_1^2",
+          "grade": {
+            "stem": 2,
+            "filtration": 2,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "h_1^2",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived during source audit: active local display point had no source locator or notes.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_3237d5f2ea",
+          "label": "v_1^4D^{-1}",
+          "grade": {
+            "stem": 4,
+            "filtration": 0,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "v_1^4D^{-1}",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived during source audit: active local display point had no source locator or notes.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_1637b64002",
+          "label": "v_1^4D^{-1}",
+          "grade": {
+            "stem": 10,
+            "filtration": 7,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "v_1^4D^{-1}",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived by a local user action. Historical claims are retained.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "class_d3fe2b51c3",
+          "label": "h_1^3",
+          "grade": {
+            "stem": 3,
+            "filtration": 3,
+            "representation": {
+              "H": 0,
+              "sigma_i": 0,
+              "sigma_j": 0,
+              "sigma_k": 0,
+              "trivial": 0
+            }
+          },
+          "page": 2,
+          "state": "unknown",
+          "notes": "",
+          "style": {},
+          "period_stem": 0,
+          "period_filtration": 0,
+          "expression": "h_1^3",
+          "coefficient_context_id": "q8-witt-f4",
+          "convention_id": "q8-thesis-plotted-v1",
+          "sector_id": "q8-ro-a0-b0",
+          "archived": true,
+          "archived_reason": "Archived during source audit: active local display point had no source locator or notes.",
+          "periodicity_rule_id": null,
+          "periodicity_anchor_class_id": null,
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [
@@ -402,7 +700,10 @@
           "anchor_differential_id": null,
           "period_notes": "",
           "unperiodic_reason": "No periodicity asserted in imported data.",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_int_d5_D2",
@@ -419,7 +720,50 @@
           "anchor_differential_id": null,
           "period_notes": "",
           "unperiodic_reason": "No periodicity asserted in imported data.",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "diff_74fcb38abc",
+          "source_id": "class_3237d5f2ea",
+          "target_id": "class_d3fe2b51c3",
+          "page": 3,
+          "status": "candidate",
+          "label": "",
+          "period_stem": 0,
+          "period_filtration": 0,
+          "proposition_id": "prop_67a9f48803",
+          "period_family_id": null,
+          "period_translation": [],
+          "anchor_differential_id": null,
+          "period_notes": "",
+          "unperiodic_reason": "No periodicity asserted in imported data.",
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
+        },
+        {
+          "id": "diff_9cc8ea6bf5",
+          "source_id": "class_3237d5f2ea",
+          "target_id": "class_d3fe2b51c3",
+          "page": 3,
+          "status": "candidate",
+          "label": "",
+          "period_stem": 0,
+          "period_filtration": 0,
+          "proposition_id": "prop_8e27451b5c",
+          "period_family_id": null,
+          "period_translation": [],
+          "anchor_differential_id": null,
+          "period_notes": "",
+          "unperiodic_reason": "No periodicity asserted in imported data.",
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differential_events": [
@@ -494,6 +838,70 @@
             "DKLLW24, Corollary 4.15 (as cited in Note/formal_notes.tex)"
           ],
           "status": "established"
+        },
+        {
+          "id": "event_diff_74fcb38abc_supports",
+          "spectral_sequence": "hfpss",
+          "page": 3,
+          "role": "supports",
+          "class_id": "class_3237d5f2ea",
+          "counterpart_class_id": "class_d3fe2b51c3",
+          "differential_claim_id": "diff_74fcb38abc",
+          "source_filtration": 0,
+          "target_filtration": 3,
+          "source_exists_in_hfpss": true,
+          "comparison_status": "transports_to_hfpss",
+          "proposition_id": "prop_67a9f48803",
+          "source_refs": [],
+          "status": "candidate"
+        },
+        {
+          "id": "event_diff_74fcb38abc_receives",
+          "spectral_sequence": "hfpss",
+          "page": 3,
+          "role": "receives",
+          "class_id": "class_d3fe2b51c3",
+          "counterpart_class_id": "class_3237d5f2ea",
+          "differential_claim_id": "diff_74fcb38abc",
+          "source_filtration": 0,
+          "target_filtration": 3,
+          "source_exists_in_hfpss": true,
+          "comparison_status": "transports_to_hfpss",
+          "proposition_id": "prop_67a9f48803",
+          "source_refs": [],
+          "status": "candidate"
+        },
+        {
+          "id": "event_diff_9cc8ea6bf5_supports",
+          "spectral_sequence": "hfpss",
+          "page": 3,
+          "role": "supports",
+          "class_id": "class_3237d5f2ea",
+          "counterpart_class_id": "class_d3fe2b51c3",
+          "differential_claim_id": "diff_9cc8ea6bf5",
+          "source_filtration": 0,
+          "target_filtration": 3,
+          "source_exists_in_hfpss": true,
+          "comparison_status": "transports_to_hfpss",
+          "proposition_id": "prop_8e27451b5c",
+          "source_refs": [],
+          "status": "candidate"
+        },
+        {
+          "id": "event_diff_9cc8ea6bf5_receives",
+          "spectral_sequence": "hfpss",
+          "page": 3,
+          "role": "receives",
+          "class_id": "class_d3fe2b51c3",
+          "counterpart_class_id": "class_3237d5f2ea",
+          "differential_claim_id": "diff_9cc8ea6bf5",
+          "source_filtration": 0,
+          "target_filtration": 3,
+          "source_exists_in_hfpss": true,
+          "comparison_status": "transports_to_hfpss",
+          "proposition_id": "prop_8e27451b5c",
+          "source_refs": [],
+          "status": "candidate"
         }
       ],
       "fates": [
@@ -705,6 +1113,116 @@
           "appears_from_page": 2,
           "hfpss_outgoing_events": [],
           "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_2a00e3ba4f",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_28878d6631",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_a9596906ad",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_7682c5cca9",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_2cde6fffa1",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_3237d5f2ea",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [
+            "event_diff_74fcb38abc_supports",
+            "event_diff_9cc8ea6bf5_supports"
+          ],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_1637b64002",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [],
+          "tate_outgoing_events": [],
+          "tate_incoming_events": [],
+          "first_hfpss_death": null,
+          "last_hfpss_live_page": "unknown",
+          "conclusion": "unresolved",
+          "conclusion_page": null,
+          "justification_ids": []
+        },
+        {
+          "class_id": "class_d3fe2b51c3",
+          "appears_from_page": 2,
+          "hfpss_outgoing_events": [],
+          "hfpss_incoming_events": [
+            "event_diff_74fcb38abc_receives",
+            "event_diff_9cc8ea6bf5_receives"
+          ],
           "tate_outgoing_events": [],
           "tate_incoming_events": [],
           "first_hfpss_death": null,
@@ -1288,6 +1806,109 @@
           "reviewer": "",
           "reviewed_at": null,
           "supersedes_id": null
+        },
+        {
+          "id": "prop_2957f21dfc",
+          "kind": "relation",
+          "statement": "Relation: 1 ~ h_1",
+          "status": "candidate",
+          "conclusion": {
+            "source_id": "class_a9596906ad",
+            "target_id": "class_7682c5cca9",
+            "page": 2
+          },
+          "premise_ids": [],
+          "rule": "manual",
+          "confidence": 0.5,
+          "notes": "Added from the chart relation tool; evidence remains to be supplied.",
+          "source_ref": "",
+          "source_refs": [],
+          "convention_id": "q8-thesis-plotted-v1",
+          "hypotheses": [],
+          "verification_checks": [],
+          "reviewer": "",
+          "reviewed_at": null,
+          "supersedes_id": null
+        },
+        {
+          "id": "prop_0f00d2cd2a",
+          "kind": "tombstone",
+          "statement": "Archive the chart display of v_1^4D^{-1} without deleting its proof history.",
+          "status": "established",
+          "conclusion": {
+            "class_id": "class_1637b64002",
+            "archived": true
+          },
+          "premise_ids": [],
+          "rule": "UserArchive",
+          "confidence": 1.0,
+          "notes": "",
+          "source_ref": "Local workspace edit",
+          "source_refs": [
+            "Local workspace edit"
+          ],
+          "convention_id": "q8-thesis-plotted-v1",
+          "hypotheses": [],
+          "verification_checks": [],
+          "reviewer": "",
+          "reviewed_at": null,
+          "supersedes_id": null
+        },
+        {
+          "id": "prop_67a9f48803",
+          "kind": "differential",
+          "statement": "d_3(v_1^4D^{-1}) = h_1^3",
+          "status": "candidate",
+          "conclusion": {
+            "source_id": "class_3237d5f2ea",
+            "target_id": "class_d3fe2b51c3",
+            "page": 3
+          },
+          "premise_ids": [],
+          "rule": "manual",
+          "confidence": 0.5,
+          "notes": "",
+          "source_ref": "",
+          "source_refs": [],
+          "convention_id": "q8-thesis-plotted-v1",
+          "hypotheses": [],
+          "verification_checks": [
+            "structure",
+            "bidegree",
+            "page-liveness",
+            "evidence"
+          ],
+          "reviewer": "",
+          "reviewed_at": null,
+          "supersedes_id": null
+        },
+        {
+          "id": "prop_8e27451b5c",
+          "kind": "differential",
+          "statement": "d_3(v_1^4D^{-1}) = h_1^3",
+          "status": "candidate",
+          "conclusion": {
+            "source_id": "class_3237d5f2ea",
+            "target_id": "class_d3fe2b51c3",
+            "page": 3
+          },
+          "premise_ids": [],
+          "rule": "manual",
+          "confidence": 0.5,
+          "notes": "",
+          "source_ref": "",
+          "source_refs": [],
+          "convention_id": "q8-thesis-plotted-v1",
+          "hypotheses": [],
+          "verification_checks": [
+            "structure",
+            "bidegree",
+            "page-liveness",
+            "evidence"
+          ],
+          "reviewer": "",
+          "reviewed_at": null,
+          "supersedes_id": null
         }
       ],
       "summary": "Reference workspace for the integer-graded calculation used to transport differentials to RO(Q8) shifts.",
@@ -1351,7 +1972,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "sig_xplusy",
@@ -1377,7 +2002,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "sig_x3",
@@ -1403,7 +2032,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_sigma_x2plusy2_usigma_i",
@@ -1429,7 +2062,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_sigma_h1plusxv1_usigma_i",
@@ -1455,7 +2092,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "e2_sigma_v12_usigma_i",
@@ -1481,7 +2122,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [],
@@ -1826,7 +2471,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_x2h1u",
@@ -1852,7 +2501,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_a2",
@@ -1878,7 +2531,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_D",
@@ -1904,7 +2561,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_2D",
@@ -1930,7 +2591,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_h2D",
@@ -1956,7 +2621,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_kh2sqD",
@@ -1982,7 +2651,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_2kh2D",
@@ -2008,7 +2681,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_xh1u",
@@ -2034,7 +2711,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_kh1cubedu",
@@ -2060,7 +2741,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_a2D2",
@@ -2086,7 +2771,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_k3h1D3",
@@ -2112,7 +2801,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_k2h1sqD3",
@@ -2138,7 +2831,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_k4xh1sqD4",
@@ -2164,7 +2861,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_2h2D3",
@@ -2190,7 +2891,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "two_d13target",
@@ -2216,7 +2921,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [
@@ -2237,7 +2946,10 @@
           "anchor_differential_id": "diff_two_d3_u",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d5_h2D",
@@ -2256,7 +2968,10 @@
           "anchor_differential_id": "diff_two_d5_h2D",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d5_2D",
@@ -2275,7 +2990,10 @@
           "anchor_differential_id": "diff_two_d5_2D",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d5_xh1",
@@ -2294,7 +3012,10 @@
           "anchor_differential_id": "diff_two_d5_xh1",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d9",
@@ -2313,7 +3034,10 @@
           "anchor_differential_id": "diff_two_d9",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d11",
@@ -2332,7 +3056,10 @@
           "anchor_differential_id": "diff_two_d11",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_two_d13",
@@ -2351,7 +3078,10 @@
           "anchor_differential_id": "diff_two_d13",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differential_events": [
@@ -3407,7 +4137,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_h1cubed",
@@ -3433,7 +4167,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_combo",
@@ -3459,7 +4197,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_k2a2D3",
@@ -3485,7 +4227,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_k3xh1sqD3",
@@ -3511,7 +4257,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_yh2_source",
@@ -3537,7 +4287,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_kx3_target",
@@ -3563,7 +4317,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_x3_source",
@@ -3589,7 +4347,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_2v1_target",
@@ -3615,7 +4377,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_xyD2_source",
@@ -3641,7 +4407,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_h1xv1_target",
@@ -3667,7 +4437,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_sum_source",
@@ -3693,7 +4467,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_sum_target",
@@ -3719,7 +4497,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_25_source",
@@ -3745,7 +4527,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_25_target",
@@ -3771,7 +4557,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d11_30_source",
@@ -3797,7 +4587,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d11_30_target",
@@ -3823,7 +4617,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_17_source",
@@ -3849,7 +4647,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_17_target",
@@ -3875,7 +4677,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_18_source",
@@ -3901,7 +4707,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_18_target",
@@ -3927,7 +4737,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_32_source",
@@ -3953,7 +4767,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_32_target",
@@ -3979,7 +4797,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_25b_source",
@@ -4005,7 +4827,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "three_d9_25b_target",
@@ -4031,7 +4857,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [
@@ -4052,7 +4882,10 @@
           "anchor_differential_id": "diff_three_d3",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d5_main",
@@ -4071,7 +4904,10 @@
           "anchor_differential_id": "diff_three_d5_main",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d5_yh2",
@@ -4090,7 +4926,10 @@
           "anchor_differential_id": "diff_three_d5_yh2",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d5_x3",
@@ -4109,7 +4948,10 @@
           "anchor_differential_id": "diff_three_d5_x3",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d5_xyD2",
@@ -4128,7 +4970,10 @@
           "anchor_differential_id": "diff_three_d5_xyD2",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d5_sum",
@@ -4147,7 +4992,10 @@
           "anchor_differential_id": "diff_three_d5_sum",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d9_25",
@@ -4166,7 +5014,10 @@
           "anchor_differential_id": "diff_three_d9_25",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d11_30",
@@ -4185,7 +5036,10 @@
           "anchor_differential_id": "diff_three_d11_30",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d9_17",
@@ -4204,7 +5058,10 @@
           "anchor_differential_id": "diff_three_d9_17",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d9_18",
@@ -4223,7 +5080,10 @@
           "anchor_differential_id": "diff_three_d9_18",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d9_32",
@@ -4242,7 +5102,10 @@
           "anchor_differential_id": "diff_three_d9_32",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_three_d9_25b",
@@ -4261,7 +5124,10 @@
           "anchor_differential_id": "diff_three_d9_25b",
           "period_notes": "Migrated from raw period_stem/period_filtration fields; certificate remains under review.",
           "unperiodic_reason": "",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differential_events": [
@@ -5902,7 +6768,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "mixed_h1",
@@ -5929,7 +6799,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "mixed_combo",
@@ -5956,7 +6830,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [
@@ -5975,7 +6853,10 @@
           "anchor_differential_id": null,
           "period_notes": "",
           "unperiodic_reason": "No periodicity asserted in imported data.",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differential_events": [
@@ -6168,7 +7049,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "c4_target",
@@ -6192,7 +7077,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "c4_delta",
@@ -6216,7 +7105,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "c4_delta_target",
@@ -6240,7 +7133,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [
@@ -6259,7 +7156,10 @@
           "anchor_differential_id": null,
           "period_notes": "",
           "unperiodic_reason": "No periodicity asserted in imported data.",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "diff_c4_d5_delta",
@@ -6276,7 +7176,10 @@
           "anchor_differential_id": null,
           "period_notes": "",
           "unperiodic_reason": "No periodicity asserted in imported data.",
-          "periodicity_rule_id": null
+          "periodicity_rule_id": null,
+          "manual_periodicity_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differential_events": [
@@ -6550,7 +7453,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "tate_g",
@@ -6574,7 +7481,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [],
@@ -6693,7 +7604,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         },
         {
           "id": "H_period",
@@ -6719,7 +7634,11 @@
           "archived_reason": "",
           "periodicity_rule_id": null,
           "periodicity_anchor_class_id": null,
-          "periodicity_translation": 0
+          "periodicity_translation": 0,
+          "manual_periodicity_id": null,
+          "manual_periodicity_anchor_class_id": null,
+          "manual_periodicity_translation": 0,
+          "manual_periodicity_exponents": []
         }
       ],
       "differentials": [],
@@ -7337,10 +8256,53 @@
     "source": "Local REU_Projects (1).zip",
     "scope": "RO(Q8)-graded HFPSS for height-2 Morava E-theory",
     "reduction": "RO(Q8) finite atlas: all 16 (* - a sigma_i - b sigma_j), 0<=a,b<=3, are persisted; no quotient by i/j transposition is applied.",
-    "status_policy": "Statements imported from drafts remain derived or under-review unless the archive explicitly treats them as established input."
+    "status_policy": "Statements imported from drafts remain derived or under-review unless the archive explicitly treats them as established input.",
+    "retired_legacy_workspaces": [
+      {
+        "workspace_id": "legacy_v153_f64cf6d9ea8b",
+        "name": "Imported legacy canvas — 2sigma_Dec30.json",
+        "classes": 2096,
+        "differentials": 948,
+        "propositions": 4876,
+        "legacy_import": {
+          "format": "sseq-ver15.3",
+          "source_name": "2sigma_Dec30.json",
+          "sha256": "f64cf6d9ea8bf04a0ca8818f3e4b4a6565a83996ca590933ca0e108393765a91",
+          "p_q_mapping": "p -> stem, q -> filtration",
+          "offset_policy": "preserved in class style/notes; adaptive packing renders the cell",
+          "mathematical_status": "candidate/manual-unverified"
+        },
+        "reason": "Retired obsolete appended temporary workspace after legacy I/O became an in-place current-page operation."
+      }
+    ],
+    "display_source_audits": [
+      {
+        "workspace_id": "ws_integer",
+        "archived_uncited_class_ids": [
+          "class_a9596906ad",
+          "class_7682c5cca9",
+          "class_2cde6fffa1",
+          "class_3237d5f2ea",
+          "class_d3fe2b51c3"
+        ],
+        "restored_source_catalogue_class_ids": [
+          "e2_integer_k",
+          "e2_integer_x2",
+          "e2_integer_y2",
+          "e2_integer_xh1",
+          "e2_integer_h1",
+          "e2_integer_h2",
+          "e2_integer_v12h1",
+          "e2_integer_v14",
+          "int_D"
+        ],
+        "page_period_cycle_id": "integer-D-E2-page-period",
+        "limitation": "Finite source-backed catalogue only; not a transcription of every point in Figure 5."
+      }
+    ]
   },
-  "revision": 10,
-  "schema_version": 5,
+  "revision": 52,
+  "schema_version": 6,
   "coefficient_contexts": [
     {
       "id": "q8-residue-f4",
@@ -8010,11 +8972,21 @@
       "display_label": "(*)",
       "period_reduction_context_id": "q8-ro-tile-source-scoped-v1",
       "workspace_id": "ws_integer",
-      "status": "not-computed",
+      "status": "imported",
       "c3_orbit_id": "q8-c3-orbit-0-0-0",
       "c3_position": 0,
       "symmetry_status": "distinct",
-      "class_ids": [],
+      "class_ids": [
+        "int_D",
+        "e2_integer_k",
+        "e2_integer_x2",
+        "e2_integer_y2",
+        "e2_integer_xh1",
+        "e2_integer_h1",
+        "e2_integer_h2",
+        "e2_integer_v12h1",
+        "e2_integer_v14"
+      ],
       "products_in": [],
       "products_out": []
     },
@@ -8523,6 +9495,253 @@
         "No propagation to other workspaces without a separately scoped rule."
       ],
       "source_ref": "DKLLW24, Proposition 4.1 (local PDF p. 25; journal p. 19): D^8 is invertible in bidegree (64,0); section 6.1.2 (local PDF p. 51; journal p. 40): non-E2 HFPSS pages are (64,0)-periodic by D^8."
+    }
+  ],
+  "manual_periodicities": [
+    {
+      "id": "manual-period-300f19680f4f1d0b",
+      "workspace_id": "ws_integer",
+      "anchor_class_id": "",
+      "anchor_differential_id": "",
+      "mode": "box",
+      "rule_ids": [
+        "manual_rule_1a7791a9bb"
+      ],
+      "bounds": {
+        "p_min": -20,
+        "p_max": 70,
+        "q_min": 0,
+        "q_max": 50
+      },
+      "translation_limit": 20,
+      "cycle_label": "D",
+      "period_vector": {
+        "stem": 0,
+        "filtration": 0,
+        "representation": {}
+      },
+      "page": 2,
+      "translations": [],
+      "basis": "Manual drawing operation; no mathematical certificate supplied.",
+      "source_ref": "Local manual drawing operation; no mathematical certificate supplied.",
+      "status": "manual-unverified",
+      "storage_mode": "retired-compact",
+      "retirement_summary": {
+        "retired_at": "2026-07-24T01:25:19.402827+00:00",
+        "digest": "63772f0688e0382c5b12bb997b58505ad8eea30c83e6ca84664bcdcfd5d51847",
+        "counts": {
+          "classes": 10,
+          "active_classes": 0,
+          "archived_classes": 10,
+          "differentials": 0,
+          "propositions": 10
+        },
+        "missing_counts": {
+          "classes": 0,
+          "differentials": 0,
+          "propositions": 0
+        },
+        "policy": "exact-created-id-and-record-owner"
+      },
+      "created_class_ids": [],
+      "created_differential_ids": [],
+      "created_proposition_ids": []
+    },
+    {
+      "id": "manual-period-17d3076779c6ee7b",
+      "workspace_id": "ws_integer",
+      "anchor_class_id": "",
+      "anchor_differential_id": "",
+      "mode": "box",
+      "rule_ids": [
+        "manual_rule_1a7791a9bb",
+        "manual_rule_493946e2a4"
+      ],
+      "bounds": {
+        "p_min": -20,
+        "p_max": 70,
+        "q_min": 0,
+        "q_max": 50
+      },
+      "translation_limit": 20,
+      "cycle_label": "D",
+      "period_vector": {
+        "stem": 0,
+        "filtration": 0,
+        "representation": {}
+      },
+      "page": 2,
+      "translations": [],
+      "basis": "Manual drawing operation; no mathematical certificate supplied.",
+      "source_ref": "Local manual drawing operation; no mathematical certificate supplied.",
+      "status": "manual-unverified",
+      "storage_mode": "retired-compact",
+      "retirement_summary": {
+        "retired_at": "2026-07-24T01:25:19.402827+00:00",
+        "digest": "63772f0688e0382c5b12bb997b58505ad8eea30c83e6ca84664bcdcfd5d51847",
+        "counts": {
+          "classes": 444,
+          "active_classes": 148,
+          "archived_classes": 296,
+          "differentials": 0,
+          "propositions": 444
+        },
+        "missing_counts": {
+          "classes": 0,
+          "differentials": 0,
+          "propositions": 0
+        },
+        "policy": "exact-created-id-and-record-owner"
+      },
+      "created_class_ids": [],
+      "created_differential_ids": [],
+      "created_proposition_ids": []
+    },
+    {
+      "id": "manual-period-5bf6b8c5a1b53737",
+      "workspace_id": "ws_integer",
+      "anchor_class_id": "",
+      "anchor_differential_id": "",
+      "mode": "box",
+      "rule_ids": [
+        "manual_rule_1a7791a9bb",
+        "manual_rule_493946e2a4"
+      ],
+      "bounds": {
+        "p_min": -20,
+        "p_max": 70,
+        "q_min": 0,
+        "q_max": 50
+      },
+      "translation_limit": 20,
+      "cycle_label": "D",
+      "period_vector": {
+        "stem": 0,
+        "filtration": 0,
+        "representation": {}
+      },
+      "page": 3,
+      "translations": [],
+      "basis": "Manual drawing operation; no mathematical certificate supplied.",
+      "source_ref": "Local manual drawing operation; no mathematical certificate supplied.",
+      "status": "manual-unverified",
+      "storage_mode": "retired-compact",
+      "retirement_summary": {
+        "retired_at": "2026-07-24T01:25:19.402827+00:00",
+        "digest": "63772f0688e0382c5b12bb997b58505ad8eea30c83e6ca84664bcdcfd5d51847",
+        "counts": {
+          "classes": 742,
+          "active_classes": 742,
+          "archived_classes": 0,
+          "differentials": 298,
+          "propositions": 1040
+        },
+        "missing_counts": {
+          "classes": 0,
+          "differentials": 0,
+          "propositions": 0
+        },
+        "policy": "exact-created-id-and-record-owner"
+      },
+      "created_class_ids": [],
+      "created_differential_ids": [],
+      "created_proposition_ids": []
+    }
+  ],
+  "manual_periodicity_rules": [
+    {
+      "id": "manual_rule_1a7791a9bb",
+      "workspace_id": "ws_integer",
+      "name": "D",
+      "period_vector": {
+        "stem": 8,
+        "filtration": 0,
+        "representation": {}
+      },
+      "basis": "Local manual drawing rule; no mathematical certificate supplied.",
+      "source_ref": "",
+      "status": "manual-unverified",
+      "archived": false,
+      "archived_reason": ""
+    },
+    {
+      "id": "manual_rule_0654fa6684",
+      "workspace_id": "ws_integer",
+      "name": "kD^3",
+      "period_vector": {
+        "stem": 8,
+        "filtration": 0,
+        "representation": {}
+      },
+      "basis": "Local manual drawing rule; no mathematical certificate supplied.",
+      "source_ref": "",
+      "status": "manual-unverified",
+      "archived": true,
+      "archived_reason": "Archived by local user action; existing manual copies remain auditable."
+    },
+    {
+      "id": "manual_rule_73f7d35547",
+      "workspace_id": "ws_integer",
+      "name": "kD^3",
+      "period_vector": {
+        "stem": 20,
+        "filtration": 4,
+        "representation": {}
+      },
+      "basis": "Local manual drawing rule; no mathematical certificate supplied.",
+      "source_ref": "",
+      "status": "manual-unverified",
+      "archived": true,
+      "archived_reason": "Archived by local user action; existing manual copies remain auditable."
+    },
+    {
+      "id": "manual_rule_aa9d68b68f",
+      "workspace_id": "ws_integer",
+      "name": "(kD^3)",
+      "period_vector": {
+        "stem": 20,
+        "filtration": 4,
+        "representation": {}
+      },
+      "basis": "Local manual drawing rule; no mathematical certificate supplied.",
+      "source_ref": "",
+      "status": "manual-unverified",
+      "archived": true,
+      "archived_reason": "Archived by local user action; existing manual copies remain auditable."
+    },
+    {
+      "id": "manual_rule_493946e2a4",
+      "workspace_id": "ws_integer",
+      "name": "k",
+      "period_vector": {
+        "stem": -4,
+        "filtration": 4,
+        "representation": {}
+      },
+      "basis": "Local manual drawing rule; no mathematical certificate supplied.",
+      "source_ref": "",
+      "status": "manual-unverified",
+      "archived": false,
+      "archived_reason": ""
+    }
+  ],
+  "page_period_cycles": [
+    {
+      "id": "integer-D-E2-page-period",
+      "workspace_id": "ws_integer",
+      "label": "D",
+      "grade": {
+        "stem": 8,
+        "filtration": 0,
+        "representation": {}
+      },
+      "declared_page": 2,
+      "cycle_class_id": "int_D",
+      "invertible": false,
+      "basis": "Integer-graded Q8-HFPSS E2 page is (8,0)-periodic by D.",
+      "source_ref": "DKLLW24 Section 6.1.2, journal PDF p. 52.",
+      "status": "reviewed",
+      "virtual": true
     }
   ]
 }

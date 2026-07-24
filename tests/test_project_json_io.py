@@ -78,12 +78,12 @@ class ProjectJsonIoApiTest(unittest.TestCase):
         self.assertEqual(redone.status_code, 200)
         self.assertEqual(self.client.get("/api/project").get_json()["name"], "Reviewed imported replacement")
 
-    def test_rejects_legacy_canvas_uncited_claim_and_broken_reference(self):
+    def test_rejects_malformed_legacy_canvas_uncited_claim_and_broken_reference(self):
         legacy = self.client.post("/api/project/import/preview", json={
             "generators": [], "connections": [], "periodicityRules": [],
         })
         self.assertEqual(legacy.status_code, 422)
-        self.assertIn("sseq ver15.3", legacy.get_json()["error"])
+        self.assertIn("at least one generator", legacy.get_json()["error"])
 
         uncited = self.exported_project()
         proposition = next(

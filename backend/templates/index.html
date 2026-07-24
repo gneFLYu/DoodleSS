@@ -35,6 +35,7 @@
       <button id="redo-action" class="toolbar-tool history-tool" title="Redo (Ctrl+Y)" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 7 5 5-5 5m4-5h-8a6 6 0 0 0-6 6"/></svg>Redo</button>
       <div class="toolbar-spacer"></div>
       <button id="export-json" class="toolbar-reset" title="Download the complete Studio project JSON">Export JSON</button>
+      <button id="export-legacy-json" class="toolbar-reset" title="Export the current page as lossy legacy dots">Export Legacy</button>
       <button id="import-json" class="toolbar-reset" title="Preview a complete Studio project JSON before applying it">Import JSON</button>
       <input id="import-json-file" type="file" accept=".json,application/json" hidden>
       <button id="new-workspace" class="toolbar-reset">New workspace</button>
@@ -84,6 +85,8 @@
         <h2>What the colors mean</h2>
         <p class="hint">Dot colors report the class’s derived HFPSS fate. They do not encode algebraic order, torsion length, or coefficient size.</p>
         <div class="chart-key-list">
+          <div><i class="dot unknown"></i><span><strong>DKLLW dot / fat dot / circle / square</strong> — respectively k, k[[j]], k[[j]]{j}, and W(k); shape is independent of fate color.</span></div>
+          <div><i class="key-line accepted"></i><span><strong>Multiplication lines</strong> — vertical: 2 in the same cell; slope 1: h<sub>1</sub>; slope 1/3: h<sub>2</sub>; dashed in 2BSS: hidden extension.</span></div>
           <div><i class="dot permanent"></i><span><strong>Green</strong> — permanent cycle, backed by an accepted permanent-cycle proposition.</span></div>
           <div><i class="dot unknown"></i><span><strong>Gray</strong> — fate unresolved; no accepted death or permanent-cycle proof.</span></div>
           <div><i class="dot killed"></i><span><strong>Rose</strong> — supports an accepted differential and disappears on the next page.</span></div>
@@ -100,9 +103,16 @@
         <p class="shortcut-note"><strong>Shortcuts:</strong> V, G, D, R, X, N &middot; E deductions<br>Ctrl+Z / Ctrl+Y history &middot; [ / ] page &middot; 0 fit view<br>Paused while typing or using a select control.</p>
       </section>
 
+      <section class="panel-section page-periodicity-section">
+        <div class="eyebrow">VIRTUAL / PAGE-AWARE</div>
+        <h2>Period cycle on E<sub>r</sub></h2>
+        <p class="hint">Select a live class or enter a cycle. A declaration on E<sub>r</sub> acts on lower pages and reaches E<sub>r+1</sub> only if it neither supports nor receives d<sub>r</sub>. Translates are viewport-only and never stored as dots.</p>
+        <div id="page-period-tool"><p class="empty">Loading page periods.</p></div>
+      </section>
+
       <section class="panel-section drawing-periodicity-section">
-        <div class="eyebrow">MANUAL DRAWING</div>
-        <h2>Periodicity Tool</h2>
+        <div class="eyebrow">LEGACY DRAWING</div>
+        <h2>Legacy Periodicity Tool</h2>
         <p class="hint">ver15.3-compatible cycle and connection copies. Every result remains a manual-unverified drawing candidate.</p>
 
         <div class="drawing-periodicity-block">
@@ -127,7 +137,7 @@
             <label>q<sub>min</sub><input id="drawing-period-q-min" type="number" value="0"></label>
             <label>q<sub>max</sub><input id="drawing-period-q-max" type="number" value="10"></label>
           </div>
-          <div class="periodicity-actions"><button type="button" id="preview-drawing-period-box">Preview</button><button type="button" id="apply-drawing-period-box" class="primary" disabled>Apply All Rules to Box</button></div>
+          <div class="periodicity-actions"><button type="button" id="preview-drawing-period-box">Preview</button><button type="button" id="apply-drawing-period-box" class="primary" disabled>Use live virtual view</button></div>
           <div id="drawing-period-box-preview" class="drawing-periodicity-preview">Preview has not been run.</div>
         </div>
 
@@ -220,12 +230,46 @@
       <h2>Add a class</h2>
       <label>Label<input name="label" required value="x"></label>
       <div id="class-label-preview" class="class-label-preview" aria-live="polite">x</div>
-      <label>Semantic expression<input name="expression" required value="x"></label>
+      <div id="class-generator-preview" class="hint" aria-live="polite">Basic generators: x</div>
+      <label>DKLLW class module
+        <select name="glyph">
+          <option value="dot">dot — k</option>
+          <option value="fat-dot">fat dot — k[[j]]</option>
+          <option value="circle">circle — k[[j]]{j}</option>
+          <option value="square">square — W(k)</option>
+        </select>
+      </label>
       <div class="two-col">
         <label>Stem<input name="stem" type="number" required></label>
         <label>Filtration<input name="filtration" type="number" required min="0"></label>
       </div>
       <div class="dialog-actions"><button type="button" id="cancel-class">Cancel</button><button type="submit" class="primary" id="save-class">Add class</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="rename-dialog">
+    <form id="rename-form">
+      <h2>Rename class</h2>
+      <label>Label (= algebra expression)<input name="label" required></label>
+      <div class="dialog-actions"><button type="button" id="cancel-rename">Cancel</button><button type="submit" class="primary">Save label</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="relation-dialog">
+    <form id="relation-form">
+      <h2>Add relation or multiplication</h2>
+      <p id="relation-endpoints" class="hint"></p>
+      <label>Connection meaning
+        <select name="chart_connection_kind">
+          <option value="">Generic candidate relation</option>
+          <option value="vertical-two">vertical — multiplication by 2 in the same cell</option>
+          <option value="h1">slope 1 — multiplication by h1</option>
+          <option value="h2">slope 1/3 — multiplication by h2</option>
+          <option value="hidden-extension">dashed — hidden extension (2BSS only)</option>
+        </select>
+      </label>
+      <label>Source locator<input name="source_ref" placeholder="Required for a typed multiplication/extension"></label>
+      <div class="dialog-actions"><button type="button" id="cancel-relation">Cancel</button><button type="submit" class="primary">Store candidate</button></div>
     </form>
   </dialog>
 
@@ -241,8 +285,8 @@
 
   <dialog id="import-project-dialog" class="import-project-dialog">
     <div class="import-project-content">
-      <h2>Review project JSON import</h2>
-      <p class="hint">Selecting a file only runs a read-only preview. The saved project is not replaced until you choose Apply reviewed import.</p>
+      <h2>Review JSON import</h2>
+      <p class="hint">Selecting a file only runs a read-only preview. A Studio project import replaces the project; a legacy sseq ver15.3 import merges dots into the current canvas page in place. Nothing changes until you explicitly Apply.</p>
       <div id="import-project-summary" class="import-project-summary" aria-live="polite">Choose a Studio project JSON file.</div>
       <div class="dialog-actions"><button type="button" id="cancel-project-import">Cancel</button><button type="button" class="primary" id="apply-project-import" disabled>Apply reviewed import</button></div>
     </div>

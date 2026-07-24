@@ -3,6 +3,7 @@ const state = {
   logicGraph: { nodes: [], edges: [] },
   history: { undo_depth: 0, redo_depth: 0, undo_label: null, redo_label: null },
   workspaceId: null,
+  pageByWorkspace: new Map(),
   selectedClassId: null,
   tool: "inspect",
   connectionStart: null,
@@ -11,19 +12,37 @@ const state = {
   periodicityPreview: null,
   drawingPeriodicityPreview: null,
   importPreview: null,
+  importSource: null,
   drag: null,
   suppressClick: false,
   connectionPointer: null,
+  pendingRenameId: null,
+  pendingRelation: null,
   view: { zoom: 1, panX: 0, panY: 0 },
 };
 
 const $ = (selector) => document.querySelector(selector);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+let chartRenderFrame = 0;
+
+function scheduleChartRender() {
+  if (chartRenderFrame) return;
+  chartRenderFrame = requestAnimationFrame(() => {
+    chartRenderFrame = 0;
+    renderChart();
+  });
+}
 
 async function api(path, options = {}) {
   const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error || "Request failed");
+  const responseText = await response.text();
+  let data = {};
+  try { data = responseText ? JSON.parse(responseText) : {}; }
+  catch (_error) {
+    if (!response.ok) throw new Error(`Request failed (${response.status}). The server rejected or could not process the payload.`);
+    throw new Error("The server returned an unreadable response.");
+  }
+  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
   return data;
 }
 
@@ -95,9 +114,18 @@ function visualStateFor(ws, item) {
 }
 
 function glyphShapeFor(ws, item) {
-  // Shape remains a fate/proof-status display. Never infer torsion, tower
-  // level, or coefficient algebra from a label or coefficient context.
-  return visualStateFor(ws, item) === "permanent" ? "square" : "circle";
+  // DKLLW class glyphs describe the coefficient/module pattern. They are
+  // independent of the page-fate color supplied by visualStateFor().
+  const raw = item.style?.module_pattern
+    || item.style?.dkllw_glyph
+    || item.style?.glyph
+    || "unknown";
+  const normalized = String(raw).trim().toLowerCase().replaceAll("_", "-").replaceAll(" ", "-");
+  if (["fat-dot", "blue-dot"].includes(normalized)) return "fat-dot";
+  if (["circle", "red-dot"].includes(normalized)) return "circle";
+  if (normalized === "square") return "square";
+  if (normalized === "dot") return "dot";
+  return "unknown";
 }
 
 function differentialVisualState(differential) {
@@ -135,11 +163,23 @@ function allPropositions() {
 }
 
 async function loadProject() {
+  const previousWorkspaceId = state.workspaceId;
+  const previousPage = previousWorkspaceId
+    ? (state.pageByWorkspace.get(previousWorkspaceId) ?? workspace()?.page)
+    : null;
   const [project, logicGraph, history] = await Promise.all([api("/api/project"), api("/api/v2/logic-graph"), api("/api/history")]);
   state.project = project;
   state.logicGraph = logicGraph;
   state.history = history;
   if (!state.project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
+  if (previousWorkspaceId === state.workspaceId && previousPage != null) {
+    workspace().page = clamp(Number(previousPage) || 2, 2, pageLimit(workspace()));
+    state.pageByWorkspace.set(state.workspaceId, workspace().page);
+  } else if (workspace()) {
+    const remembered = state.pageByWorkspace.get(state.workspaceId);
+    workspace().page = clamp(Number(remembered ?? workspace().page) || 2, 2, pageLimit(workspace()));
+    state.pageByWorkspace.set(state.workspaceId, workspace().page);
+  }
   render();
 }
 
@@ -197,6 +237,7 @@ function render() {
   renderComparisons();
   renderGradingAtlas();
   renderFateInspector();
+  renderPagePeriodTool();
   renderDrawingPeriodicityTool();
   renderPersistentPeriodicityTool();
   renderProofTree();
@@ -466,6 +507,16 @@ async function applyDrawingPeriodicity(mode) {
   const suffix = mode === "box" ? "box/apply" : "differentials/apply";
   button.disabled = true;
   try {
+    if (mode === "box") {
+      state.drawingPeriodicityPreview = {
+        ...preview,
+        virtual: true,
+      };
+      renderDrawingPeriodicityTool();
+      renderChart();
+      toast("Live periodicity view active for this page and viewport; no dots were materialized.");
+      return;
+    }
     const result = await api(drawingPeriodicityPath(suffix), { method: "POST", body: JSON.stringify(payload) });
     state.drawingPeriodicityPreview = null;
     await loadProject();
@@ -478,6 +529,83 @@ function d8RuleFor(ws) {
   return (state.project.periodicity_rules || []).find((item) => (
     item.workspace_id === ws.id && item.id === "q8-hfpss-integer-d8-horizontal-r3" && item.status === "established"
   ));
+}
+
+function pagePeriodEligible(ws, cycle, page = ws.page) {
+  if (page <= Number(cycle.declared_page)) return true;
+  if (!cycle.cycle_class_id) return false;
+  const rejected = new Set(["rejected", "disproven", "invalid"]);
+  for (let transition = Number(cycle.declared_page); transition < page; transition += 1) {
+    if (ws.differentials.some((item) => (
+      item.page === transition
+      && !rejected.has(item.status)
+      && [item.source_id, item.target_id].includes(cycle.cycle_class_id)
+    ))) return false;
+  }
+  return liveClassesAt(ws, page).some((item) => item.id === cycle.cycle_class_id);
+}
+
+function detectedAlgebraGenerators(ws) {
+  const ignored = new Set(["cdot", "frac", "left", "right", "mathbb", "mathrm", "operatorname"]);
+  const names = new Set();
+  liveClassesAt(ws).forEach((item) => {
+    (item.label.match(/\\[A-Za-z]+|[A-Za-z]+(?:_[A-Za-z0-9]+)?/g) || []).forEach((token) => {
+      const name = token.replace(/^\\/, "");
+      if (!ignored.has(name)) names.add(name);
+    });
+  });
+  return [...names].sort((left, right) => left.localeCompare(right));
+}
+
+function renderPagePeriodTool() {
+  const ws = workspace();
+  const root = $("#page-period-tool");
+  if (!ws || !root) return;
+  const selected = ws.classes.find((item) => item.id === state.selectedClassId && !item.archived);
+  const cycles = (state.project.page_period_cycles || []).filter((item) => item.workspace_id === ws.id);
+  const generatorNames = detectedAlgebraGenerators(ws);
+  root.innerHTML = `
+    <p class="hint"><strong>Detected basic generators:</strong> ${escapeHtml(generatorNames.join(", ") || "none on this page")}</p>
+    <label>Cycle label (= algebra expression)<input id="page-period-label" value="${escapeHtml(selected?.label || "")}" placeholder="D"></label>
+    <div class="periodicity-coordinate-row">
+      <label>Stem<input id="page-period-stem" type="number" value="${Number(selected?.grade.stem || 0)}"></label>
+      <label>Filtration<input id="page-period-filtration" type="number" value="${Number(selected?.grade.filtration || 0)}"></label>
+    </div>
+    <label>Basis / mathematical role<input id="page-period-basis" value="${selected ? `Selected live class ${escapeHtml(selected.label)} on E${ws.page}` : ""}" placeholder="Why this cycle is used as a period"></label>
+    <label>Source locator<input id="page-period-source" placeholder="Paper/notes theorem or explicit user declaration"></label>
+    <button type="button" id="register-page-period" class="wide primary">Register virtual period on E${ws.page}</button>
+    <div class="drawing-periodicity-rules">${cycles.map((cycle) => {
+      const eligible = pagePeriodEligible(ws, cycle, ws.page);
+      return `<div class="drawing-periodicity-rule"><span><strong>${escapeHtml(cycle.label)}</strong> (${cycle.grade.stem},${cycle.grade.filtration}) · declared E${cycle.declared_page} · ${eligible ? `acts on E${ws.page}` : `blocked before E${ws.page}`}</span></div>`;
+    }).join("") || '<p class="empty">No compact page-period cycle has been registered.</p>'}</div>`;
+  $("#register-page-period").addEventListener("click", registerPagePeriodCycle);
+}
+
+async function registerPagePeriodCycle() {
+  const ws = workspace();
+  const selected = ws.classes.find((item) => item.id === state.selectedClassId && !item.archived);
+  const payload = {
+    page: ws.page,
+    label: $("#page-period-label").value,
+    basis: $("#page-period-basis").value,
+    source_ref: $("#page-period-source").value,
+    status: "candidate",
+    ...(selected
+      ? { cycle_class_id: selected.id }
+      : { grade: {
+        stem: Number($("#page-period-stem").value),
+        filtration: Number($("#page-period-filtration").value),
+        representation: {},
+      } }),
+  };
+  try {
+    await api(`/api/v2/workspaces/${encodeURIComponent(ws.id)}/page-periods`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    await loadProject();
+    toast(`Registered ${payload.label} as a compact virtual period on E${payload.page}.`);
+  } catch (error) { toast(error.message); }
 }
 
 function outgoingAcceptedDifferentials(ws, node) {
@@ -878,6 +1006,11 @@ function periodsForClassOnPage(ws, item) {
     if (!usablePeriodFamily(differential)) continue;
     add(normalizedPeriod(differential.period_stem, differential.period_filtration));
   }
+  for (const cycle of state.project.page_period_cycles || []) {
+    if (cycle.workspace_id !== ws.id || !pagePeriodEligible(ws, cycle, ws.page)) continue;
+    const period = normalizedPeriod(cycle.grade?.stem, cycle.grade?.filtration);
+    if (period) add({ ...period, cycleId: cycle.id, invertible: Boolean(cycle.invertible) });
+  }
   return periods;
 }
 
@@ -888,7 +1021,7 @@ function periodicClassInstances(ws, bounds) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = [{ grade: item.grade, shift: 0, periodic: false }];
     for (const period of periods) {
-      for (const shift of shiftRange(item.grade, period, bounds)) {
+      for (const shift of shiftRange(item.grade, period, bounds).filter((value) => period.invertible || value > 0)) {
         if (shift === 0) continue;
         copies.push({
           grade: { ...item.grade, stem: item.grade.stem + shift * period.stem, filtration: item.grade.filtration + shift * period.filtration },
@@ -957,7 +1090,17 @@ function classGlyphMarkup(record, point, classNames) {
   if (record.shape === "square") {
     return `<rect class="class-point square ${classNames}" x="${point.x - record.size}" y="${point.y - record.size}" width="${2 * record.size}" height="${2 * record.size}" rx="${Math.min(1.2, record.size * 0.2)}"/>`;
   }
-  return `<circle class="class-point circle ${classNames}" cx="${point.x}" cy="${point.y}" r="${record.size}"/>`;
+  if (record.shape === "circle") {
+    return `<circle class="class-point circle ${classNames}" cx="${point.x}" cy="${point.y}" r="${record.size}"/>`;
+  }
+  if (record.shape === "fat-dot") {
+    return `<circle class="class-point fat-dot ${classNames}" cx="${point.x}" cy="${point.y}" r="${record.size * 1.28}"/>`;
+  }
+  if (record.shape === "unknown") {
+    const size = record.size * 0.82;
+    return `<path class="class-point unknown-glyph ${classNames}" d="M ${point.x} ${point.y - size} L ${point.x + size} ${point.y} L ${point.x} ${point.y + size} L ${point.x - size} ${point.y} Z"/>`;
+  }
+  return `<circle class="class-point dot-glyph ${classNames}" cx="${point.x}" cy="${point.y}" r="${record.size * 0.72}"/>`;
 }
 
 function classLabelMarkup(record, point, metrics, visible) {
@@ -1011,7 +1154,15 @@ function constrainView() {
 
 function renderMathInChart() {
   if (!window.katex) return;
-  document.querySelectorAll(".latex-label[data-latex]").forEach((node) => katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false }));
+  $("#chart").querySelectorAll(".latex-label[data-latex]").forEach((node) => katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false }));
+}
+
+function replaceSvgMarkup(svg, markup) {
+  const scratch = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  scratch.innerHTML = markup;
+  const fragment = document.createDocumentFragment();
+  while (scratch.firstChild) fragment.appendChild(scratch.firstChild);
+  svg.replaceChildren(fragment);
 }
 
 function drawingPeriodicityPreviewSvg(metrics, bounds, packedPreviewInstances, instancePoints, layer = "all") {
@@ -1119,7 +1270,9 @@ function renderChart() {
     const from = instancePoints.get(classInstanceKey(source.id, source.grade)) || pointFor(source.grade, m);
     const to = instancePoints.get(classInstanceKey(target.id, target.grade)) || pointFor(target.grade, m);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
-    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(relation.statement)}</title></line>`;
+    const chartConnection = relation.conclusion?.chart_connection;
+    const chartClass = chartConnection?.kind ? `dkllw-${chartConnection.kind}` : "";
+    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
   }
   for (const item of periodicDifferentials(ws, buffered)) {
     const from = instancePoints.get(classInstanceKey(item.diff.source_id, item.sourceGrade)) || pointFor(item.sourceGrade, m);
@@ -1142,11 +1295,11 @@ function renderChart() {
     const classes = `${visualStateFor(ws, record.item)} ${selected} ${record.periodic ? "periodic" : ""} ${manualDrawing}`;
     const label = classLabelMarkup(record, point, m, visible);
     const periodicAttribute = record.periodic ? ' data-periodic-copy="true"' : "";
-    const aria = `${record.item.label} at ${gradeText(record.grade)}${record.periodic ? ", certified render copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}`;
+    const aria = `${record.item.label} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}`;
     markup += `<g class="class-instance" data-point="${record.item.id}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
   }
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "cycles");
-  svg.innerHTML = markup;
+  replaceSvgMarkup(svg, markup);
   renderMathInChart();
   const activateClassInstance = (node, event) => {
     event.stopPropagation();
@@ -1157,18 +1310,22 @@ function renderChart() {
     if (node.dataset.periodicCopy && state.tool !== "inspect") return;
     onClassClick(node.dataset.point);
   };
-  document.querySelectorAll("[data-point]").forEach((node) => {
-    node.addEventListener("click", (event) => activateClassInstance(node, event));
-    node.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter" && event.key !== " ") return;
-      event.preventDefault();
-      activateClassInstance(node, event);
-    });
-  });
+  svg.onclick = (event) => {
+    const node = event.target.closest?.("[data-point]");
+    if (node) activateClassInstance(node, event);
+  };
+  svg.onkeydown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const node = event.target.closest?.("[data-point]");
+    if (!node) return;
+    event.preventDefault();
+    activateClassInstance(node, event);
+  };
 }
 
 function setPage(page) {
   workspace().page = clamp(Number(page), 2, pageLimit());
+  state.pageByWorkspace.set(state.workspaceId, workspace().page);
   state.connectionStart = null;
   state.candidateResults = null;
   state.periodicityPreview = null;
@@ -1230,13 +1387,10 @@ async function onClassClick(id) {
     return;
   }
   if (state.tool === "rename") {
-    const label = prompt("Class label (KaTeX accepted)", item.label);
-    if (!label?.trim()) return;
-    try {
-      await api(`/api/workspaces/${state.workspaceId}/classes/${id}`, { method: "PATCH", body: JSON.stringify({ label }) });
-      await loadProject();
-      toast("Class renamed.");
-    } catch (error) { toast(error.message); }
+    state.pendingRenameId = id;
+    $("#rename-form [name=label]").value = item.label;
+    $("#rename-dialog").showModal();
+    $("#rename-form [name=label]").focus();
     return;
   }
   state.selectedClassId = item.id;
@@ -1291,12 +1445,47 @@ async function createDifferential(source_id, target_id) {
 async function createRelation(sourceId, targetId) {
   const source = workspace().classes.find((item) => item.id === sourceId);
   const target = workspace().classes.find((item) => item.id === targetId);
+  state.pendingRelation = { sourceId, targetId };
+  $("#relation-endpoints").textContent = `${source.label} → ${target.label} on E${workspace().page}`;
+  $("#relation-form [name=chart_connection_kind]").value = (
+    source.grade.stem === target.grade.stem && source.grade.filtration === target.grade.filtration
+      ? "vertical-two" : ""
+  );
+  $("#relation-form [name=source_ref]").value = "";
+  $("#relation-dialog").showModal();
+}
+
+async function savePendingRelation(event) {
+  event.preventDefault();
+  const pending = state.pendingRelation;
+  if (!pending) return;
+  const source = workspace().classes.find((item) => item.id === pending.sourceId);
+  const target = workspace().classes.find((item) => item.id === pending.targetId);
+  const form = new FormData(event.currentTarget);
+  const chartConnectionKind = String(form.get("chart_connection_kind") || "");
+  const sourceRef = String(form.get("source_ref") || "");
   try {
-    await api(`/api/workspaces/${state.workspaceId}/propositions`, { method: "POST", body: JSON.stringify({ kind: "relation", statement: `Relation: ${source.label} ~ ${target.label}`, status: "candidate", conclusion: { source_id: sourceId, target_id: targetId, page: workspace().page }, rule: "manual", confidence: 0.5, notes: "Added from the chart relation tool; evidence remains to be supplied." }) });
+    await api(`/api/workspaces/${state.workspaceId}/propositions`, { method: "POST", body: JSON.stringify({ kind: "relation", statement: chartConnectionKind ? `${chartConnectionKind} multiplication: ${source.label} to ${target.label}` : `Relation: ${source.label} ~ ${target.label}`, status: "candidate", conclusion: { source_id: pending.sourceId, target_id: pending.targetId, page: workspace().page }, chart_connection_kind: chartConnectionKind, source_ref: sourceRef, rule: "manual", confidence: 0.5, notes: "Added from the chart relation tool; evidence remains to be supplied." }) });
+    $("#relation-dialog").close();
+    state.pendingRelation = null;
     state.connectionStart = null;
     state.connectionPointer = null;
     await loadProject();
     toast("Relation recorded in the proposition tree.");
+  } catch (error) { toast(error.message); }
+}
+
+async function savePendingRename(event) {
+  event.preventDefault();
+  const id = state.pendingRenameId;
+  const label = String(new FormData(event.currentTarget).get("label") || "").trim();
+  if (!id || !label) return;
+  try {
+    await api(`/api/workspaces/${state.workspaceId}/classes/${id}`, { method: "PATCH", body: JSON.stringify({ label }) });
+    $("#rename-dialog").close();
+    state.pendingRenameId = null;
+    await loadProject();
+    toast("Class renamed.");
   } catch (error) { toast(error.message); }
 }
 
@@ -1312,7 +1501,17 @@ function openClassDialog(stem, filtration) {
 function renderClassLabelPreview() {
   const input = $("#class-form [name=label]");
   const preview = $("#class-label-preview");
+  const generatorPreview = $("#class-generator-preview");
   if (!input || !preview) return;
+  const ignoredLatexCommands = new Set(["cdot", "frac", "left", "right", "mathbb", "mathrm", "operatorname"]);
+  const generators = [...new Set((input.value.match(/\\[A-Za-z]+|[A-Za-z]+(?:_[A-Za-z0-9]+)?/g) || [])
+    .map((token) => token.replace(/^\\/, ""))
+    .filter((token) => !ignoredLatexCommands.has(token)))];
+  if (generatorPreview) {
+    generatorPreview.textContent = generators.length
+      ? `Basic generators: ${generators.join(", ")}`
+      : "Basic generators: none detected";
+  }
   if (!window.katex) {
     preview.textContent = input.value || " ";
     return;
@@ -1410,30 +1609,64 @@ async function runRules() {
 
 function renderProjectImportPreview(preview, fileName) {
   const target = $("#import-project-summary");
-  const summary = preview.import?.summary || {};
-  const counts = ["workspaces", "classes", "differentials", "propositions", "comparisons", "periodicity_rules"]
-    .map((key) => `<li><strong>${escapeHtml(key.replaceAll("_", " "))}</strong>: ${Number(summary[key] || 0)}</li>`)
-    .join("");
-  const warnings = [
+  const metadata = preview.import || {};
+  const isLegacy = metadata.format === "legacy-sseq-ver15.3";
+  const summary = metadata.summary || {};
+  const legacy = metadata.legacy_summary || {};
+  const counts = isLegacy
+    ? [
+      ["generators received", legacy.generators_received],
+      ["classes created", legacy.classes_created],
+      ["connections received", legacy.connections_received],
+      ["relations created", legacy.relations_created],
+      ["differentials created", legacy.differentials_created],
+      ["periodicity rules received", legacy.periodicity_rules_received],
+      ["manual-unverified rules created", legacy.manual_periodicity_rules_created],
+    ].map(([label, count]) => `<li><strong>${escapeHtml(label)}</strong>: ${Number(count || 0)}</li>`).join("")
+    : ["workspaces", "classes", "differentials", "propositions", "comparisons", "periodicity_rules"]
+      .map((key) => `<li><strong>${escapeHtml(key.replaceAll("_", " "))}</strong>: ${Number(summary[key] || 0)}</li>`)
+      .join("");
+  const structuredWarnings = (metadata.warnings || []).map((warning) => {
+    if (typeof warning === "string") return `<li>${escapeHtml(warning)}</li>`;
+    const count = warning.count == null ? "" : ` (${Number(warning.count)})`;
+    return `<li><strong>${escapeHtml(warning.code || "legacy-warning")}${escapeHtml(count)}</strong>: ${escapeHtml(warning.message || "Review this converted record.")}</li>`;
+  });
+  const policyWarnings = [
     preview.mathematical_status_policy,
-    preview.import?.derived_caches_rebuilt ? "Derived fate and differential-event caches will be rebuilt from primary records." : "",
-    preview.import?.migration_applied ? `Schema migration will be applied: v${preview.import.source_schema_version} to v${preview.import.schema_version}.` : "No schema migration is required.",
-  ].filter(Boolean);
-  target.innerHTML = `<p><strong>${escapeHtml(fileName)}</strong></p><p>Project: <strong>${escapeHtml(preview.project.name)}</strong> · revision ${preview.current_revision} → ${preview.would_revision}</p><ul class="import-counts">${counts}</ul><h3>Review warnings</h3><ul>${warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`;
+    metadata.derived_caches_rebuilt ? "Derived fate and differential-event caches will be rebuilt from primary records." : "",
+    !isLegacy && metadata.migration_applied ? `Schema migration will be applied: v${metadata.source_schema_version} to v${metadata.schema_version}.` : "",
+    !isLegacy && !metadata.migration_applied ? "No schema migration is required." : "",
+  ].filter(Boolean).map((warning) => `<li>${escapeHtml(warning)}</li>`);
+  const operation = isLegacy
+    ? `<p class="import-operation replace"><strong>Import into the current E${Number(metadata.target_page || workspace().page)} canvas in place.</strong> This legacy sseq ver15.3 canvas will be merged into <strong>${escapeHtml(workspace().name)}</strong>; no temporary workspace will be created and existing proof history is retained.</p><p>Legacy glyph semantics are deliberately forgotten as ordinary dots. Stored offsets remain metadata; connections and period rules remain candidate/manual-unverified.</p>`
+    : `<p class="import-operation replace"><strong>Replace project.</strong> Applying this reviewed Studio JSON will replace the current project with <strong>${escapeHtml(preview.project.name)}</strong>.</p>`;
+  $("#apply-project-import").textContent = isLegacy ? "Import into current page" : "Apply reviewed import";
+  target.innerHTML = `<p><strong>${escapeHtml(fileName)}</strong></p>${operation}<p>Revision ${preview.current_revision} → ${preview.would_revision}</p><ul class="import-counts">${counts}</ul><h3>Review warnings</h3><ul>${[...structuredWarnings, ...policyWarnings].join("") || "<li>No warnings reported.</li>"}</ul>`;
 }
 
 async function previewProjectImport(file) {
   const dialog = $("#import-project-dialog");
   const applyButton = $("#apply-project-import");
   state.importPreview = null;
+  state.importSource = null;
   applyButton.disabled = true;
   $("#import-project-summary").textContent = `Reading ${file.name}...`;
   if (!dialog.open) dialog.showModal();
   try {
     const text = await file.text();
     const project = JSON.parse(text);
-    const preview = await api("/api/project/import/preview", { method: "POST", body: JSON.stringify(project) });
+    const previewPath = `/api/project/import/preview?source_name=${encodeURIComponent(file.name)}&target_workspace_id=${encodeURIComponent(state.workspaceId)}&target_page=${encodeURIComponent(workspace().page)}`;
+    const preview = await api(previewPath, { method: "POST", body: JSON.stringify(project) });
     state.importPreview = preview;
+    if (preview.import?.format === "legacy-sseq-ver15.3") {
+      state.importSource = {
+        legacyCanvas: project,
+        sourceName: file.name,
+        workspaceName: preview.import?.workspace_name || "",
+        targetWorkspaceId: state.workspaceId,
+        targetPage: workspace().page,
+      };
+    }
     renderProjectImportPreview(preview, file.name);
     applyButton.disabled = false;
     toast("Import preview ready; review it before applying.");
@@ -1447,25 +1680,63 @@ async function applyProjectImport() {
   const preview = state.importPreview;
   if (!preview) return;
   const button = $("#apply-project-import");
+  const previewWorkspaceId = preview.import?.imported_workspace_id || preview.import?.workspace_id || null;
+  const isLegacy = preview.import?.format === "legacy-sseq-ver15.3";
+  const idleLabel = isLegacy ? "Import into current page" : "Apply reviewed import";
   button.disabled = true;
+  button.textContent = "Applying...";
+  $("#import-project-summary").insertAdjacentHTML(
+    "beforeend",
+    '<p id="import-apply-status" class="hint" aria-live="polite">Applying the reviewed import...</p>',
+  );
   try {
+    if (isLegacy && !state.importSource?.legacyCanvas) {
+      throw new Error("The original legacy JSON is no longer available. Choose the file and Preview it again.");
+    }
+    const commonApply = {
+      preview_sha256: preview.preview_sha256,
+      expected_revision: preview.current_revision,
+      imported_workspace_id: previewWorkspaceId,
+    };
+    const applyPayload = isLegacy
+      ? {
+        ...commonApply,
+        legacy_canvas: state.importSource.legacyCanvas,
+        source_name: state.importSource.sourceName,
+        workspace_name: state.importSource.workspaceName,
+        target_workspace_id: state.importSource.targetWorkspaceId,
+        target_page: state.importSource.targetPage,
+      }
+      : { ...commonApply, project: preview.project };
+    await new Promise((resolve) => requestAnimationFrame(resolve));
     const result = await api("/api/project/import/apply", {
       method: "POST",
-      body: JSON.stringify({
-        project: preview.project,
-        preview_sha256: preview.preview_sha256,
-        expected_revision: preview.current_revision,
-      }),
+      body: JSON.stringify(applyPayload),
     });
+    const importedWorkspaceId = result.imported_workspace_id
+      || result.import?.imported_workspace_id
+      || result.import?.workspace_id
+      || previewWorkspaceId;
     $("#import-project-dialog").close("applied");
     state.importPreview = null;
-    state.workspaceId = null;
+    state.importSource = null;
+    state.workspaceId = importedWorkspaceId || null;
     state.selectedClassId = null;
+    state.connectionStart = null;
+    state.suggestions = [];
+    state.candidateResults = null;
+    state.periodicityPreview = null;
+    state.drawingPeriodicityPreview = null;
     state.view = { zoom: 1, panX: 0, panY: 0 };
     await loadProject();
-    toast(`Imported reviewed project revision ${result.revision}.`);
+    toast(isLegacy && importedWorkspaceId
+      ? `Imported reviewed legacy canvas into ${workspace()?.name || importedWorkspaceId} on E${workspace()?.page || state.importSource?.targetPage}.`
+      : `Imported reviewed project revision ${result.revision}.`);
   } catch (error) {
+    $("#import-apply-status")?.remove();
     $("#import-project-summary").insertAdjacentHTML("beforeend", `<p class="import-error">Apply failed: ${escapeHtml(error.message)} Preview again before retrying if the project changed.</p>`);
+    button.disabled = false;
+    button.textContent = idleLabel;
     toast(error.message);
   }
 }
@@ -1488,7 +1759,7 @@ function onWheel(event) {
   state.view.panX += x - after.x;
   state.view.panY += y - after.y;
   constrainView();
-  renderChart();
+  scheduleChartRender();
 }
 
 function isTypingTarget(target) {
@@ -1573,6 +1844,9 @@ function bindEvents() {
   });
   $("#reset-view").addEventListener("click", resetView);
   $("#export-json").addEventListener("click", () => window.location.assign("/api/project/export"));
+  $("#export-legacy-json").addEventListener("click", () => {
+    window.location.assign(`/api/workspaces/${encodeURIComponent(state.workspaceId)}/legacy-export?page=${encodeURIComponent(workspace().page)}`);
+  });
   $("#import-json").addEventListener("click", () => $("#import-json-file").click());
   $("#import-json-file").addEventListener("change", (event) => {
     const file = event.target.files?.[0];
@@ -1582,6 +1856,7 @@ function bindEvents() {
   $("#apply-project-import").addEventListener("click", applyProjectImport);
   $("#cancel-project-import").addEventListener("click", () => {
     state.importPreview = null;
+    state.importSource = null;
     $("#import-project-dialog").close("cancel");
   });
   $("#export-chart").addEventListener("click", () => downloadTex("chart"));
@@ -1675,7 +1950,7 @@ function bindEvents() {
     state.drag.x = event.clientX;
     state.drag.y = event.clientY;
     constrainView();
-    renderChart();
+    scheduleChartRender();
   });
   const stopDrag = (event) => {
     if (!state.drag || event.pointerId !== state.drag.pointerId) return;
@@ -1702,7 +1977,8 @@ function bindEvents() {
     submit.disabled = true;
     try {
       const sector = (state.project.grading_sectors || []).find((item) => item.workspace_id === state.workspaceId);
-      await api(`/api/workspaces/${state.workspaceId}/classes`, { method: "POST", body: JSON.stringify({ label: form.get("label"), expression: form.get("expression"), stem: Number(form.get("stem")), filtration: Number(form.get("filtration")), state: "unknown", page: workspace().page, representation: sector?.normal_form || {}, sector_id: sector?.id || null }) });
+      const label = String(form.get("label") || "").trim();
+      await api(`/api/workspaces/${state.workspaceId}/classes`, { method: "POST", body: JSON.stringify({ label, expression: label, glyph: form.get("glyph"), stem: Number(form.get("stem")), filtration: Number(form.get("filtration")), state: "unknown", page: workspace().page, representation: sector?.normal_form || {}, sector_id: sector?.id || null }) });
       $("#class-dialog").close();
       await loadProject();
       toast("Class added.");
@@ -1710,6 +1986,18 @@ function bindEvents() {
   });
   $("#class-form [name=label]").addEventListener("input", renderClassLabelPreview);
   $("#cancel-class").addEventListener("click", () => $("#class-dialog").close("cancel"));
+  $("#rename-form").addEventListener("submit", savePendingRename);
+  $("#cancel-rename").addEventListener("click", () => {
+    state.pendingRenameId = null;
+    $("#rename-dialog").close("cancel");
+  });
+  $("#relation-form").addEventListener("submit", savePendingRelation);
+  $("#cancel-relation").addEventListener("click", () => {
+    state.pendingRelation = null;
+    state.connectionStart = null;
+    $("#relation-dialog").close("cancel");
+    renderChart();
+  });
   $("#open-e2-presentation").addEventListener("click", openE2PresentationDialog);
   $("#preview-e2-presentation").addEventListener("click", previewE2Presentation);
   $("#e2-presentation-form").addEventListener("submit", materializeE2Presentation);
@@ -1748,7 +2036,7 @@ function bindEvents() {
     toast("Illustrative research demo restored.");
   });
   document.addEventListener("keydown", handleHotkey, true);
-  window.addEventListener("resize", () => { syncLayoutHeight(); constrainView(); renderChart(); });
+  window.addEventListener("resize", () => { syncLayoutHeight(); constrainView(); scheduleChartRender(); });
 }
 
 function downloadTex(kind) {

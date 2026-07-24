@@ -24,6 +24,12 @@ from domain.e2_presentation import (
     presentation_from_input,
     presentation_to_dict,
 )
+from domain.dkllw_chart import (
+    ChartSemanticError,
+    annotate_connection,
+    class_semantic_from_glyph,
+)
+from domain.structured_algebra import AlgebraValidationError, preview_structured_algebra
 from domain.migrations import migrate_project
 from domain.logic_graph import build_logic_graph
 from domain.history import history_status, record_edit, redo_edit, undo_edit
@@ -38,6 +44,15 @@ from domain.manual_periodicity import (
     preview_all_rules_to_box,
     preview_differentials_only,
     preview_manual_periodicity,
+)
+from domain.page_periodicity import (
+    PagePeriodicityError,
+    apply_manual_periodicity_retirement,
+    page_period_status,
+    plan_virtual_period_instances,
+    prepare_page_period_cycle,
+    preview_manual_periodicity_retirement,
+    register_page_period_cycle,
 )
 from domain.models import ClassNode, Differential, Grade, Project, Proposition, Workspace, new_id, project_from_dict, project_to_dict
 from domain.project_io import ProjectImportValidationError, import_digest, prepare_project_import
@@ -79,10 +94,10 @@ def _project_data_path() -> tuple[Path, str]:
 
 DATA_PATH, PROJECT_STORAGE_MODE = _project_data_path()
 LOCK = Lock()
-# The Vercel build copies these local Flask assets to public/static for its
-# CDN.  Keeping Flask's normal static folder preserves run-latest.ps1 exactly.
-app = Flask(__name__)
-APP_VERSION = "2026.07.22-manual-periodicity"
+# Production assets live in public/static so Vercel can serve them from its
+# CDN.  Flask still serves the same directory for the local launcher.
+app = Flask(__name__, static_folder=ROOT.parent / "public" / "static")
+APP_VERSION = "2026.07.23-structured-algebra"
 
 # Compatibility map for project.json files created before periodicity was
 # attached to individual differential families.  It is intentionally limited
@@ -168,6 +183,98 @@ def export_project():
     return response
 
 
+@app.get("/api/workspaces/<workspace_id>/legacy-export")
+def export_legacy_canvas(workspace_id: str):
+    """Export the displayed page as a lossy sseq ver15.3 canvas.
+
+    The legacy format has no coefficient-module glyph, provenance, fate, or
+    LogicGraph fields. Every visible class is therefore exported as an
+    ordinary dot by design.
+    """
+    project = load_project()
+    workspace = find_workspace(project, workspace_id)
+    try:
+        page = int(request.args.get("page", workspace.page))
+    except (TypeError, ValueError):
+        return jsonify({"error": "page must be an integer."}), 400
+    if page < 2:
+        return jsonify({"error": "page must be at least 2."}), 400
+    visible = [
+        item for item in workspace.classes
+        if not item.archived and class_is_live_on_page(workspace, item.id, page)
+    ]
+    visible_ids = {item.id for item in visible}
+    generators = [{
+        "id": item.id,
+        "p": item.grade.stem,
+        "q": item.grade.filtration,
+        "name": item.label,
+        "xOffset": float(item.style.get("legacy_x_offset", 0)),
+        "yOffset": float(item.style.get("legacy_y_offset", 0)),
+        "isBaseGenerator": True,
+        "page": page,
+    } for item in visible]
+    connections = []
+    for differential in workspace.differentials:
+        if (
+            differential.page == page
+            and differential.source_id in visible_ids
+            and differential.target_id in visible_ids
+        ):
+            connections.append({
+                "id": differential.id,
+                "fromId": differential.source_id,
+                "toId": differential.target_id,
+                "type": "differential",
+                "isPeriodic": False,
+                "page": page,
+            })
+    for proposition in workspace.propositions:
+        conclusion = proposition.conclusion if isinstance(proposition.conclusion, dict) else {}
+        if (
+            proposition.kind == "relation"
+            and conclusion.get("source_id") in visible_ids
+            and conclusion.get("target_id") in visible_ids
+            and int(conclusion.get("page", page)) == page
+        ):
+            connections.append({
+                "id": proposition.id,
+                "fromId": conclusion["source_id"],
+                "toId": conclusion["target_id"],
+                "type": "relation",
+                "isPeriodic": False,
+                "page": page,
+            })
+    rules = [{
+        "id": item.id,
+        "name": item.name,
+        "p": item.period_vector.stem,
+        "q": item.period_vector.filtration,
+    } for item in project.manual_periodicity_rules if (
+        item.workspace_id == workspace.id and not item.archived
+    )]
+    payload = {
+        "generators": generators,
+        "connections": connections,
+        "periodicityRules": rules,
+    }
+    response = app.response_class(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        mimetype="application/json",
+    )
+    safe_workspace = "".join(
+        character if character.isalnum() or character in "-_" else "-"
+        for character in workspace.id
+    )
+    response.headers["Content-Disposition"] = (
+        f'attachment; filename="{safe_workspace}-E{page}-legacy-v15.3.json"'
+    )
+    response.headers["X-HFPSS-Lossy-Export"] = (
+        "All Studio class glyphs, fates, algebra, and provenance were forgotten as ordinary legacy dots."
+    )
+    return response
+
+
 def _import_status_policy() -> str:
     return (
         "Imported proposition and differential statuses are preserved only as cited assertions from the file. "
@@ -177,16 +284,27 @@ def _import_status_policy() -> str:
 
 @app.post("/api/project/import/preview")
 def preview_project_import():
-    """Parse/migrate/validate a full replacement project without writing it."""
+    """Preview a full replacement or a legacy canvas on the selected page."""
     try:
         raw = request.get_json(force=True)
-        candidate, metadata = prepare_project_import(raw)
         current = load_project()
+        candidate, metadata = prepare_project_import(
+            raw,
+            base_project=current,
+            legacy_source_name=request.args.get("source_name", ""),
+            legacy_workspace_name=request.args.get("workspace_name", ""),
+            legacy_target_workspace_id=request.args.get("target_workspace_id", ""),
+            legacy_target_page=(
+                int(request.args["target_page"]) if request.args.get("target_page") else None
+            ),
+        )
+        imported_workspace_id = metadata.get("imported_workspace_id")
         return jsonify({
             "valid": True,
             "preview_sha256": import_digest(candidate),
             "current_revision": current.revision,
             "would_revision": current.revision + 1,
+            "imported_workspace_id": imported_workspace_id,
             "project": project_to_dict(candidate),
             "import": metadata,
             "mathematical_status_policy": _import_status_policy(),
@@ -202,14 +320,43 @@ def apply_project_import():
     """Atomically replace a project only after its exact preview was reviewed."""
     try:
         body = request.get_json(force=True)
-        if not isinstance(body, dict) or set(("project", "preview_sha256", "expected_revision")) - set(body):
+        if not isinstance(body, dict) or set(("preview_sha256", "expected_revision")) - set(body):
             raise ProjectImportValidationError(
-                "Apply requires an object with project, preview_sha256, and expected_revision from a successful preview."
+                "Apply requires preview_sha256 and expected_revision from a successful preview."
+            )
+        has_project = "project" in body
+        has_legacy_canvas = "legacy_canvas" in body
+        if has_project == has_legacy_canvas:
+            raise ProjectImportValidationError(
+                "Apply requires exactly one of project or legacy_canvas."
             )
         if not isinstance(body["preview_sha256"], str) or not body["preview_sha256"]:
             raise ProjectImportValidationError("preview_sha256 must be the nonempty value returned by preview.")
         if isinstance(body["expected_revision"], bool) or not isinstance(body["expected_revision"], int):
             raise ProjectImportValidationError("expected_revision must be the integer current_revision returned by preview.")
+        imported_workspace_id = body.get("imported_workspace_id")
+        if imported_workspace_id is not None and (
+            not isinstance(imported_workspace_id, str) or not imported_workspace_id.strip()
+        ):
+            raise ProjectImportValidationError("imported_workspace_id must be a nonempty string when supplied.")
+        if has_legacy_canvas and imported_workspace_id is None:
+            raise ProjectImportValidationError(
+                "Legacy Apply requires imported_workspace_id from its successful preview."
+            )
+        legacy_source_name = body.get("source_name", "")
+        legacy_workspace_name = body.get("workspace_name", "")
+        legacy_target_workspace_id = body.get("target_workspace_id", "")
+        legacy_target_page = body.get("target_page")
+        if not all(isinstance(value, str) for value in (
+            legacy_source_name, legacy_workspace_name, legacy_target_workspace_id,
+        )):
+            raise ProjectImportValidationError(
+                "source_name, workspace_name, and target_workspace_id must be strings when supplied."
+            )
+        if legacy_target_page is not None and (
+            isinstance(legacy_target_page, bool) or not isinstance(legacy_target_page, int)
+        ):
+            raise ProjectImportValidationError("target_page must be an integer when supplied.")
         with LOCK:
             current = load_project()
             if body["expected_revision"] != current.revision:
@@ -217,7 +364,27 @@ def apply_project_import():
                     "error": "The project changed after preview; preview the import again before applying it.",
                     "current_revision": current.revision,
                 }), 409
-            candidate, metadata = prepare_project_import(body["project"])
+            if has_legacy_canvas:
+                candidate, metadata = prepare_project_import(
+                    body["legacy_canvas"],
+                    base_project=current,
+                    legacy_source_name=legacy_source_name,
+                    legacy_workspace_name=legacy_workspace_name,
+                    legacy_target_workspace_id=legacy_target_workspace_id,
+                    legacy_target_page=legacy_target_page,
+                )
+                if metadata.get("format") != "legacy-sseq-ver15.3":
+                    raise ProjectImportValidationError(
+                        "legacy_canvas must use the legacy sseq ver15.3 generators/connections shape."
+                    )
+            else:
+                candidate, metadata = prepare_project_import(body["project"])
+            if imported_workspace_id is not None and not any(
+                item.id == imported_workspace_id for item in candidate.workspaces
+            ):
+                raise ProjectImportValidationError(
+                    "imported_workspace_id is absent from the reviewed candidate project."
+                )
             if body["preview_sha256"] != import_digest(candidate):
                 return jsonify({
                     "error": "The proposed project differs from the reviewed preview; preview it again before applying.",
@@ -226,15 +393,32 @@ def apply_project_import():
             # Project revision records local replacement history, not a number
             # supplied by an external file.  The old state remains undoable.
             candidate.revision = current.revision
-            checkpoint(current, "Import and replace validated project JSON")
+            checkpoint(
+                current,
+                f"Import legacy canvas into {imported_workspace_id} on E{legacy_target_page}"
+                if imported_workspace_id is not None
+                else "Import and replace validated project JSON",
+            )
             save_project(candidate)
-        return jsonify({
-            "project": project_to_dict(candidate),
+        if imported_workspace_id is not None:
+            metadata = {
+                **metadata,
+                "imported_workspace_id": imported_workspace_id,
+                "workspace_id": imported_workspace_id,
+            }
+        response = {
             "revision": candidate.revision,
+            "imported_workspace_id": imported_workspace_id,
             "import": metadata,
             "mathematical_status_policy": _import_status_policy(),
             **history_status(history_key()),
-        }), 201
+        }
+        # A converted legacy project can be several times larger than the
+        # uploaded canvas.  The browser reloads the project after Apply, so do
+        # not duplicate that large document in the Apply response.
+        if not has_legacy_canvas:
+            response["project"] = project_to_dict(candidate)
+        return jsonify(response), 201
     except ProjectImportValidationError as error:
         return jsonify({"error": str(error)}), 422
     except (AttributeError, KeyError, TypeError, ValueError) as error:
@@ -355,6 +539,16 @@ def list_e2_presentations():
             "this endpoint does not compute group cohomology or discover differentials."
         ),
     })
+
+
+@app.post("/api/v2/algebra/preview")
+def structured_algebra_preview():
+    """Evaluate explicit structured algebra without storing mathematical claims."""
+    try:
+        body = request.get_json(force=True)
+        return jsonify(preview_structured_algebra(body))
+    except (KeyError, TypeError, ValueError, AlgebraValidationError) as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.post("/api/v2/e2-presentations/preview")
@@ -539,6 +733,10 @@ def create_class(workspace_id: str):
         for key, value in representation.items()
     ):
         return jsonify({"error": "Representation must map strings to integer coefficients."}), 400
+    try:
+        glyph = class_semantic_from_glyph(body.get("glyph", "dot")).glyph
+    except ChartSemanticError as error:
+        return jsonify({"error": str(error)}), 400
     with LOCK:
         project = load_project(); workspace = find_workspace(project, workspace_id)
         if filtration < 0 and workspace_sequence_kind(workspace) != "tate":
@@ -558,6 +756,7 @@ def create_class(workspace_id: str):
             coefficient_context_id=body.get("coefficient_context_id", "q8-witt-f4"),
             convention_id=body.get("convention_id", "q8-thesis-plotted-v1"),
             sector_id=body.get("sector_id"),
+            style={"module_pattern": glyph},
         )
         checkpoint(project, f"Add class {node.label}")
         workspace.classes.append(node); save_project(project)
@@ -798,6 +997,139 @@ def list_manual_periodicities(workspace_id: str):
     })
 
 
+@app.get("/api/v2/workspaces/<workspace_id>/page-periods")
+def list_page_period_cycles(workspace_id: str):
+    """List compact page periods and their eligibility on one requested page."""
+    try:
+        project = load_project()
+        workspace = find_workspace(project, workspace_id)
+        page = int(request.args.get("page", workspace.page))
+        cycles = [
+            item for item in project.page_period_cycles
+            if item.workspace_id == workspace.id
+        ]
+        return jsonify({
+            "page": page,
+            "cycles": [{
+                **asdict(item),
+                "page_status": page_period_status(project, item.id, page).to_dict(),
+            } for item in cycles],
+            "virtual": True,
+        })
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/page-periods/preview")
+def preview_page_period_cycle(workspace_id: str):
+    """Validate a page-period declaration without storing translated dots."""
+    try:
+        project = load_project()
+        cycle = prepare_page_period_cycle(project, workspace_id, request.get_json(force=True))
+        return jsonify({
+            "cycle": asdict(cycle),
+            "persisted": False,
+            "virtual": True,
+            "created_class_ids": [],
+            "created_differential_ids": [],
+            "created_proposition_ids": [],
+        })
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/page-periods")
+def create_page_period_cycle(workspace_id: str):
+    """Store one compact period-cycle record; never materialize translations."""
+    try:
+        body = request.get_json(force=True)
+        with LOCK:
+            project = load_project()
+            cycle = prepare_page_period_cycle(project, workspace_id, body)
+            checkpoint(project, f"Register page period {cycle.label} on E{cycle.declared_page}")
+            register_page_period_cycle(project, cycle)
+            save_project(project)
+        return jsonify({
+            "cycle": asdict(cycle),
+            "persisted": True,
+            "virtual": True,
+            "revision": project.revision,
+            **history_status(history_key()),
+        }), 201
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/page-periods/<cycle_id>/instances")
+def preview_page_period_instances(workspace_id: str, cycle_id: str):
+    """Plan viewport-bounded virtual multiples without changing the project."""
+    try:
+        body = request.get_json(force=True)
+        project = load_project()
+        cycle = next(
+            (item for item in project.page_period_cycles if item.id == cycle_id),
+            None,
+        )
+        if cycle is None or cycle.workspace_id != workspace_id:
+            return jsonify({"error": "Unknown page-period cycle in this workspace."}), 404
+        return jsonify(plan_virtual_period_instances(
+            project,
+            cycle_id,
+            page=int(body.get("page")),
+            base_class_ids=body.get("base_class_ids", []),
+            translations=body.get("translations", []),
+        ))
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/manual-periodicity-retirement/preview")
+def preview_manual_periodicity_retirement_operation():
+    """Audit ownership before compacting legacy materialized period copies."""
+    try:
+        body = request.get_json(force=True)
+        return jsonify(preview_manual_periodicity_retirement(
+            load_project(),
+            body.get("manual_periodicity_ids", []),
+        ))
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/manual-periodicity-retirement/apply")
+def apply_manual_periodicity_retirement_operation():
+    """Compact only exact generated IDs from an unchanged reviewed preview."""
+    try:
+        body = request.get_json(force=True)
+        with LOCK:
+            project = load_project()
+            current = preview_manual_periodicity_retirement(
+                project,
+                body.get("manual_periodicity_ids", []),
+            )
+            if current["digest"] != body.get("digest"):
+                raise PagePeriodicityError(
+                    "Retirement preview is stale; preview it again."
+                )
+            if not current["would_change"]:
+                return jsonify({
+                    **current,
+                    "persisted": False,
+                    "revision": project.revision,
+                    **history_status(history_key()),
+                })
+            checkpoint(project, "Retire legacy materialized periodic copies")
+            result = apply_manual_periodicity_retirement(project, current)
+            save_project(project)
+        return jsonify({
+            **result,
+            "revision": project.revision,
+            **history_status(history_key()),
+        }), 201
+    except (KeyError, TypeError, ValueError, PagePeriodicityError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
 @app.post("/api/v2/workspaces/<workspace_id>/manual-periodicity/preview")
 def preview_manual_periodicity_operation(workspace_id: str):
     """Validate explicit manual copies without changing the project."""
@@ -971,12 +1303,34 @@ def save_proposition(workspace_id: str):
     body = request.get_json(force=True)
     with LOCK:
         project = load_project(); workspace = find_workspace(project, workspace_id)
+        conclusion = body.get("conclusion", {})
+        chart_connection_kind = body.get("chart_connection_kind")
+        if chart_connection_kind:
+            classes = {item.id: item for item in workspace.classes}
+            source = classes.get(conclusion.get("source_id"))
+            target = classes.get(conclusion.get("target_id"))
+            if source is None or target is None:
+                return jsonify({"error": "A DKLLW multiplication needs two classes in this workspace."}), 400
+            try:
+                semantic = annotate_connection(
+                    kind=chart_connection_kind,
+                    source_grade=source.grade,
+                    target_grade=target.grade,
+                    spectral_sequence=workspace.spectral_sequence,
+                    claim_source_ref=body.get("source_ref", ""),
+                )
+            except ChartSemanticError as error:
+                return jsonify({"error": str(error)}), 400
+            conclusion = {
+                **conclusion,
+                "chart_connection": semantic.to_dict(),
+            }
         proposition = Proposition(
             id=body.get("id", new_id("prop")),
             kind=body.get("kind", "relation"),
             statement=body["statement"],
             status=body.get("status", "suggested"),
-            conclusion=body.get("conclusion", {}),
+            conclusion=conclusion,
             premise_ids=body.get("premise_ids", []),
             rule=body.get("rule", "manual"),
             confidence=float(body.get("confidence", 1)),

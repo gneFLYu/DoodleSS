@@ -8,6 +8,10 @@ from .models import (
 from .fate import sync_project_fates
 from .actions import ensure_c3_action
 from .grading import ensure_q8_atlas
+from .manual_periodicity import (
+    format_multiplicative_latex,
+    normalize_multiplicative_expression,
+)
 from .periods import migrate_legacy_period_families
 from .periodicity import ensure_source_backed_q8_periodicity_rules
 
@@ -94,6 +98,9 @@ def ensure_foundations(project: Project) -> Project:
             "No source-scoped vanishing-line certificate has been selected.",
         )
         for node in workspace.classes:
+            if node.manual_periodicity_id:
+                node.label = format_multiplicative_latex(node.label)
+                node.expression = normalize_multiplicative_expression(node.expression)
             node.expression = node.expression or node.label
             node.coefficient_context_id = node.coefficient_context_id or "q8-witt-f4"
             node.convention_id = node.convention_id or "q8-thesis-plotted-v1"

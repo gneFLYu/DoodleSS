@@ -28,6 +28,43 @@ class ManualPeriodicityError(ValueError):
     """Raised when a drawing-periodicity request is unsafe or inconsistent."""
 
 
+def format_multiplicative_latex(*factors: str) -> str:
+    """Render a commutative product by juxtaposition.
+
+    The coefficient ``1`` is the multiplicative identity, so it is omitted
+    whenever another factor is present.  Legacy ``\,`` spacing commands are
+    presentation-only and are removed from canonical output.
+    """
+    normalized: list[str] = []
+    for raw_factor in factors:
+        for piece in str(raw_factor).split(r"\,"):
+            factor = piece.strip()
+            if factor and factor != "1":
+                normalized.append(factor)
+    return "".join(normalized) or "1"
+
+
+def normalize_multiplicative_expression(expression: str) -> str:
+    """Remove legacy LaTeX spacing and an explicit leading ``(1)*``."""
+    normalized = str(expression).replace(r"\,", "").strip()
+    if not normalized.startswith("(1)*"):
+        return normalized
+    remainder = normalized[len("(1)*"):]
+    if remainder.startswith("(") and remainder.endswith(")"):
+        return remainder[1:-1]
+    return remainder or "1"
+
+
+def _multiply_expression(base: ClassNode, factor: str) -> str:
+    base_expression = normalize_multiplicative_expression(base.expression or base.label)
+    normalized_factor = normalize_multiplicative_expression(factor)
+    if format_multiplicative_latex(base.label) == "1" or base_expression == "1":
+        return normalized_factor
+    if normalized_factor == "1":
+        return base_expression
+    return f"({base_expression})*({normalized_factor})"
+
+
 def _integer(value: Any, name: str) -> int:
     if isinstance(value, bool):
         raise ManualPeriodicityError(f"{name} must be an integer.")
@@ -109,11 +146,12 @@ def _normalize_request(workspace: Workspace, payload: dict[str, Any]) -> dict[st
 
 def _copy_label(base: ClassNode, cycle_label: str, translation: int) -> str:
     factor = cycle_label if translation == 1 else f"{cycle_label}^{{{translation}}}"
-    return f"{base.label}\\,{factor}"
+    return format_multiplicative_latex(base.label, factor)
 
 
 def _copy_expression(base: ClassNode, cycle_label: str, translation: int) -> str:
-    return f"({base.expression or base.label})*({cycle_label})^({translation})"
+    factor = cycle_label if translation == 1 else f"({cycle_label})^({translation})"
+    return _multiply_expression(base, factor)
 
 
 def _translated_grade(base: ClassNode, period: Grade, translation: int) -> Grade:
@@ -495,7 +533,7 @@ def _rule_factor(rules: list[dict[str, Any]], exponents: list[int]) -> str:
         if exponent == 0:
             continue
         factors.append(rule["name"] if exponent == 1 else f"{rule['name']}^{{{exponent}}}")
-    return "\\,".join(factors) or "1"
+    return format_multiplicative_latex(*factors)
 
 
 def _compound_translations(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -606,8 +644,8 @@ def _batch_builder(
         factor = _rule_factor(rules, shift["exponents"])
         plan = {
             "kind": "cycle", "plan_key": orbit_key, "base_class_id": base.id,
-            "label": f"{base.label}\\,{factor}",
-            "expression": f"({base.expression or base.label})*({factor})",
+            "label": format_multiplicative_latex(base.label, factor),
+            "expression": _multiply_expression(base, factor),
             "grade": asdict(grade), "exponents": exponents,
             "action": "archived-conflict" if existing and existing.archived else "reuse" if existing else "create",
             "class_id": existing.id if existing else None,

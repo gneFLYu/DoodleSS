@@ -42,7 +42,7 @@ extension mode。
 
 | 用户可见操作 | HFPSS Studio beta | 与 `sseq ver15.3.html` 的关系 |
 | --- | --- | --- |
-| Generator | `G` 后单击格点；填写 label/expression；实时 KaTeX preview；同格点自动避让 | 覆盖 legacy 手工加点，并用确定性 packing 代替固定八方向 offset |
+| Generator | `G` 后单击格点；label 同时就是 algebra expression；实时 KaTeX preview 与基本生成元分词；同格点自动避让 | 覆盖 legacy 手工加点，并用确定性 packing 代替固定八方向 offset |
 | Differential | `D` 后选择 source/target；显示跟随指针的 preview；保存 candidate 与 provenance proposition | 覆盖 legacy 两点连箭头，但增加 page、liveness 和 grading 校验 |
 | Relation | `R` 后选择两点；candidate relation 会显示在图上并进入 proof tree | 覆盖 legacy 手工关系线，同时保留 review status |
 | Delete | `X` 后单击 class；不确认，归档 class 并保留 proof/differential/relation history | 不等同于 legacy 直接擦除记录；目前不能直接点线删除 differential/relation claim |
@@ -52,12 +52,18 @@ extension mode。
 | Page | 顶部按钮/下拉框或 `[`、`]`；可从菜单增加 E26 以后页面 | 覆盖 legacy page selector，并按 fate 控制 page liveness |
 | History | `Ctrl+Z`；`Ctrl+Y` 或 `Ctrl+Shift+Z` | class、differential 和 relation 使用同一事务 history |
 | Periodicity Tool | 定义多个 `(p,q)` 手动画图规则；复合应用到 box；或只平移 differential | 复刻 legacy 三个周期区块，但所有生成结果明确标为 manual-unverified candidate |
-| Project JSON | 顶部 **Export JSON** 下载完整 Studio project；**Import JSON** 必须先 Preview，再由用户明确 Apply | 不直接导入 legacy 画布 JSON，也不会在选中文件时立即覆盖项目 |
+| Period cycle on E_r | 选择当前页 live class，或输入 label/grade；登记来源后按可见视口虚拟展开 | 在 E_r 成立则用于 E_≤r；只有该 cycle 在 E_r 不支持也不接收 d_r 时才继续到 E_{r+1}；不写入复制 dots |
+| Project / Legacy JSON | **Export JSON** 下载完整 Studio project；**Export Legacy** 把当前 E_r 页退化为普通 dots；**Import JSON** 必须先 Preview，再由用户明确 Apply | 完整 Studio JSON 可替换项目；legacy 15.3 JSON 直接写入当前 workspace 的当前页，不创建临时 workspace |
 | Clear current canvas | 顶部同名按钮经确认后归档当前 workspace 的全部 active dots；数学记录保留，并可一次 Undo | 是可恢复的 workspace 级归档，不是 legacy 的不可逆 Clear All |
 
-下列 legacy 15.3 功能尚未直接移植：legacy 任意画布 JSON 格式的直接载入、拖动
-class 修改纯视觉 offset、直接点击删除 connection，以及启发式 extension
+下列 legacy 15.3 功能尚未直接移植：拖动 class 修改纯视觉 offset、直接点击删除
+connection，以及启发式 extension
 批量生成。Studio 不会把手动画图周期自动解释为带来源的数学
+
+`Legacy Periodicity Tool` 只为旧图兼容保留。新工作应使用
+**Period cycle on E_r**：它保存一条紧凑 `PagePeriodCycle`，平移点只在当前页与
+当前可见范围中即时生成，不进入 Project JSON。若周期类在 E_r 支持或接收任何
+非 rejected 的 `d_r`，程序会阻止它自动传播到 E_{r+1}。
 结论；周期、跨 grading 产品和 deduction 应使用各自的 certificate/candidate
 工作流。
 
@@ -104,10 +110,24 @@ snapshot，所以相关 differential 和 relation 会随事务一起恢复；一
 ### 完整 Project JSON 与安全清空
 
 - 顶部 **Export JSON** 下载完整的 Studio project JSON。
-- 顶部 **Import JSON** 选择文件后只做只读 Preview。对话框会显示 revision、
-  记录数量、迁移信息、warning 和数学 status policy；此时不会替换当前项目。
-  核对后必须再次单击 **Apply reviewed import** 才会应用。若 preview digest 或
-  expected revision 已不匹配，服务会拒绝应用，需重新 Preview。
+- 顶部 **Import JSON** 统一采用 **Import JSON → Preview → Apply**：选择文件后只做
+  只读 Preview；若 preview digest 或 expected revision 已不匹配，服务会拒绝应用，
+  必须重新 Preview。
+- 对完整 Studio project JSON，Preview 会明确标为 **Replace project**；只有再次单击
+  **Apply reviewed import** 才会替换当前项目。
+- 对旧 `sseq ver15.3` JSON，Preview 会明确标出当前 workspace 与当前 E_r 页，列出旧文件中
+  generators、connections、relations、differentials 和 periodicity rules 的接收/转换
+  数量，并逐项显示带 `code`、`message`、`count` 的 warnings。单击
+  **Import into current page** 后，旧数据直接写入当前 canvas；不会建立、列出或切换到
+  临时 workspace。其他 workspace 与其他 first-appearance page 的记录保留。
+- legacy 转换不会按格点合并生成元：每个 dot 都保留独立的 class ID；原文件的 offset
+  会保存在 legacy metadata 中，画面仍使用自适应 packing 防止同格重叠。connections
+  只转换为待审阅的 relation/differential propositions，period rules 只转换为
+  `candidate/manual-unverified` 手动画图规则；它们都不会显示成 certified theorem。
+- 点击 **Append reviewed workspace** 后，按钮会显示 **Applying...**。旧格式路径只重新上传
+  原始 legacy JSON，服务端会在 revision 锁内重复转换并核对 Preview digest；它不会再上传
+  数倍大的转换后完整 Project。若部署平台拒绝请求或返回错误，原因会显示在对话框中，按钮
+  会恢复为可重试状态。
 - 顶部 **Clear current canvas** 会先显示确认说明。确认后，它归档当前
   workspace 中所有页面的 active dots，但不物理删除 class records、
   differentials、relations、propositions、provenance 或 fate history；整个清空
@@ -185,7 +205,8 @@ Invoke-RestMethod http://127.0.0.1:5078/api/v2/e2-presentations
 
 ## 手动画图周期（ver15.3-compatible）
 
-左侧 **Periodicity Tool** 是绘图编辑器，不是 theorem prover。它包含与
+左侧 **Legacy Periodicity Tool** 是绘图兼容器，不是 theorem prover。新工作优先使用
+上方的 **Period cycle on E_r**。旧工具包含与
 `sseq ver15.3.html` 对应的三个区块：
 
 1. **Define New Rule**：输入 multiplier 的 LaTeX 名称及 `(p,q)`，加入规则
@@ -193,14 +214,15 @@ Invoke-RestMethod http://127.0.0.1:5078/api/v2/e2-presentations
    Project JSON 导入导出。
 2. **Apply All Rules to Box**：输入 `p_min/p_max/q_min/q_max`，先 Preview。
    当前规则列表会复合应用于当前页的 cycles、differential arrows 和 relation
-   connections。蓝色空心点与蓝色虚线是预览，不会修改项目；核对摘要后才点
-   **Apply All Rules to Box**。整次 Apply 是一个 history checkpoint。
+   connections。蓝色空心点与蓝色虚线是按当前页/当前视口生成的预览；点击
+   **Use live virtual view** 只保留当前会话的虚拟显示，不会写入 dots、
+   propositions 或 differentials。
 3. **Apply Periodicity to Differentials Only**：输入一个 `(p,q)`。对每条当前页
    differential 及平移量检查端点：两端存在则只连箭头；恰好一端缺失则补齐
    缺失的点再连；两端都缺失则跳过。仍须 Preview 后才可 Apply。
 
-实体化的点、箭头和 relation 都是独立存储记录，并以青蓝描边/虚线与普通
-记录区分；它们可选择、检查、归档，且进入 Project JSON 与 Undo/Redo。
+旧的 differential-only Apply 仍会生成 candidate 记录，并以青蓝描边/虚线与普通
+记录区分；box 周期展开不再实体化。
 其 status 始终从 `manual-unverified` / `candidate` 开始。工具不会因为用户输入
 了向量就声称该向量是 spectral-sequence period，也不会把复制的 differential
 自动标为 accepted。
@@ -284,8 +306,10 @@ transport suggestion。推荐流程是：
 
 ## 来源导入
 
-来源导入是命令行维护流程，不是普通画布操作。详细审计范围、来源定位和
-幂等性说明见 [E2_IMPORT_AUDIT.md](E2_IMPORT_AUDIT.md)。
+旧 sseq 画布现在可通过顶部 **Import JSON** 直接导入当前 workspace 的当前页；这只
+保留画图数据，不构成来源核验。**Export Legacy** 只导出当前页可见 dots/lines，并遗忘
+glyph、fate、代数语义和 provenance。带来源的 E2 catalogue 导入仍是单独的命令行维护流程。
+详细审计范围、来源定位和幂等性说明见 [E2_IMPORT_AUDIT.md](E2_IMPORT_AUDIT.md)。
 
 只读检查 legacy JSON：
 
@@ -313,7 +337,7 @@ python backend/audit_e2_import.py --workspace integer --apply-verified --project
 | Differential candidates | 枚举 bidegree + liveness + representation compatible endpoints，返回 read-only candidates | 证明 nonzero differential；自动持久化或接受 candidate |
 | Comparison candidates | 从已有 Comparison 和已接受 source arrow 形成带 hypotheses 的 transport candidates | 自动证明 map hypotheses、restriction、transfer、norm 或 Tate transport |
 | Proof tree | 显示 propositions、sources、dependencies 和 review status | 替代人工 proof review |
-| Project persistence | 完整 Studio JSON 导出；强制 Preview/明确 Apply 的导入；revision/digest 检查；可撤销的 workspace canvas 归档 | 直接信任或自动套用 legacy 任意画布 JSON |
+| Project persistence | 完整 Studio JSON 导出；当前页 Legacy 退化导入/导出；强制 Preview/明确 Apply；revision/digest 检查；可撤销的 workspace canvas 归档 | 直接信任 legacy 箭头/规则，或把它们提升为 certified 数学结论 |
 | Collaboration | 本地 JSON、revision 和 undo/redo | 账号、权限、实时多人同步、冲突处理 |
 
 此外，当前不会自动完成以下工作：

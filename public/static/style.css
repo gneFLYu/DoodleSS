@@ -1252,6 +1252,20 @@ dialog.e2-presentation-dialog {
   stroke-dasharray: 2 3;
 }
 
+.relation-line.dkllw-vertical-two,
+.relation-line.dkllw-h1,
+.relation-line.dkllw-h2 {
+  stroke: #475569;
+  stroke-width: 1.5;
+  stroke-dasharray: none;
+}
+
+.relation-line.dkllw-hidden-extension {
+  stroke: #475569;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
 .connection-preview {
   pointer-events: none;
   stroke: var(--gold);
@@ -1272,7 +1286,6 @@ dialog.e2-presentation-dialog {
   stroke-width: 2;
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 0.12s ease, stroke-width 0.12s ease, filter 0.12s ease;
 }
 
 .class-instance:hover .class-point,
@@ -1280,7 +1293,6 @@ dialog.e2-presentation-dialog {
   transform: scale(1.24);
   stroke: var(--blue);
   stroke-width: 3;
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--blue) 65%, transparent));
 }
 
 .class-instance { cursor: pointer; }
@@ -1316,15 +1328,29 @@ dialog.e2-presentation-dialog {
   stroke: var(--point-color);
 }
 
+.class-point.circle {
+  fill: white;
+  stroke: var(--point-color);
+}
+
+.class-point.fat-dot {
+  stroke-width: 1;
+}
+
+.class-point.unknown-glyph {
+  fill: white;
+  stroke: var(--point-color);
+  stroke-width: 1.5;
+}
+
 .class-point.periodic {
-  opacity: 0.48;
+  opacity: 0.88;
   stroke-width: 1.25;
 }
 
 .class-point.manual-drawing-periodic {
   stroke: #0891b2;
   stroke-width: 2.5;
-  filter: drop-shadow(0 0 2px rgb(8 145 178 / 35%));
 }
 
 .selected {

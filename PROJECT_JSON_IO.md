@@ -17,24 +17,30 @@ Invoke-WebRequest http://127.0.0.1:5078/api/project/export `
   -OutFile .\hfpss-studio-project.json
 ```
 
-The old `frontEnd_lty/sseq ver15.3.html` browser format is **not** accepted.
-Its `{ generators, connections, periodicityRules }` shape has neither Studio
-workspace/grading semantics nor evidence records. The server rejects it rather
-than guessing dot coordinates or mathematical meaning.
+The old `frontEnd_lty/sseq ver15.3.html` browser format is accepted through the
+staged Preview endpoint. Its `{ generators, connections, periodicityRules }`
+shape can be converted into the selected existing workspace and current page; it
+never replaces or merges an existing workspace during Preview. Because that
+format does not contain coefficient, representation, or proof semantics, all
+converted claims remain `candidate` and all named period vectors remain
+`manual-unverified`.
 
 ## Reviewed replacement workflow
 
 Replacement is two-stage and local-first:
 
-1. `POST /api/project/import/preview` with the raw exported project object.
+1. `POST /api/project/import/preview` with a raw Studio project or legacy
+   ver15.3 object.
    This does not write the project or change history. It validates the input,
    migrates supported legacy Studio schemas, rebuilds derived fate/event caches,
    and returns the post-migration `project`, `preview_sha256`,
    `current_revision`, and `would_revision`.
-2. Review the returned project and then `POST /api/project/import/apply` with
-   exactly that raw project, the returned digest, and the returned current
-   revision. A stale revision or changed document receives `409 Conflict` and
-   must be previewed again.
+2. Review the response and then `POST /api/project/import/apply`. A full Studio
+   project sends `preview.project`; a legacy preview sends the original compact
+   legacy canvas as `legacy_canvas`, plus `source_name`, `target_workspace_id`,
+   and `target_page`. Both paths
+   send the returned digest and current revision. A stale revision or changed
+   document receives `409 Conflict` and must be previewed again.
 
 Example preview:
 
@@ -50,9 +56,10 @@ Example apply (use the same raw file that was previewed):
 
 ```powershell
 $apply = @{
-  project = $project
+  project = $preview.project
   preview_sha256 = $preview.preview_sha256
   expected_revision = $preview.current_revision
+  imported_workspace_id = $preview.imported_workspace_id
 }
 Invoke-RestMethod http://127.0.0.1:5078/api/project/import/apply `
   -Method Post -ContentType 'application/json' `
@@ -82,3 +89,40 @@ from the validated primary records; they are not treated as imported evidence.
 This endpoint is local JSON exchange, not a collaborative merge service. It
 replaces the complete current project after review; it does not merge two
 collaborators' changes.
+
+## Legacy ver15.3 response contract
+
+Optional query parameters on Preview are `source_name` and `workspace_name`.
+The response keeps the normal `project`, `preview_sha256`, `current_revision`,
+and `would_revision` fields and adds:
+
+```json
+{
+  "imported_workspace_id": "ws_integer",
+  "import": {
+    "format": "legacy-sseq-ver15.3",
+    "operation": "merge-current-page",
+    "imported_workspace_id": "ws_integer",
+    "workspace_id": "ws_integer",
+    "target_page": 5,
+    "warnings": [],
+    "legacy_summary": {}
+  }
+}
+```
+
+Legacy Apply sends `legacy_canvas`, `source_name`, `target_workspace_id`, `target_page`, and
+`imported_workspace_id` with the Preview digest/revision. The server repeats the
+conversion against the unchanged current project, verifies the exact digest and
+workspace ID, then writes one Undo checkpoint. This avoids re-uploading the much
+larger converted Studio project. Its compact response intentionally omits the
+full project; the UI reloads it and switches directly to the echoed workspace.
+
+Conversion maps `p -> stem` and `q -> filtration`. Every generator gets a new
+ID; same-grade dots are never merged. `xOffset`, `yOffset`, original ID, and
+`isBaseGenerator` are retained in class style/notes, while adaptive packing
+controls rendering. Relations and bidegree-valid differentials become
+source-labelled candidates. A line marked differential with incompatible
+`d_r` bidegree is retained as an anomaly proposition and reported in warnings,
+not promoted to a `Differential`. Legacy periodicity rules become canonical
+`manual_periodicity_rules` with `manual-unverified` status.

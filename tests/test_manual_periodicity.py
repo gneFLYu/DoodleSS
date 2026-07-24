@@ -21,7 +21,9 @@ from domain.manual_periodicity import (
     materialize_batch_preview,
     preview_all_rules_to_box,
     preview_differentials_only,
+    preview_manual_periodicity,
 )
+from domain.migrations import ensure_foundations
 from domain.models import ClassNode, Differential, Grade, Project, Proposition, Workspace, project_from_dict, project_to_dict
 from domain.project_io import prepare_project_import
 from domain.seed import demo_project
@@ -100,6 +102,59 @@ class ManualDrawingPeriodicityDomainTest(unittest.TestCase):
         self.assertEqual(len(parsed.manual_periodicities), 1)
         self.assertEqual(raw["manual_periodicities"][0]["mode"], "box")
         self.assertEqual(len(raw["manual_periodicities"][0]["rule_ids"]), 2)
+
+    def test_unit_coefficient_and_latex_spacing_are_omitted(self):
+        project, workspace = drawing_project()
+        source = next(item for item in workspace.classes if item.id == "source")
+        source.label = "1"
+        source.expression = "1"
+
+        single = preview_manual_periodicity(workspace, {
+            "anchor_class_id": source.id,
+            "page": 2,
+            "period_stem": 8,
+            "period_filtration": 0,
+            "translation_start": 1,
+            "translation_end": 1,
+            "cycle_label": "D",
+            "include_cycles": True,
+        })
+        copy = single["cycle_copies"][0]
+        self.assertEqual(copy["label"], "D")
+        self.assertEqual(copy["expression"], "D")
+        self.assertNotIn(r"\,", copy["label"])
+
+        self.add_rule(project, workspace, "D", p=1, q=0)
+        self.add_rule(project, workspace, "k", p=0, q=1)
+        combined = preview_all_rules_to_box(project, workspace, {
+            "page": 2, "p_min": 1, "p_max": 1, "q_min": 1, "q_max": 1,
+            "basis": "Manual product-label formatting test.",
+            "source_ref": "Research notebook entry",
+        })
+        combined_copy = next(
+            item for item in combined["cycle_copies"]
+            if item["base_class_id"] == source.id
+        )
+        self.assertEqual(combined_copy["label"], "Dk")
+        self.assertEqual(combined_copy["expression"], "Dk")
+        self.assertNotIn(r"\,", combined_copy["label"])
+
+    def test_legacy_manual_product_labels_migrate_idempotently(self):
+        project, workspace = drawing_project()
+        workspace.classes.append(ClassNode(
+            "legacy-product", r"1\,D\,k", Grade(20, 4),
+            expression=r"(1)*(D\,k)",
+            manual_periodicity_id="legacy-manual-period",
+        ))
+
+        ensure_foundations(project)
+        migrated = next(item for item in workspace.classes if item.id == "legacy-product")
+        self.assertEqual(migrated.label, "Dk")
+        self.assertEqual(migrated.expression, "Dk")
+
+        ensure_foundations(project)
+        self.assertEqual(migrated.label, "Dk")
+        self.assertEqual(migrated.expression, "Dk")
 
     def test_founded_demo_import_stays_strict_while_manual_rules_round_trip(self):
         project = demo_project()

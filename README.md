@@ -15,6 +15,7 @@ A local-first, proof-aware workbench for RO(G)-graded spectral sequences, beginn
 - Conservative suggestion rules: `LeibnizRule`, a strong `VanishingLine` obligation, plus comparison transport for translation/restriction/transfer/norm/Tate records.
 - A JSON-backed local project revision counter. This deliberately has no authentication or shared server yet.
 - An explicit finite E2-presentation workflow: source-cited, typed integral generators and monic relations can be previewed, exactly rewritten, and materialized without inventing monomial dots or differentials. F4/Witt coefficients are deliberately rejected until their scalar algebra is implemented.
+- A read-only structured algebra preview for registered generators: exact formal-integer and F4 polynomial arithmetic, bounded SymPy-backed integral expansion/collection, full RO(Q8) term grades, explicit rewrite provenance, and strict Witt/2-adic rejection.
 
 The research seed is a structured index of the Overleaf archive, not a machine-checked transcription of every chart. In particular, the working log records corrected periodicities and draft sections that need review. The interface deliberately preserves these facts rather than presenting a draft differential as settled mathematics.
 
@@ -62,9 +63,9 @@ python -m unittest discover -s tests -v
 ### Vercel deployment
 
 The repository now exposes `api/index.py` as Vercel's Flask/WSGI entry point.
-`vercel.json` includes the `backend/` application bundle; its build command
-copies `backend/static/` into `public/static/` for Vercel's CDN, so the deployed
-site uses the same assets and routes as the local launcher.
+`vercel.json` includes the `backend/` application bundle and the browser assets
+are available under `public/static/`, so the deployed site uses the same routes
+as the local launcher.
 
 Install the Vercel CLI and run the following from this repository root:
 
@@ -89,7 +90,10 @@ durable.
 
 - [Chinese operational user guide](USER_GUIDE.zh-CN.md): launch, chart controls, explicit E2-presentation dialog, read-only candidate enumeration, and capability limits.
 - [Explicit E2-presentation JSON/API contract](E2_PRESENTATION_INPUT.md).
-- [Full project JSON import/export contract](PROJECT_JSON_IO.md): downloadable Studio projects, staged preview/apply replacement, validation, and history semantics.
+- [Safe structured algebra preview API](ALGEBRA_ENGINE.md): exact integer/F4 polynomial arithmetic, RO(Q8) grading, bounded SymPy expansion, and rewrite limits.
+- [Full project and legacy ver15.3 JSON contract](PROJECT_JSON_IO.md): complete Studio projects, current-page lossy legacy import/export, staged Preview/Apply, validation, and history semantics.
+- [DKLLW chart conventions](DKLLW_CHART_CONVENTIONS.md): class glyphs, multiplication lines, page roles, and period-cycle eligibility.
+- Page-aware periods are compact `PagePeriodCycle` records. Viewport copies are virtual, and legacy materialized copies can be retired only through an ownership-checked preview/apply operation.
 - [Safe workspace canvas clear API](CANVAS_CLEAR.md): archive active dots without deleting mathematics, with one-step undo.
 - [Manual drawing periodicity contract](MANUAL_PERIODICITY.md): named vectors, batched chart copies, conflict handling, JSON provenance, and limits.
 
