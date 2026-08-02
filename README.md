@@ -93,6 +93,7 @@ durable.
 - [Safe structured algebra preview API](ALGEBRA_ENGINE.md): exact integer/F4 polynomial arithmetic, RO(Q8) grading, bounded SymPy expansion, and rewrite limits.
 - [Full project and legacy ver15.3 JSON contract](PROJECT_JSON_IO.md): complete Studio projects, current-page lossy legacy import/export, staged Preview/Apply, validation, and history semantics.
 - [DKLLW chart conventions](DKLLW_CHART_CONVENTIONS.md): class glyphs, multiplication lines, page roles, and period-cycle eligibility.
+- [DKLLW24 F4 argument audit](DKLLW_F4_ARGUMENT_AUDIT.md): residue/Witt coefficient boundaries, up-to-unit precision, mixed-RO scope guard, and the Danus-style fact-admission DAG.
 - Page-aware periods are compact `PagePeriodCycle` records. Viewport copies are virtual, and legacy materialized copies can be retired only through an ownership-checked preview/apply operation.
 - [Safe workspace canvas clear API](CANVAS_CLEAR.md): archive active dots without deleting mathematics, with one-step undo.
 - [Manual drawing periodicity contract](MANUAL_PERIODICITY.md): named vectors, batched chart copies, conflict handling, JSON provenance, and limits.

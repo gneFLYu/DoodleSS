@@ -540,6 +540,11 @@ input {
   stroke: var(--blue);
 }
 
+.logic-edge.requires-coefficients {
+  stroke: #7c3aed;
+  stroke-dasharray: 3 2;
+}
+
 .logic-node {
   cursor: pointer;
 }
@@ -551,6 +556,16 @@ input {
 
 .logic-node.proposition rect {
   stroke: var(--blue);
+}
+
+.logic-node.proposition.review-queue rect {
+  stroke: #d97706;
+  stroke-dasharray: 4 2;
+}
+
+.logic-node.coefficient-context rect {
+  fill: #f5f3ff;
+  stroke: #7c3aed;
 }
 
 .logic-node.class-fate rect {

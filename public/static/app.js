@@ -770,16 +770,27 @@ function showComparisonNote() {
 
 function renderProofTree() {
   const ws = workspace();
-  const propositions = $("#proof-scope").value === "project" ? allPropositions() : ws.propositions.map((item) => ({ ...item, workspaceName: ws.name }));
+  const all = $("#proof-scope").value === "project" ? allPropositions() : ws.propositions.map((item) => ({ ...item, workspaceName: ws.name }));
+  const graphPropositions = new Map((state.logicGraph?.nodes || []).filter((item) => item.kind === "proposition").map((item) => [item.record_id, item]));
+  const admissionFilter = $("#proof-admission").value;
+  const propositions = all.filter((item) => {
+    const admitted = graphPropositions.get(item.id)?.admitted === true;
+    return admissionFilter === "all" || (admissionFilter === "admitted" ? admitted : !admitted);
+  });
   const lookup = new Map(allPropositions().map((item) => [item.id, item.statement]));
   $("#proposition-count").textContent = propositions.length;
-  $("#proof-tree").innerHTML = propositions.map((item) => `<article class="proof-node ${escapeHtml(item.status)}"><strong>${escapeHtml(item.statement)}</strong><small>${escapeHtml(item.workspaceName)} · ${escapeHtml(item.rule)} · ${escapeHtml(item.status)} · ${(item.confidence * 100).toFixed(0)}%</small>${item.source_ref ? `<div class="source-ref">${escapeHtml(item.source_ref)}</div>` : ""}${item.premise_ids?.length ? `<div class="parents">depends on: ${item.premise_ids.map((id) => escapeHtml(lookup.get(id) || id)).join("; ")}</div>` : ""}</article>`).join("") || '<p class="empty">No propositions in this workspace.</p>';
+  $("#proof-tree").innerHTML = propositions.map((item) => {
+    const graphItem = graphPropositions.get(item.id) || {};
+    const admission = graphItem.admitted ? `admitted · depth ${graphItem.dependency_depth ?? 0}` : `review queue${graphItem.blocked_by?.length ? ` · blocked by ${graphItem.blocked_by.join(", ")}` : ""}`;
+    return `<article class="proof-node ${escapeHtml(item.status)}"><strong>${escapeHtml(item.statement)}</strong><small>${escapeHtml(item.workspaceName)} · ${escapeHtml(item.rule)} · ${escapeHtml(item.status)} · ${escapeHtml(admission)} · ${(item.confidence * 100).toFixed(0)}%</small>${item.source_ref ? `<div class="source-ref">${escapeHtml(item.source_ref)}</div>` : ""}${item.premise_ids?.length ? `<div class="parents">depends on: ${item.premise_ids.map((id) => escapeHtml(lookup.get(id) || id)).join("; ")}</div>` : ""}</article>`;
+  }).join("") || '<p class="empty">No propositions match this fact-admission filter.</p>';
   renderLogicGraph();
 }
 
 function renderLogicGraph() {
   const graph = state.logicGraph || { nodes: [], edges: [] };
   const projectScope = $("#proof-scope").value === "project";
+  const admissionFilter = $("#proof-admission").value;
   let visibleIds = new Set(graph.nodes.filter((item) => projectScope || item.workspace_id === state.workspaceId).map((item) => item.id));
   if (!projectScope) {
     const localIds = new Set(visibleIds);
@@ -790,12 +801,25 @@ function renderLogicGraph() {
       }
     }
   }
+  if (admissionFilter !== "all") {
+    const matchingPropositions = new Set(graph.nodes.filter((item) => (
+      item.kind === "proposition"
+      && visibleIds.has(item.id)
+      && (admissionFilter === "admitted" ? item.admitted : !item.admitted)
+    )).map((item) => item.id));
+    const contextualIds = new Set(matchingPropositions);
+    for (const edge of graph.edges) {
+      if (matchingPropositions.has(edge.source)) contextualIds.add(edge.target);
+      if (matchingPropositions.has(edge.target)) contextualIds.add(edge.source);
+    }
+    visibleIds = new Set([...visibleIds].filter((ident) => contextualIds.has(ident)));
+  }
   const allVisible = graph.nodes.filter((item) => visibleIds.has(item.id));
   const nodes = allVisible.slice(0, projectScope ? 70 : 90);
   visibleIds = new Set(nodes.map((item) => item.id));
   const edges = graph.edges.filter((item) => visibleIds.has(item.source) && visibleIds.has(item.target));
   const columnFor = (kind) => {
-    if (["source-reference", "c3-action"].includes(kind)) return 0;
+    if (["source-reference", "coefficient-context", "c3-action"].includes(kind)) return 0;
     if (kind === "proposition") return 1;
     if (["differential-claim", "differential-event", "cross-graded-product"].includes(kind)) return 2;
     return 3;
@@ -816,12 +840,18 @@ function renderLogicGraph() {
   for (const item of nodes) {
     const point = positions.get(item.id);
     const label = item.label.length > 23 ? `${item.label.slice(0, 22)}…` : item.label;
-    markup += `<g class="logic-node ${escapeHtml(item.kind)}" data-logic-node="${escapeHtml(item.id)}" transform="translate(${point.x} ${point.y})"><rect width="118" height="33" rx="5"/><text x="7" y="13">${escapeHtml(item.kind)}</text><text class="logic-label" x="7" y="26">${escapeHtml(label)}</text><title>${escapeHtml(item.label)}</title></g>`;
+    const admissionClass = item.kind === "proposition" ? (item.admitted ? " admitted" : " review-queue") : "";
+    const depth = item.dependency_depth == null ? "" : ` · d${item.dependency_depth}`;
+    markup += `<g class="logic-node ${escapeHtml(item.kind)}${admissionClass}" data-logic-node="${escapeHtml(item.id)}" transform="translate(${point.x} ${point.y})"><rect width="118" height="33" rx="5"/><text x="7" y="13">${escapeHtml(item.kind)}${escapeHtml(depth)}</text><text class="logic-label" x="7" y="26">${escapeHtml(label)}</text><title>${escapeHtml(item.label)}</title></g>`;
   }
   svg.innerHTML = markup || '<text x="12" y="24">No graph nodes.</text>';
   svg.querySelectorAll("[data-logic-node]").forEach((node) => node.addEventListener("click", () => {
     const item = graph.nodes.find((candidate) => candidate.id === node.dataset.logicNode);
-    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"} · ${item.label}`;
+    const admission = item.kind === "proposition"
+      ? ` · ${item.admitted ? `admitted at depth ${item.dependency_depth ?? 0}` : `review queue${item.blocked_by?.length ? ` (blocked by ${item.blocked_by.join(", ")})` : ""}`}`
+      : "";
+    const coefficients = item.coefficient_context_ids?.length ? ` · coefficients: ${item.coefficient_context_ids.join(", ")}` : "";
+    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"}${admission}${coefficients} · ${item.label}`;
   }));
   $("#logic-node-detail").textContent = allVisible.length > nodes.length
     ? `Showing ${nodes.length} of ${allVisible.length} typed nodes. Select a node for details.`
@@ -1865,6 +1895,7 @@ function bindEvents() {
   $("#undo-action").addEventListener("click", () => changeHistory("undo"));
   $("#redo-action").addEventListener("click", () => changeHistory("redo"));
   $("#proof-scope").addEventListener("change", renderProofTree);
+  $("#proof-admission").addEventListener("change", renderProofTree);
   $("#comparison-select").addEventListener("change", showComparisonNote);
   document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
   $("#add-drawing-period-rule").addEventListener("click", addDrawingPeriodicityRule);

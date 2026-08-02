@@ -110,6 +110,166 @@ def ensure_foundations(project: Project) -> Project:
     return project
 
 
+def ensure_dkllw_f4_argument_audit(project: Project) -> Project:
+    """Install the reviewed coefficient-sensitive backbone of DKLLW24.
+
+    These are deliberately narrow source facts, not an automatic assertion
+    that every argument in the paper has been formally verified.
+    """
+    if project.id != "hfpss_studio":
+        return project
+    integer = next((item for item in project.workspaces if item.id == "ws_integer"), None)
+    if not integer:
+        return project
+    known = {item.id for item in integer.propositions}
+    reviewed_at = "2026-08-02"
+
+    def add(proposition: Proposition) -> None:
+        if proposition.id not in known:
+            integer.propositions.append(proposition)
+            known.add(proposition.id)
+
+    add(Proposition(
+        id="prop_dkllw_coeff_witt",
+        kind="coefficient-foundation",
+        statement=r"The coefficient ring is W(F_4)[[u_1]][u^{\pm1}], not F_4 alone.",
+        status="established",
+        conclusion={"coefficient_context_id": "q8-witt-f4", "scope": "Morava E_2 coefficients"},
+        rule="SourceAudit",
+        notes="F_4 is the residue field; 2-adic and integral formulas live over its Witt vectors.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 631-649",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 631-649"],
+        hypotheses=["coefficient-context:q8-witt-f4"],
+        verification_checks=["Match the coefficient ring and the definition of D in the source."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_bss_f4_to_witt",
+        kind="coefficient-lift",
+        statement=r"The 2-BSS starts over F_4 and reconstructs the W(F_4)-cohomology with its 2-power extensions.",
+        status="established",
+        conclusion={"source_context_id": "q8-residue-f4", "target_context_id": "q8-witt-f4"},
+        premise_ids=["prop_dkllw_coeff_witt"],
+        rule="2-Bockstein",
+        notes="This is why coefficients such as 2, 4, and 8 must not be reduced to characteristic two in later HFPSS arguments.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 887-892 and 965-1040",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 887-892 and 965-1040"],
+        hypotheses=["coefficient-context:q8-residue-f4", "coefficient-context:q8-witt-f4"],
+        verification_checks=["Check the E1 and abutment rings.", "Check the displayed 2-, 4-, and 8-torsion Bocksteins."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_c3_f4_eigenspaces",
+        kind="coefficient-decomposition",
+        statement=r"The rank-three 1,D,D^2 decomposition uses the three F_4-valued C_3 eigencharacters.",
+        status="established",
+        conclusion={"basis": ["1", "D", "D^2"], "eigenvalues": ["1", "zeta^2", "zeta"]},
+        premise_ids=["prop_dkllw_coeff_witt"],
+        rule="C3EigenspaceDecomposition",
+        notes="The argument genuinely needs F_4 (and zeta); it is not a scalar-free F_2 argument. Source line 918 has a typographical omission, but the surrounding eigenvalue statement is unambiguous.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 898-919",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 898-919"],
+        hypotheses=["coefficient-context:q8-residue-f4"],
+        verification_checks=["Verify omega(D)=zeta^2 D.", "Verify that all three C3 eigenvalues split over F_4."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_galois_base_change",
+        kind="comparison",
+        statement=r"The cited Galois comparison is W(F_4)-base change for the integer-graded HFPSS when F/F_0 maps isomorphically to Gal(F_4/F_2).",
+        status="established",
+        conclusion={"scope": "integer-graded HFPSS", "scalar_behavior": "Galois-semilinear before base change"},
+        premise_ids=["prop_dkllw_coeff_witt"],
+        rule="GaloisBaseChange",
+        notes="This comparison preserves differential patterns; by itself it is not a pagewise isomorphism for every mixed RO(Q8) grading.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 619-629",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 619-629"],
+        hypotheses=["coefficient-context:q8-witt-f4"],
+        verification_checks=["Check the hypothesis F/F0 -> Gal.", "Keep the displayed pi_* grading distinct from a general RO(Q8) grading."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_unit_ambiguity",
+        kind="normalization-guard",
+        statement=r"Restriction-based class identifications are only determined up to a unit in W(F_4).",
+        status="established",
+        conclusion={"precision": "up-to-W(F4)-unit", "does_not_determine": "canonical nonzero scalar"},
+        premise_ids=["prop_dkllw_coeff_witt"],
+        rule="SourceConvention",
+        notes="Existence, non-vanishing, and one-dimensional target arguments survive; an exact normalized coefficient requires an additional choice or computation.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 1573-1579",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 1573-1579"],
+        hypotheses=["coefficient-context:q8-witt-f4"],
+        verification_checks=["Do not turn an up-to-unit restriction into an exact equality in downstream propositions."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_extended_scope",
+        kind="topological-scope-guard",
+        statement=r"Q_8 and G_24 lie in the small stabilizer; SD_16 and G_48 use the extended Galois action.",
+        status="established",
+        conclusion={"small": ["Q8", "G24"], "extended": ["SD16", "G48"]},
+        premise_ids=["prop_dkllw_galois_base_change"],
+        rule="GroupScope",
+        notes="Inside the small stabilizer, the visible quotient symmetry is C3, not an unconditional topological S3 action on every RO(Q8)-graded tower.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 616 and 631-633",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 616 and 631-633"],
+        hypotheses=["coefficient-context:q8-witt-f4"],
+        verification_checks=["Separate small and extended Morava stabilizer groups."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_mixed_ro_guard",
+        kind="topological-scope-guard",
+        statement=r"DKLLW24 does not establish a Galois reflection identifying arbitrary mixed RO(Q_8)-graded HFPSS towers.",
+        status="established",
+        conclusion={"unsupported_transport": "2 sigma_i + sigma_j <-> sigma_i + 2 sigma_j"},
+        premise_ids=["prop_dkllw_galois_base_change", "prop_dkllw_extended_scope"],
+        rule="ScopeAudit",
+        notes="The paper computes the integer and single-sigma_i gradings; a mixed-grading normalizer action needs a separate genuine tower construction.",
+        source_ref="DKLLW24 arXiv v3, main.tex lines 255-286 and 1935-1936",
+        source_refs=["DKLLW24 arXiv v3, main.tex lines 255-286 and 1935-1936"],
+        hypotheses=["coefficient-context:q8-witt-f4"],
+        verification_checks=["Do not infer a mixed-RO pagewise isomorphism from the integer-graded Galois base-change lemma."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    add(Proposition(
+        id="prop_dkllw_f4_audit_conclusion",
+        kind="audit-conclusion",
+        statement=r"Qualified yes: DKLLW24 respects F_4/W(F_4) for its module and differential patterns, but exact units and arbitrary mixed-RO Galois transport are outside those arguments.",
+        status="established",
+        conclusion={"verdict": "qualified-yes", "exact_unit_coefficients": False, "mixed_ro_s3_transport": False},
+        premise_ids=[
+            "prop_dkllw_bss_f4_to_witt",
+            "prop_dkllw_c3_f4_eigenspaces",
+            "prop_dkllw_unit_ambiguity",
+            "prop_dkllw_extended_scope",
+            "prop_dkllw_mixed_ro_guard",
+        ],
+        rule="CoefficientAndScopeAudit",
+        notes="Read displayed formulas as normalized representatives whenever the proof supplies only an up-to-unit restriction.",
+        source_ref="DKLLW24 coefficient audit, 2026-08-02",
+        source_refs=[
+            "DKLLW24 arXiv v3, main.tex lines 619-649",
+            "DKLLW24 arXiv v3, main.tex lines 887-919",
+            "DKLLW24 arXiv v3, main.tex lines 1573-1579",
+            "DKLLW24 arXiv v3, main.tex lines 1935-1936",
+        ],
+        hypotheses=["coefficient-context:q8-residue-f4", "coefficient-context:q8-witt-f4"],
+        verification_checks=["All cited premises are admitted.", "No exact unit or mixed-RO S3 claim is smuggled into the conclusion."],
+        reviewer="Codex source audit",
+        reviewed_at=reviewed_at,
+    ))
+    return project
+
+
 def migrate_dkl24_q8_corrections(project: Project) -> Project:
     """Correct only the demonstrably stale DKLLW24 seed records.
 
@@ -230,6 +390,7 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
 
 def migrate_project(project: Project) -> Project:
     ensure_foundations(project)
+    ensure_dkllw_f4_argument_audit(project)
     ensure_q8_atlas(project)
     ensure_c3_action(project)
     migrate_dkl24_q8_corrections(project)

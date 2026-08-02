@@ -22,9 +22,44 @@ class LogicGraphTest(unittest.TestCase):
         node_kinds = {item["kind"] for item in graph["nodes"]}
         edge_kinds = {item["kind"] for item in graph["edges"]}
 
-        self.assertTrue({"proposition", "differential-claim", "differential-event", "class-fate", "period-family", "grading-sector", "c3-action"}.issubset(node_kinds))
-        self.assertTrue({"asserts", "updates", "certifies", "belongs-to", "tracks-orbit"}.issubset(edge_kinds))
+        self.assertTrue({"proposition", "coefficient-context", "differential-claim", "differential-event", "class-fate", "period-family", "grading-sector", "c3-action"}.issubset(node_kinds))
+        self.assertTrue({"asserts", "updates", "certifies", "belongs-to", "tracks-orbit", "requires-coefficients"}.issubset(edge_kinds))
         self.assertEqual(len(graph["nodes"]), len({item["id"] for item in graph["nodes"]}))
+        self.assertGreater(graph["admission"]["admitted"], 0)
+        self.assertGreater(graph["admission"]["review_queue"], 0)
+
+    def test_dkllw_f4_audit_is_an_admitted_dependency_chain(self):
+        graph = build_logic_graph(migrate_project(demo_project()))
+        nodes = {item["id"]: item for item in graph["nodes"]}
+        conclusion = nodes["proposition:prop_dkllw_f4_audit_conclusion"]
+
+        self.assertTrue(conclusion["admitted"])
+        self.assertGreaterEqual(conclusion["dependency_depth"], 3)
+        self.assertEqual(conclusion["conclusion"]["verdict"], "qualified-yes")
+        self.assertIn("q8-witt-f4", conclusion["coefficient_context_ids"])
+        self.assertIn(
+            {
+                "source": "proposition:prop_dkllw_unit_ambiguity",
+                "target": "proposition:prop_dkllw_f4_audit_conclusion",
+                "kind": "uses",
+            },
+            graph["edges"],
+        )
+
+    def test_unverified_or_cyclic_claims_do_not_enter_the_fact_dag(self):
+        project = migrate_project(demo_project())
+        propositions = {item.id: item for workspace in project.workspaces for item in workspace.propositions}
+        self.assertFalse(
+            next(
+                item for item in build_logic_graph(project)["nodes"]
+                if item["id"] == "proposition:prop_two_d3_u"
+            )["admitted"]
+        )
+
+        propositions["prop_int_d5_D"].premise_ids = ["prop_int_d5_D2"]
+        propositions["prop_int_d5_D2"].premise_ids = ["prop_int_d5_D"]
+        errors = validate_logic_graph(build_logic_graph(project))
+        self.assertIn("Proposition dependencies must form a directed acyclic graph.", errors)
 
     def test_differential_proposition_asserts_its_claim(self):
         graph = build_logic_graph(migrate_project(demo_project()))
@@ -84,13 +119,15 @@ class V2ApiAndUiTest(unittest.TestCase):
         markup = (ROOT / "backend" / "templates" / "index.html").read_text(encoding="utf-8")
         script = (ROOT / "backend" / "static" / "app.js").read_text(encoding="utf-8")
 
-        for ident in ("grading-atlas", "fate-inspector", "logic-graph", "product-form", "product-preview"):
+        for ident in ("grading-atlas", "fate-inspector", "logic-graph", "proof-admission", "product-form", "product-preview"):
             self.assertIn(f'id="{ident}"', markup)
         self.assertIn("first_hfpss_death", script)
         self.assertIn("tate_only_negative_source", script)
         self.assertIn("function renderGradingAtlas", script)
         self.assertIn("function renderFateInspector", script)
         self.assertIn("function renderLogicGraph", script)
+        self.assertIn("Admitted facts", markup)
+        self.assertIn("dependency_depth", script)
         self.assertIn("/api/v2/products/preview", script)
         self.assertIn("usablePeriodFamily", script)
         self.assertNotIn(".filter((item) => item.page < page)\n      .flatMap", script)

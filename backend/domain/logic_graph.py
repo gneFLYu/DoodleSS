@@ -4,7 +4,76 @@ from __future__ import annotations
 from .models import Project
 
 
-def build_logic_graph(project: Project) -> dict[str, list[dict]]:
+ADMITTED_PROPOSITION_STATUSES = frozenset({"established", "verified", "source-verified"})
+NON_FACT_PROPOSITION_KINDS = frozenset({"tombstone"})
+COEFFICIENT_HYPOTHESIS_PREFIX = "coefficient-context:"
+
+
+def _proposition_state(project: Project) -> dict[str, dict]:
+    propositions = {
+        proposition.id: proposition
+        for workspace in project.workspaces
+        for proposition in workspace.propositions
+    }
+    depths: dict[str, int | None] = {}
+    admitted: dict[str, bool] = {}
+
+    def depth(ident: str, trail: frozenset[str] = frozenset()) -> int | None:
+        if ident in depths:
+            return depths[ident]
+        if ident in trail:
+            return None
+        proposition = propositions[ident]
+        premise_depths = [
+            depth(premise, trail | {ident})
+            for premise in proposition.premise_ids
+            if premise in propositions
+        ]
+        value = None if any(item is None for item in premise_depths) else 1 + max(premise_depths, default=-1)
+        depths[ident] = value
+        return value
+
+    def is_admitted(ident: str, trail: frozenset[str] = frozenset()) -> bool:
+        if ident in admitted:
+            return admitted[ident]
+        if ident in trail:
+            return False
+        proposition = propositions[ident]
+        value = (
+            proposition.status in ADMITTED_PROPOSITION_STATUSES
+            and proposition.kind not in NON_FACT_PROPOSITION_KINDS
+            and all(premise in propositions for premise in proposition.premise_ids)
+            and all(is_admitted(premise, trail | {ident}) for premise in proposition.premise_ids)
+        )
+        admitted[ident] = value
+        return value
+
+    state: dict[str, dict] = {}
+    for ident, proposition in propositions.items():
+        missing = [premise for premise in proposition.premise_ids if premise not in propositions]
+        blocked = [
+            premise
+            for premise in proposition.premise_ids
+            if premise in propositions and not is_admitted(premise)
+        ]
+        explicitly_verified = (
+            proposition.status in ADMITTED_PROPOSITION_STATUSES
+            and proposition.kind not in NON_FACT_PROPOSITION_KINDS
+        )
+        if proposition.status not in ADMITTED_PROPOSITION_STATUSES:
+            blocked.insert(0, f"status:{proposition.status}")
+        elif proposition.kind in NON_FACT_PROPOSITION_KINDS:
+            blocked.insert(0, f"kind:{proposition.kind}")
+        state[ident] = {
+            "admitted": is_admitted(ident),
+            "explicitly_verified": explicitly_verified,
+            "dependency_depth": depth(ident),
+            "blocked_by": [*missing, *blocked],
+        }
+    return state
+
+
+def build_logic_graph(project: Project) -> dict:
     nodes: list[dict] = []
     edges: list[dict] = []
     node_ids: set[str] = set()
@@ -23,11 +92,29 @@ def build_logic_graph(project: Project) -> dict[str, list[dict]]:
         edge_keys.add(key)
         edges.append({"source": source, "target": target, "kind": kind, **metadata})
 
+    for context in project.coefficient_contexts:
+        add_node(
+            f"coefficient-context:{context.id}",
+            "coefficient-context",
+            f"{context.coefficient_ring} (residue {context.residue_field})",
+            record_id=context.id,
+            status=context.scalar_mode,
+            coefficient_ring=context.coefficient_ring,
+            residue_field=context.residue_field,
+            bockstein_stage=context.bockstein_stage,
+        )
+
+    proposition_state = _proposition_state(project)
     proposition_locations: dict[str, str] = {}
     for workspace in project.workspaces:
         for proposition in workspace.propositions:
             prop_id = f"proposition:{proposition.id}"
             proposition_locations[proposition.id] = prop_id
+            coefficient_context_ids = [
+                item.removeprefix(COEFFICIENT_HYPOTHESIS_PREFIX)
+                for item in proposition.hypotheses
+                if item.startswith(COEFFICIENT_HYPOTHESIS_PREFIX)
+            ]
             add_node(
                 prop_id,
                 "proposition",
@@ -36,6 +123,14 @@ def build_logic_graph(project: Project) -> dict[str, list[dict]]:
                 workspace_id=workspace.id,
                 status=proposition.status,
                 rule=proposition.rule,
+                conclusion=proposition.conclusion,
+                notes=proposition.notes,
+                hypotheses=proposition.hypotheses,
+                verification_checks=proposition.verification_checks,
+                reviewer=proposition.reviewer,
+                reviewed_at=proposition.reviewed_at,
+                coefficient_context_ids=coefficient_context_ids,
+                **proposition_state[proposition.id],
             )
             for source_ref in proposition.source_refs or ([proposition.source_ref] if proposition.source_ref else []):
                 source_id = f"source:{source_ref}"
@@ -50,6 +145,11 @@ def build_logic_graph(project: Project) -> dict[str, list[dict]]:
                     add_edge(premise_id, prop_id, "uses")
             for source_ref in proposition.source_refs or ([proposition.source_ref] if proposition.source_ref else []):
                 add_edge(f"source:{source_ref}", prop_id, "supports")
+            for hypothesis in proposition.hypotheses:
+                if not hypothesis.startswith(COEFFICIENT_HYPOTHESIS_PREFIX):
+                    continue
+                context_id = hypothesis.removeprefix(COEFFICIENT_HYPOTHESIS_PREFIX)
+                add_edge(f"coefficient-context:{context_id}", prop_id, "requires-coefficients")
             if proposition.supersedes_id:
                 superseded = proposition_locations.get(proposition.supersedes_id)
                 if superseded:
@@ -151,10 +251,23 @@ def build_logic_graph(project: Project) -> dict[str, list[dict]]:
         for sector in project.grading_sectors:
             add_edge(action_id, f"sector:{sector.id}", "tracks-orbit", orbit_id=sector.c3_orbit_id)
 
-    return {"nodes": nodes, "edges": edges}
+    admitted_count = sum(
+        item["kind"] == "proposition" and item.get("admitted", False)
+        for item in nodes
+    )
+    proposition_count = sum(item["kind"] == "proposition" for item in nodes)
+    return {
+        "nodes": nodes,
+        "edges": edges,
+        "admission": {
+            "admitted": admitted_count,
+            "review_queue": proposition_count - admitted_count,
+            "policy": "Only established or verifier-marked propositions whose premises are admitted enter the fact DAG.",
+        },
+    }
 
 
-def validate_logic_graph(graph: dict[str, list[dict]]) -> list[str]:
+def validate_logic_graph(graph: dict) -> list[str]:
     node_ids = [item["id"] for item in graph.get("nodes", [])]
     errors: list[str] = []
     if len(node_ids) != len(set(node_ids)):
@@ -163,4 +276,35 @@ def validate_logic_graph(graph: dict[str, list[dict]]) -> list[str]:
     for edge in graph.get("edges", []):
         if edge.get("source") not in known or edge.get("target") not in known:
             errors.append(f"Dangling {edge.get('kind', 'unknown')} edge.")
+    node_lookup = {item["id"]: item for item in graph.get("nodes", [])}
+    dependency_edges = [
+        edge for edge in graph.get("edges", [])
+        if edge.get("kind") == "uses"
+        and str(edge.get("source", "")).startswith("proposition:")
+        and str(edge.get("target", "")).startswith("proposition:")
+    ]
+    adjacency: dict[str, list[str]] = {}
+    for edge in dependency_edges:
+        adjacency.setdefault(edge["source"], []).append(edge["target"])
+        source = node_lookup.get(edge["source"], {})
+        target = node_lookup.get(edge["target"], {})
+        if target.get("admitted") and not source.get("admitted"):
+            errors.append("Admitted proposition depends on a proposition outside the admitted fact DAG.")
+
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def has_cycle(ident: str) -> bool:
+        if ident in visiting:
+            return True
+        if ident in visited:
+            return False
+        visiting.add(ident)
+        cyclic = any(has_cycle(target) for target in adjacency.get(ident, []))
+        visiting.remove(ident)
+        visited.add(ident)
+        return cyclic
+
+    if any(has_cycle(ident) for ident in adjacency if ident not in visited):
+        errors.append("Proposition dependencies must form a directed acyclic graph.")
     return errors
