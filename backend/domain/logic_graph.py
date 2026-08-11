@@ -105,6 +105,11 @@ def build_logic_graph(project: Project) -> dict:
         )
 
     proposition_state = _proposition_state(project)
+    proposition_implications: dict[str, list[str]] = {}
+    for workspace in project.workspaces:
+        for proposition in workspace.propositions:
+            for premise_id in proposition.premise_ids:
+                proposition_implications.setdefault(premise_id, []).append(proposition.id)
     proposition_locations: dict[str, str] = {}
     for workspace in project.workspaces:
         for proposition in workspace.propositions:
@@ -130,6 +135,7 @@ def build_logic_graph(project: Project) -> dict:
                 reviewer=proposition.reviewer,
                 reviewed_at=proposition.reviewed_at,
                 coefficient_context_ids=coefficient_context_ids,
+                implies_ids=proposition_implications.get(proposition.id, []),
                 **proposition_state[proposition.id],
             )
             for source_ref in proposition.source_refs or ([proposition.source_ref] if proposition.source_ref else []):
@@ -208,6 +214,10 @@ def build_logic_graph(project: Project) -> dict:
         certificate = proposition_locations.get(family.certificate_proposition_id)
         if certificate:
             add_edge(certificate, family_id, "certifies")
+        for workspace_item in project.workspaces:
+            for proposition in workspace_item.propositions:
+                if proposition.conclusion.get("period_family_id") == family.id:
+                    add_edge(f"proposition:{proposition.id}", family_id, "belongs-to-period")
         workspace = next((item for item in project.workspaces if item.id == family.workspace_id), None)
         if workspace:
             for differential in workspace.differentials:

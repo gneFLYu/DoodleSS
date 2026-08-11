@@ -11,7 +11,19 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" crossorigin="anonymous"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body data-page="{{ page }}">
+  <header class="mode-bar">
+    <a class="mode-brand" href="{{ url_for('index') }}">
+      <strong>HFPSS Studio</strong>
+      <span>source-backed computation</span>
+    </a>
+    <nav class="mode-tabs" aria-label="Studio mode">
+      <a href="{{ url_for('index') }}" {% if page == "computation" %}class="active" aria-current="page"{% endif %}>Computation</a>
+      <a href="{{ url_for('review') }}" {% if page == "review" %}class="active" aria-current="page"{% endif %}>Review</a>
+    </nav>
+  </header>
+
+  {% if page == "computation" %}
   <nav class="legacy-toolbar" aria-label="Chart controls">
     <div class="legacy-toolbar-inner">
       <label class="workspace-picker">Workspace <select id="workspace-select" aria-label="Active workspace"></select></label>
@@ -197,15 +209,6 @@
         <button id="run-comparison" class="wide">Suggest transport</button>
       </section>
 
-      <section class="panel-section">
-        <div class="section-head"><div><div class="eyebrow">LOGIC GRAPH</div><h2>Typed evidence flow</h2></div><span id="proposition-count" class="pill">0</span></div>
-        <select id="proof-scope" aria-label="Proof tree scope"><option value="workspace">This workspace</option><option value="project">All workspaces</option></select>
-        <select id="proof-admission" aria-label="Fact admission filter"><option value="admitted">Admitted facts</option><option value="review">Review queue</option><option value="all">All claims</option></select>
-        <div id="logic-graph-shell"><svg id="logic-graph" role="img" aria-label="Typed proposition and evidence graph"></svg></div>
-        <div id="logic-node-detail" class="hint">Select a graph node to inspect its type and status.</div>
-        <div id="proof-tree" class="proof-tree"></div>
-      </section>
-
       <section class="panel-section product-panel">
         <div class="section-head"><div><div class="eyebrow">CROSS-GRADED PRODUCT</div><h2>Same-page multiplication</h2></div></div>
         <form id="product-form">
@@ -294,6 +297,55 @@
   </dialog>
 
   <script src="{{ url_for('static', filename='cell-layout.js') }}"></script>
+  {% else %}
+  <main class="review-page">
+    <section class="review-intro">
+      <div>
+        <div class="eyebrow">REVIEW MODE</div>
+        <h1>Typed evidence and proposition dependencies</h1>
+        <p>Inspect admitted facts, blocked claims, source edges, coefficient contexts, and reverse implications without opening the chart editor.</p>
+      </div>
+      <div id="review-admission-summary" class="review-summary" aria-live="polite">Loading fact admission summary.</div>
+    </section>
+
+    <section class="review-controls" aria-label="Review filters">
+      <label>Workspace
+        <select id="review-workspace-select" aria-label="Review workspace"></select>
+      </label>
+      <label>Scope
+        <select id="proof-scope" aria-label="Proof tree scope">
+          <option value="project">All workspaces</option>
+          <option value="workspace">Selected workspace</option>
+        </select>
+      </label>
+      <label>Admission
+        <select id="proof-admission" aria-label="Fact admission filter">
+          <option value="admitted">Admitted facts</option>
+          <option value="review">Review queue</option>
+          <option value="all">All claims</option>
+        </select>
+      </label>
+      <span class="review-count"><strong id="proposition-count">0</strong> propositions shown</span>
+    </section>
+
+    <section class="review-grid">
+      <article class="review-graph-card">
+        <div class="section-head">
+          <div><div class="eyebrow">LOGIC GRAPH</div><h2>Typed evidence flow</h2></div>
+          <span class="pill">select a node</span>
+        </div>
+        <div id="logic-graph-shell"><svg id="logic-graph" role="img" aria-label="Typed proposition and evidence graph"></svg></div>
+        <div id="logic-node-detail" class="review-node-detail">Select a graph node to inspect its status, dependencies, coefficients, and consequences.</div>
+      </article>
+
+      <aside class="review-ledger-card">
+        <div class="eyebrow">PROPOSITION LEDGER</div>
+        <h2>Readable fact list</h2>
+        <div id="proof-tree" class="proof-tree"></div>
+      </aside>
+    </section>
+  </main>
+  {% endif %}
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

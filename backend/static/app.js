@@ -23,6 +23,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const PAGE_MODE = document.body.dataset.page || "computation";
 let chartRenderFrame = 0;
 
 function scheduleChartRender() {
@@ -167,9 +168,8 @@ async function loadProject() {
   const previousPage = previousWorkspaceId
     ? (state.pageByWorkspace.get(previousWorkspaceId) ?? workspace()?.page)
     : null;
-  const [project, logicGraph, history] = await Promise.all([api("/api/project"), api("/api/v2/logic-graph"), api("/api/history")]);
+  const [project, history] = await Promise.all([api("/api/project"), api("/api/history")]);
   state.project = project;
-  state.logicGraph = logicGraph;
   state.history = history;
   if (!state.project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   if (previousWorkspaceId === state.workspaceId && previousPage != null) {
@@ -240,7 +240,6 @@ function render() {
   renderPagePeriodTool();
   renderDrawingPeriodicityTool();
   renderPersistentPeriodicityTool();
-  renderProofTree();
   renderProductControls();
   renderSuggestions();
   constrainView();
@@ -249,8 +248,10 @@ function render() {
 }
 
 function syncLayoutHeight() {
+  const modeBar = document.querySelector(".mode-bar");
   const toolbar = document.querySelector(".legacy-toolbar");
-  if (toolbar) document.documentElement.style.setProperty("--toolbar-height", `${toolbar.offsetHeight}px`);
+  const height = (modeBar?.offsetHeight || 0) + (toolbar?.offsetHeight || 0);
+  document.documentElement.style.setProperty("--toolbar-height", `${height}px`);
 }
 
 function renderHistoryControls() {
@@ -851,11 +852,44 @@ function renderLogicGraph() {
       ? ` · ${item.admitted ? `admitted at depth ${item.dependency_depth ?? 0}` : `review queue${item.blocked_by?.length ? ` (blocked by ${item.blocked_by.join(", ")})` : ""}`}`
       : "";
     const coefficients = item.coefficient_context_ids?.length ? ` · coefficients: ${item.coefficient_context_ids.join(", ")}` : "";
-    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"}${admission}${coefficients} · ${item.label}`;
+    const datum = item.conclusion?.datum_type ? ` · ${item.conclusion.datum_type} in ${item.conclusion.spectral_sequence || "unspecified tower"}` : "";
+    const period = item.conclusion?.period_identity ? ` · period: ${item.conclusion.period_identity}` : "";
+    const implies = item.implies_ids?.length ? ` · implies: ${item.implies_ids.join(", ")}` : "";
+    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"}${admission}${coefficients}${datum}${period}${implies} · ${item.label}`;
   }));
   $("#logic-node-detail").textContent = allVisible.length > nodes.length
     ? `Showing ${nodes.length} of ${allVisible.length} typed nodes. Select a node for details.`
     : `${nodes.length} typed nodes · ${edges.length} visible evidence edges.`;
+}
+
+async function loadReviewPage() {
+  const [project, logicGraph] = await Promise.all([api("/api/project"), api("/api/v2/logic-graph")]);
+  state.project = project;
+  state.logicGraph = logicGraph;
+  if (!project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
+  const selector = $("#review-workspace-select");
+  selector.innerHTML = project.workspaces.map((item) => (
+    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${escapeHtml(item.grading_label)}</option>`
+  )).join("");
+  selector.value = state.workspaceId;
+  const admission = logicGraph.admission || {};
+  $("#review-admission-summary").innerHTML = (
+    `<strong>${Number(admission.admitted || 0)} admitted</strong>`
+    + `<span>${Number(admission.review_queue || 0)} in review</span>`
+    + `<small>${escapeHtml(admission.policy || "Premise-complete facts enter the admitted DAG.")}</small>`
+  );
+  renderProofTree();
+  syncLayoutHeight();
+}
+
+function bindReviewEvents() {
+  $("#review-workspace-select").addEventListener("change", (event) => {
+    state.workspaceId = event.target.value;
+    renderProofTree();
+  });
+  $("#proof-scope").addEventListener("change", renderProofTree);
+  $("#proof-admission").addEventListener("change", renderProofTree);
+  window.addEventListener("resize", syncLayoutHeight);
 }
 
 function renderSuggestions() {
@@ -1894,8 +1928,6 @@ function bindEvents() {
   $("#clear-current-canvas").addEventListener("click", clearCurrentCanvas);
   $("#undo-action").addEventListener("click", () => changeHistory("undo"));
   $("#redo-action").addEventListener("click", () => changeHistory("redo"));
-  $("#proof-scope").addEventListener("change", renderProofTree);
-  $("#proof-admission").addEventListener("change", renderProofTree);
   $("#comparison-select").addEventListener("change", showComparisonNote);
   document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
   $("#add-drawing-period-rule").addEventListener("click", addDrawingPeriodicityRule);
@@ -2076,7 +2108,9 @@ function downloadTex(kind) {
   window.location.assign(`/api/v2/render/workspaces/${encodeURIComponent(state.workspaceId)}/${kind}.tex?page=${encodeURIComponent(page)}`);
 }
 
-bindEvents();
-loadProject().catch((error) => {
+if (PAGE_MODE === "review") bindReviewEvents();
+else bindEvents();
+
+(PAGE_MODE === "review" ? loadReviewPage() : loadProject()).catch((error) => {
   document.body.innerHTML = `<pre>Unable to load HFPSS Studio: ${escapeHtml(error.message)}</pre>`;
 });

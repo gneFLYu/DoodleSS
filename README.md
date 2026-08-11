@@ -94,6 +94,7 @@ durable.
 - [Full project and legacy ver15.3 JSON contract](PROJECT_JSON_IO.md): complete Studio projects, current-page lossy legacy import/export, staged Preview/Apply, validation, and history semantics.
 - [DKLLW chart conventions](DKLLW_CHART_CONVENTIONS.md): class glyphs, multiplication lines, page roles, and period-cycle eligibility.
 - [DKLLW24 F4 argument audit](DKLLW_F4_ARGUMENT_AUDIT.md): residue/Witt coefficient boundaries, up-to-unit precision, mixed-RO scope guard, and the Danus-style fact-admission DAG.
+- [DKLLW24 Q8 fact chain](DKLLW_Q8_FACT_CHAIN.md): C2/C4 and 2-BSS inputs, Q8 differentials/permanent cycles, implication edges, and strict D8-period object identity.
 - Page-aware periods are compact `PagePeriodCycle` records. Viewport copies are virtual, and legacy materialized copies can be retired only through an ownership-checked preview/apply operation.
 - [Safe workspace canvas clear API](CANVAS_CLEAR.md): archive active dots without deleting mathematics, with one-step undo.
 - [Manual drawing periodicity contract](MANUAL_PERIODICITY.md): named vectors, batched chart copies, conflict handling, JSON provenance, and limits.

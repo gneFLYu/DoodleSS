@@ -46,6 +46,28 @@ class LogicGraphTest(unittest.TestCase):
             graph["edges"],
         )
 
+    def test_dkllw_fact_chain_exposes_types_implications_and_period_identity(self):
+        graph = build_logic_graph(migrate_project(demo_project()))
+        nodes = {item["id"]: item for item in graph["nodes"]}
+        chain = [item for ident, item in nodes.items() if ident.startswith("proposition:prop_chain_")]
+        period = nodes["proposition:prop_chain_q8_D8_pc"]
+        bss = nodes["proposition:prop_chain_2bss_int_survivors"]
+
+        self.assertGreaterEqual(len(chain), 40)
+        self.assertTrue(all(item["admitted"] for item in chain))
+        self.assertEqual(period["conclusion"]["datum_type"], "permanent-cycle")
+        self.assertIn("D^(8n)", period["conclusion"]["period_identity"])
+        self.assertEqual(bss["conclusion"]["role"], "HFPSS-E2-input")
+        self.assertIn("prop_chain_q8_hurewicz_pc", bss["implies_ids"])
+        self.assertIn(
+            {
+                "source": "proposition:prop_chain_q8_D8_pc",
+                "target": "period-family:period_integer_D8",
+                "kind": "belongs-to-period",
+            },
+            graph["edges"],
+        )
+
     def test_unverified_or_cyclic_claims_do_not_enter_the_fact_dag(self):
         project = migrate_project(demo_project())
         propositions = {item.id: item for workspace in project.workspaces for item in workspace.propositions}
@@ -128,6 +150,8 @@ class V2ApiAndUiTest(unittest.TestCase):
         self.assertIn("function renderLogicGraph", script)
         self.assertIn("Admitted facts", markup)
         self.assertIn("dependency_depth", script)
+        self.assertIn("implies_ids", script)
+        self.assertIn("period_identity", script)
         self.assertIn("/api/v2/products/preview", script)
         self.assertIn("usablePeriodFamily", script)
         self.assertNotIn(".filter((item) => item.page < page)\n      .flatMap", script)

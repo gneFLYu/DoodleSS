@@ -161,7 +161,12 @@ def body_integer(body: dict, key: str, default: int) -> int:
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", page="computation")
+
+
+@app.get("/review")
+def review():
+    return render_template("index.html", page="review")
 
 
 @app.get("/api/project")

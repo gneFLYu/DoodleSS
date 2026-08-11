@@ -5,6 +5,8 @@ from .models import (
     CoefficientContext, Grade, PeriodFamily, PeriodGenerator, Project,
     Proposition, SCHEMA_VERSION, SymbolDefinition,
 )
+from .dkllw_fact_chain import ensure_dkllw_fact_chain
+from .reu_fact_chain import ensure_reu_fact_chain
 from .fate import sync_project_fates
 from .actions import ensure_c3_action
 from .grading import ensure_q8_atlas
@@ -391,6 +393,8 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
 def migrate_project(project: Project) -> Project:
     ensure_foundations(project)
     ensure_dkllw_f4_argument_audit(project)
+    ensure_dkllw_fact_chain(project)
+    ensure_reu_fact_chain(project)
     ensure_q8_atlas(project)
     ensure_c3_action(project)
     migrate_dkl24_q8_corrections(project)
