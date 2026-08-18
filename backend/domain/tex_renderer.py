@@ -16,7 +16,12 @@ from .fate import class_is_live_on_page, is_accepted
 from .models import Differential, Project, Proposition, Workspace
 
 
-TEMPLATE_SOURCE = Path(r"E:\课程\PACE2025_fly\HFPSS Q_8\Notes\Charts\2Sigma_corrected_E11above.tex")
+_LEGACY_TEMPLATE_SOURCE = Path(r"E:\课程\PACE2025_fly\HFPSS Q_8\Notes\Charts\2Sigma_corrected_E11above.tex")
+_REU_TEMPLATE_SOURCE = (
+    Path(__file__).resolve().parents[4]
+    / "REU Projects" / "Final Presentation" / "Figures" / "Drawing" / "2Sigma_corrected_E11above.tex"
+)
+TEMPLATE_SOURCE = _LEGACY_TEMPLATE_SOURCE if _LEGACY_TEMPLATE_SOURCE.is_file() else _REU_TEMPLATE_SOURCE
 
 
 def _template_fingerprint() -> str:

@@ -10,14 +10,17 @@ class PageModeTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
-    def test_computation_page_has_tabs_and_no_logic_graph(self):
+    def test_researching_page_has_tabs_cell_tools_and_no_logic_graph(self):
         response = self.client.get("/")
         markup = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
         self.assertIn('aria-label="Studio mode"', markup)
-        self.assertIn('aria-current="page">Computation', markup)
+        self.assertIn('aria-current="page">Researching', markup)
         self.assertIn('id="chart"', markup)
+        self.assertIn('id="cell-inspector"', markup)
+        self.assertIn('id="matrix-dialog"', markup)
+        self.assertEqual(markup.count('id="legacy-catalog-select"'), 1)
         self.assertNotIn('id="logic-graph"', markup)
 
     def test_review_page_is_dedicated_to_fact_graph(self):
@@ -25,7 +28,7 @@ class PageModeTests(unittest.TestCase):
         markup = response.get_data(as_text=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn('aria-current="page">Review', markup)
+        self.assertIn('aria-current="page">Reviewing', markup)
         self.assertIn('id="logic-graph"', markup)
         self.assertIn('id="proof-tree"', markup)
         self.assertIn('id="logic-node-detail"', markup)

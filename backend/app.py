@@ -30,8 +30,17 @@ from domain.dkllw_chart import (
     class_semantic_from_glyph,
 )
 from domain.structured_algebra import AlgebraValidationError, preview_structured_algebra
+from domain.cell_linear_algebra import CellLinearAlgebraError, projective_normal_form
+from domain.cells import (
+    cell_from_payload,
+    map_image_ports,
+    page_transition,
+    validate_differential_map,
+    vector_image,
+)
 from domain.migrations import migrate_project
 from domain.logic_graph import build_logic_graph
+from domain.legacy_catalog import catalog_workspace_dict, manifest as legacy_catalog_manifest
 from domain.history import history_status, record_edit, redo_edit, undo_edit
 from domain.manual_periodicity import (
     ManualPeriodicityError,
@@ -97,7 +106,7 @@ LOCK = Lock()
 # Production assets live in public/static so Vercel can serve them from its
 # CDN.  Flask still serves the same directory for the local launcher.
 app = Flask(__name__, static_folder=ROOT.parent / "public" / "static")
-APP_VERSION = "2026.07.23-structured-algebra"
+APP_VERSION = "2026.08.18-f4-cells"
 
 # Compatibility map for project.json files created before periodicity was
 # attached to individual differential families.  It is intentionally limited
@@ -161,17 +170,43 @@ def body_integer(body: dict, key: str, default: int) -> int:
 
 @app.get("/")
 def index():
-    return render_template("index.html", page="computation")
+    return render_template("index.html", page="researching")
 
 
 @app.get("/review")
 def review():
-    return render_template("index.html", page="review")
+    return render_template("index.html", page="reviewing")
 
 
 @app.get("/api/project")
 def get_project():
-    return jsonify(project_to_dict(load_project()))
+    project = load_project()
+    payload = project_to_dict(project)
+    for workspace_payload, workspace in zip(payload.get("workspaces", []), project.workspaces):
+        for cell_payload in workspace_payload.get("cells", []):
+            for key in ("display_basis", "named_vectors"):
+                for vector in cell_payload.get(key, []):
+                    vector["projective_coordinates"] = projective_normal_form(vector.get("coordinates", []))
+        by_id = {item.id: item for item in workspace.differential_maps}
+        for map_payload in workspace_payload.get("differential_maps", []):
+            item = by_id.get(map_payload.get("id"))
+            map_payload["image_ports"] = map_image_ports(workspace, item) if item else []
+    return jsonify(payload)
+
+
+@app.get("/api/v2/legacy-catalog")
+def legacy_catalog():
+    return jsonify({"entries": legacy_catalog_manifest()})
+
+
+@app.get("/api/v2/legacy-catalog/<entry_id>")
+def legacy_catalog_entry(entry_id: str):
+    try:
+        return jsonify({"workspace": catalog_workspace_dict(entry_id)})
+    except KeyError:
+        return jsonify({"error": "Unknown legacy catalog entry."}), 404
+    except (FileNotFoundError, ProjectImportValidationError, json.JSONDecodeError) as error:
+        return jsonify({"error": str(error)}), 422
 
 
 @app.get("/api/project/export")
@@ -714,6 +749,233 @@ def update_workspace_settings(workspace_id: str):
             workspace.settings["page_limit"] = page_limit
         save_project(project)
     return jsonify({"settings": workspace.settings, "revision": project.revision})
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/cells")
+def create_cell(workspace_id: str):
+    try:
+        body = request.get_json(force=True)
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            cell = cell_from_payload(project, body)
+            if any(item.id == cell.id for item in workspace.cells):
+                return jsonify({"error": f"Cell ID already exists: {cell.id}."}), 409
+            checkpoint(project, f"Add rank-{len(cell.basis)} cell {cell.id}")
+            workspace.cells.append(cell)
+            save_project(project)
+        return jsonify({"cell": asdict(cell), "revision": project.revision}), 201
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except CellLinearAlgebraError as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.patch("/api/v2/workspaces/<workspace_id>/cells/<cell_id>")
+def update_cell(workspace_id: str, cell_id: str):
+    try:
+        body = request.get_json(force=True)
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            existing = next((item for item in workspace.cells if item.id == cell_id and not item.archived), None)
+            if existing is None:
+                return jsonify({"error": "Unknown active cell."}), 404
+            updated = cell_from_payload(project, body, existing)
+            if len(updated.basis) != len(existing.basis):
+                attached = any(item.cell_id == cell_id for item in workspace.classes)
+                mapped = any(
+                    not item.archived and cell_id in {item.source_cell_id, item.target_cell_id}
+                    for item in workspace.differential_maps
+                )
+                if attached or mapped:
+                    return jsonify({
+                        "error": "Detach named classes and archive differential maps before changing the cell rank."
+                    }), 409
+            checkpoint(project, f"Edit cell {cell_id}")
+            workspace.cells[workspace.cells.index(existing)] = updated
+            save_project(project)
+        return jsonify({"cell": asdict(updated), "revision": project.revision})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except CellLinearAlgebraError as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.delete("/api/v2/workspaces/<workspace_id>/cells/<cell_id>")
+def archive_cell(workspace_id: str, cell_id: str):
+    try:
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            cell = next((item for item in workspace.cells if item.id == cell_id and not item.archived), None)
+            if cell is None:
+                return jsonify({"error": "Unknown active cell."}), 404
+            checkpoint(project, f"Archive cell {cell_id}")
+            cell.archived = True
+            cell.archived_reason = "Archived by a local researcher; basis, maps, and provenance are retained."
+            for item in workspace.differential_maps:
+                if not item.archived and cell_id in {item.source_cell_id, item.target_cell_id}:
+                    item.archived = True
+                    item.archived_reason = f"Archived with endpoint cell {cell_id}; mathematical history retained."
+            save_project(project)
+        return jsonify({"archived": cell_id, "revision": project.revision})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+
+
+def _map_proposition(workspace: Workspace, body: dict, map_id: str) -> Proposition:
+    source_id = body.get("source_cell_id") or "0"
+    target_id = body.get("target_cell_id") or "0"
+    page = int(body.get("page", workspace.page))
+    source_ref = str(body.get("source_ref", "")).strip()
+    source_refs = body.get("source_refs", [])
+    proposition = Proposition(
+        id=new_id("prop"),
+        kind="differential-map",
+        statement=str(body.get("statement") or f"d_{page}: {source_id} -> {target_id} has the displayed F4 matrix"),
+        status=str(body.get("status", "candidate")),
+        conclusion={"differential_map_id": map_id, "source_cell_id": body.get("source_cell_id"), "target_cell_id": body.get("target_cell_id"), "page": page},
+        premise_ids=list(body.get("premise_ids", [])),
+        rule=str(body.get("rule", "manual-matrix")),
+        confidence=float(body.get("confidence", 0.5)),
+        notes=str(body.get("notes", "")),
+        source_ref=source_ref,
+        source_refs=list(source_refs) or ([source_ref] if source_ref else []),
+        hypotheses=[f"coefficient-context:{body.get('coefficient_context_id', 'q8-residue-f4')}", *list(body.get("hypotheses", []))],
+        verification_checks=["coefficient-field", "matrix-dimensions", "bidegree", "coverage", "d-squared"],
+    )
+    workspace.propositions.append(proposition)
+    return proposition
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/differential-maps")
+def create_differential_map(workspace_id: str):
+    try:
+        body = request.get_json(force=True)
+        if not isinstance(body, dict):
+            raise CellLinearAlgebraError("Differential-map input must be a JSON object.")
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            map_id = str(body.get("id") or new_id("linear_map"))
+            if any(item.id == map_id for item in workspace.differential_maps):
+                return jsonify({"error": f"Differential-map ID already exists: {map_id}."}), 409
+            working = dict(body, id=map_id)
+            created_proposition = None
+            if not working.get("proposition_id"):
+                created_proposition = _map_proposition(workspace, working, map_id)
+                working["proposition_id"] = created_proposition.id
+            item = validate_differential_map(project, workspace, working)
+            if created_proposition:
+                workspace.propositions.remove(created_proposition)
+            checkpoint(project, f"Add d_{item.page} matrix {item.id}")
+            if created_proposition:
+                workspace.propositions.append(created_proposition)
+            workspace.differential_maps.append(item)
+            save_project(project)
+        return jsonify({"differential_map": asdict(item), "image_ports": map_image_ports(workspace, item), "revision": project.revision}), 201
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except (CellLinearAlgebraError, TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.patch("/api/v2/workspaces/<workspace_id>/differential-maps/<map_id>")
+def update_differential_map(workspace_id: str, map_id: str):
+    try:
+        body = request.get_json(force=True)
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            existing = next((item for item in workspace.differential_maps if item.id == map_id and not item.archived), None)
+            if existing is None:
+                return jsonify({"error": "Unknown active differential map."}), 404
+            updated = validate_differential_map(project, workspace, body, existing)
+            proposition = next((item for item in workspace.propositions if item.id == updated.proposition_id), None)
+            if proposition:
+                proposition.status = updated.status
+                proposition.source_ref = updated.source_ref
+                proposition.source_refs = updated.source_refs
+                proposition.conclusion.update({
+                    "differential_map_id": map_id,
+                    "source_cell_id": updated.source_cell_id,
+                    "target_cell_id": updated.target_cell_id,
+                    "page": updated.page,
+                })
+            checkpoint(project, f"Edit d_{updated.page} matrix {map_id}")
+            workspace.differential_maps[workspace.differential_maps.index(existing)] = updated
+            save_project(project)
+        return jsonify({"differential_map": asdict(updated), "image_ports": map_image_ports(workspace, updated), "revision": project.revision})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except (CellLinearAlgebraError, TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.delete("/api/v2/workspaces/<workspace_id>/differential-maps/<map_id>")
+def archive_differential_map(workspace_id: str, map_id: str):
+    try:
+        with LOCK:
+            project = load_project(); workspace = find_workspace(project, workspace_id)
+            item = next((record for record in workspace.differential_maps if record.id == map_id and not record.archived), None)
+            if item is None:
+                return jsonify({"error": "Unknown active differential map."}), 404
+            checkpoint(project, f"Archive differential map {map_id}")
+            item.archived = True
+            item.archived_reason = "Archived by a local researcher; proposition and matrix are retained."
+            save_project(project)
+        return jsonify({"archived": map_id, "revision": project.revision})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+
+
+@app.get("/api/v2/workspaces/<workspace_id>/cells/<cell_id>/page-transition")
+def get_cell_page_transition(workspace_id: str, cell_id: str):
+    try:
+        project = load_project(); workspace = find_workspace(project, workspace_id)
+        page = int(request.args.get("page", workspace.page))
+        return jsonify({"transition": page_transition(project, workspace, cell_id, page)})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except (CellLinearAlgebraError, TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/cells/<cell_id>/vector-image")
+def preview_cell_vector_image(workspace_id: str, cell_id: str):
+    try:
+        body = request.get_json(force=True)
+        if not isinstance(body, dict) or not isinstance(body.get("coordinates"), list):
+            raise CellLinearAlgebraError("Vector-image preview requires a coordinates list.")
+        project = load_project(); workspace = find_workspace(project, workspace_id)
+        return jsonify({"result": vector_image(
+            project, workspace, cell_id, str(body.get("map_id", "")), body["coordinates"]
+        )})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except CellLinearAlgebraError as error:
+        return jsonify({"error": str(error)}), 400
+
+
+@app.post("/api/v2/workspaces/<workspace_id>/page-transitions/preview")
+def preview_cell_page_transition(workspace_id: str):
+    try:
+        body = request.get_json(force=True)
+        if not isinstance(body, dict):
+            raise CellLinearAlgebraError("Transition preview input must be a JSON object.")
+        project = load_project(); workspace = find_workspace(project, workspace_id)
+        result = page_transition(
+            project,
+            workspace,
+            str(body.get("cell_id", "")),
+            int(body.get("page", workspace.page)),
+            incoming_map_id=body.get("incoming_map_id"),
+            outgoing_map_id=body.get("outgoing_map_id"),
+            incoming_zero=bool(body.get("incoming_zero", False)),
+            outgoing_zero=bool(body.get("outgoing_zero", False)),
+        )
+        result["canonical"] = False
+        return jsonify({"transition": result, "persisted": False})
+    except KeyError as error:
+        return jsonify({"error": str(error)}), 404
+    except (CellLinearAlgebraError, TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.post("/api/workspaces/<workspace_id>/classes")

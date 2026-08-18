@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 from .models import (
-    CoefficientContext, Grade, PeriodFamily, PeriodGenerator, Project,
-    Proposition, SCHEMA_VERSION, SymbolDefinition,
+    CellBasisVector, CellVectorSpace, CoefficientContext, DifferentialMap, Grade,
+    NamedVector, PeriodFamily, PeriodGenerator, Project, Proposition,
+    SCHEMA_VERSION, SymbolDefinition,
 )
 from .dkllw_fact_chain import ensure_dkllw_fact_chain
 from .reu_fact_chain import ensure_reu_fact_chain
@@ -109,6 +110,81 @@ def ensure_foundations(project: Project) -> Project:
         for proposition in workspace.propositions:
             if proposition.source_ref and not proposition.source_refs:
                 proposition.source_refs = [proposition.source_ref]
+    return project
+
+
+def ensure_f4_high_rank_cell_sample(project: Project) -> Project:
+    """Install the formal-notes d5 whose target is a genuine vector sum."""
+    workspace = next((item for item in project.workspaces if item.id == "ws_3sigma_i"), None)
+    if workspace is None:
+        return project
+    classes = {item.id: item for item in workspace.classes}
+    source_node = classes.get("three_sum_source")
+    target_node = classes.get("three_sum_target")
+    if source_node is None or target_node is None:
+        return project
+    source_ref = "REU Projects/Note/formal_notes.tex:749-760"
+    cells = {item.id: item for item in workspace.cells}
+    if "cell_three_sum_source" not in cells:
+        workspace.cells.append(CellVectorSpace(
+            id="cell_three_sum_source",
+            grade=source_node.grade,
+            page=source_node.page,
+            coefficient_context_id="q8-residue-f4",
+            basis=[CellBasisVector("basis_three_sum_source", source_node.label, source_node.expression or source_node.label)],
+            display_basis=[NamedVector("display_three_sum_source", source_node.label, ["1"], source_node.expression or source_node.label)],
+            status="source-verified",
+            source_ref=source_ref,
+            source_refs=[source_ref],
+        ))
+    if "cell_three_sum_target" not in cells:
+        label_a = "\\{yh_2+xh_1v_1\\}kDu_{3\\sigma_i}"
+        label_b = "\\{h_1+xv_1\\}h_1kDu_{3\\sigma_i}"
+        workspace.cells.append(CellVectorSpace(
+            id="cell_three_sum_target",
+            grade=target_node.grade,
+            page=target_node.page,
+            coefficient_context_id="q8-residue-f4",
+            basis=[
+                CellBasisVector("basis_three_sum_A", label_a, label_a),
+                CellBasisVector("basis_three_sum_B", label_b, label_b),
+            ],
+            display_basis=[
+                NamedVector("display_three_sum_A", "A", ["1", "0"], label_a),
+                NamedVector("display_three_sum_B", "B", ["0", "1"], label_b),
+            ],
+            named_vectors=[NamedVector(
+                "vector_three_sum_target", target_node.label, ["1", "1"], target_node.expression or target_node.label,
+            )],
+            status="source-verified",
+            source_ref=source_ref,
+            source_refs=[source_ref],
+        ))
+    source_node.cell_id = "cell_three_sum_source"
+    source_node.coordinates = ["1"]
+    source_node.coefficient_context_id = "q8-residue-f4"
+    target_node.cell_id = "cell_three_sum_target"
+    target_node.coordinates = ["1", "1"]
+    target_node.coefficient_context_id = "q8-residue-f4"
+    maps = {item.id: item for item in workspace.differential_maps}
+    if "linear_diff_three_d5_sum" not in maps:
+        proposition = next((item for item in workspace.propositions if item.id == "prop_three_d5_sum"), None)
+        workspace.differential_maps.append(DifferentialMap(
+            id="linear_diff_three_d5_sum",
+            source_cell_id="cell_three_sum_source",
+            target_cell_id="cell_three_sum_target",
+            page=5,
+            matrix=[["1"], ["1"]],
+            coverage="complete",
+            status=proposition.status if proposition else "candidate",
+            proposition_id=proposition.id if proposition else "",
+            source_ref=source_ref,
+            source_refs=[source_ref],
+            notes="The target is the line A+B, not either basis vector separately.",
+        ))
+    differential = next((item for item in workspace.differentials if item.id == "diff_three_d5_sum"), None)
+    if differential:
+        differential.linear_map_id = "linear_diff_three_d5_sum"
     return project
 
 
@@ -392,6 +468,7 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
 
 def migrate_project(project: Project) -> Project:
     ensure_foundations(project)
+    ensure_f4_high_rank_cell_sample(project)
     ensure_dkllw_f4_argument_audit(project)
     ensure_dkllw_fact_chain(project)
     ensure_reu_fact_chain(project)

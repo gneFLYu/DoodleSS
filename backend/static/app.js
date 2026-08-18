@@ -1,10 +1,15 @@
 const state = {
   project: null,
+  savedProject: null,
+  catalogEntries: [],
+  catalogMode: false,
   logicGraph: { nodes: [], edges: [] },
   history: { undo_depth: 0, redo_depth: 0, undo_label: null, redo_label: null },
   workspaceId: null,
   pageByWorkspace: new Map(),
   selectedClassId: null,
+  selectedCellId: null,
+  lastVectorResult: null,
   tool: "inspect",
   connectionStart: null,
   suggestions: [],
@@ -23,7 +28,7 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const PAGE_MODE = document.body.dataset.page || "computation";
+const PAGE_MODE = document.body.dataset.page || "researching";
 let chartRenderFrame = 0;
 
 function scheduleChartRender() {
@@ -51,6 +56,10 @@ function workspace() {
   return state.project?.workspaces.find((item) => item.id === state.workspaceId);
 }
 
+function readOnlyCatalog(ws = workspace()) {
+  return Boolean(state.catalogMode && ws?.settings?.read_only_catalog);
+}
+
 function isReferenceSupportWorkspace(item) {
   return item.spectral_sequence !== "hfpss"
     || item.group !== "Q8"
@@ -73,6 +82,15 @@ function defaultWorkspaceId() {
 
 function renderWorkspaceNavigation(ws) {
   const selector = $("#workspace-select");
+  if (readOnlyCatalog(ws)) {
+    selector.innerHTML = `<option value="${ws.id}">[read-only archive] ${escapeHtml(ws.name)}</option>`;
+    selector.value = ws.id;
+    selector.disabled = true;
+    $("#support-workspace-select").innerHTML = "";
+    $("#open-support-workspace").disabled = true;
+    return;
+  }
+  selector.disabled = false;
   const ordinary = ordinaryWorkspaces();
   const currentIsOrdinary = ordinary.some((item) => item.id === ws.id);
   selector.innerHTML = `${currentIsOrdinary ? "" : `<option value="${ws.id}">[${isReferenceSupportWorkspace(ws) ? "reference" : "atlas"}] ${escapeHtml(ws.name)}</option>`}${ordinary.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("")}`;
@@ -170,6 +188,8 @@ async function loadProject() {
     : null;
   const [project, history] = await Promise.all([api("/api/project"), api("/api/history")]);
   state.project = project;
+  state.catalogMode = false;
+  state.savedProject = null;
   state.history = history;
   if (!state.project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   if (previousWorkspaceId === state.workspaceId && previousPage != null) {
@@ -181,6 +201,59 @@ async function loadProject() {
     state.pageByWorkspace.set(state.workspaceId, workspace().page);
   }
   render();
+}
+
+async function loadLegacyCatalogManifest() {
+  const data = await api("/api/v2/legacy-catalog");
+  state.catalogEntries = data.entries || [];
+  const selector = $("#legacy-catalog-select");
+  selector.innerHTML = state.catalogEntries.map((entry) => (
+    `<option value="${escapeHtml(entry.id)}">[${escapeHtml(entry.status)}] ${escapeHtml(entry.title)}</option>`
+  )).join("");
+  $("#open-legacy-catalog").disabled = !state.catalogEntries.length;
+}
+
+function catalogProject(project, ws) {
+  return {
+    ...project,
+    workspaces: [ws],
+    comparisons: [],
+    grading_sectors: [],
+    page_period_cycles: [],
+    drawing_periodicity_rules: [],
+    manual_periodicities: [],
+    manual_periodicity_rules: [],
+    products: [],
+  };
+}
+
+async function openLegacyCatalog() {
+  const entryId = $("#legacy-catalog-select").value;
+  if (!entryId) return;
+  const button = $("#open-legacy-catalog");
+  button.disabled = true;
+  try {
+    const data = await api(`/api/v2/legacy-catalog/${encodeURIComponent(entryId)}`);
+    if (!state.catalogMode) state.savedProject = state.project;
+    state.catalogMode = true;
+    state.project = catalogProject(state.savedProject, data.workspace);
+    state.workspaceId = data.workspace.id;
+    state.selectedClassId = null;
+    state.tool = "inspect";
+    state.connectionStart = null;
+    state.view = { zoom: 1, panX: 0, panY: 0 };
+    render();
+    toast(`Opened ${data.workspace.name} as a read-only research chart.`);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function closeLegacyCatalog() {
+  await loadProject();
+  toast("Returned to the saved Studio project.");
 }
 
 function toolHint() {
@@ -203,10 +276,29 @@ function renderPageSelector() {
   select.innerHTML = Array.from({ length: maximum - 1 }, (_, index) => {
     const page = index + 2;
     return `<option value="${page}">E${page}</option>`;
-  }).join("") + `<option value="__add_page">+ Add E${maximum + 1}</option>`;
+  }).join("") + (readOnlyCatalog(ws) ? "" : `<option value="__add_page">+ Add E${maximum + 1}</option>`);
   select.value = current;
   $("#page-previous").disabled = current <= 2;
-  $("#page-next").disabled = false;
+  $("#page-next").disabled = readOnlyCatalog(ws) && current >= maximum;
+}
+
+function renderLegacyCatalogState(ws) {
+  const entry = ws.settings.catalog_entry;
+  const active = readOnlyCatalog(ws) && entry;
+  document.body.classList.toggle("catalog-mode", Boolean(active));
+  $("#close-legacy-catalog").hidden = !active;
+  $("#legacy-catalog-summary").hidden = !active;
+  if (active) {
+    $("#legacy-catalog-select").value = entry.id;
+    const stats = entry.statistics;
+    $("#legacy-catalog-summary").innerHTML = `<strong>${escapeHtml(entry.status)} · ${escapeHtml(entry.authority)}</strong><span>${stats.generators} generators · ${stats.connections} connections · ${stats.differentials} differentials · ${stats.periodicity_rules} drawing-period rules</span><span>${escapeHtml(entry.filename)}</span><span>${escapeHtml(entry.evidence_ref)}</span><em>Read-only visual record; unlinked edges are not admitted as theorems.</em>`;
+  }
+  const blockedIds = [
+    "export-json", "export-legacy-json", "import-json", "new-workspace", "export-chart", "export-article",
+    "clear-current-canvas", "reset-demo", "run-rules", "open-cell-editor", "open-matrix-editor",
+  ];
+  blockedIds.forEach((id) => { const node = $(`#${id}`); if (node) node.disabled = Boolean(active); });
+  document.querySelectorAll('[data-tool]:not([data-tool="inspect"])').forEach((button) => { button.disabled = Boolean(active); });
 }
 
 function render() {
@@ -217,6 +309,7 @@ function render() {
   renderWorkspaceNavigation(ws);
   renderPageSelector();
   renderHistoryControls();
+  renderLegacyCatalogState(ws);
   $("#chart").dataset.tool = state.tool;
 
   $("#workspace-title").textContent = ws.name;
@@ -237,11 +330,13 @@ function render() {
   renderComparisons();
   renderGradingAtlas();
   renderFateInspector();
+  renderCellInspector();
   renderPagePeriodTool();
   renderDrawingPeriodicityTool();
   renderPersistentPeriodicityTool();
   renderProductControls();
   renderSuggestions();
+  renderLegacyCatalogState(ws);
   constrainView();
   renderChart();
   syncLayoutHeight();
@@ -257,8 +352,8 @@ function syncLayoutHeight() {
 function renderHistoryControls() {
   const undo = $("#undo-action");
   const redo = $("#redo-action");
-  undo.disabled = !state.history.undo_depth;
-  redo.disabled = !state.history.redo_depth;
+  undo.disabled = readOnlyCatalog() || !state.history.undo_depth;
+  redo.disabled = readOnlyCatalog() || !state.history.redo_depth;
   undo.title = state.history.undo_label ? `Undo: ${state.history.undo_label} (Ctrl+Z)` : "Nothing to undo (Ctrl+Z)";
   redo.title = state.history.redo_label ? `Redo: ${state.history.redo_label} (Ctrl+Y)` : "Nothing to redo (Ctrl+Y)";
 }
@@ -558,6 +653,238 @@ function detectedAlgebraGenerators(ws) {
   return [...names].sort((left, right) => left.localeCompare(right));
 }
 
+function explicitCells(ws = workspace()) {
+  return (ws?.cells || []).filter((item) => !item.archived);
+}
+
+function activeDifferentialMaps(ws = workspace()) {
+  return (ws?.differential_maps || []).filter((item) => !item.archived);
+}
+
+function selectedCell() {
+  return explicitCells().find((item) => item.id === state.selectedCellId) || null;
+}
+
+function vectorText(vector) {
+  return `[${(vector || []).join(":")}]`;
+}
+
+function matrixText(matrix) {
+  if (!matrix?.length) return "zero codomain";
+  return matrix.map((row) => `[${row.join(", ")}]`).join("; ");
+}
+
+function renderCellInspector() {
+  const ws = workspace();
+  const cells = explicitCells(ws);
+  const select = $("#cell-select");
+  if (!select) return;
+  if (!cells.some((item) => item.id === state.selectedCellId)) state.selectedCellId = cells[0]?.id || null;
+  select.innerHTML = '<option value="">No explicit cell selected</option>' + cells.map((cell) => (
+    `<option value="${escapeHtml(cell.id)}">rank ${cell.basis.length} · ${escapeHtml(gradeText(cell.grade))}</option>`
+  )).join("");
+  select.value = state.selectedCellId || "";
+  const cell = selectedCell();
+  const inspector = $("#cell-inspector");
+  const mapSelect = $("#cell-vector-map");
+  if (!cell) {
+    $("#cell-status").textContent = "none";
+    inspector.innerHTML = '<p class="empty">Select or create an explicit F4 cell. Legacy classes remain independent rank-one adapters.</p>';
+    mapSelect.innerHTML = '<option value="">Choose a map</option>';
+    return;
+  }
+  $("#cell-status").textContent = `rank ${cell.basis.length}`;
+  const maps = activeDifferentialMaps(ws).filter((item) => item.source_cell_id === cell.id || item.target_cell_id === cell.id);
+  const basis = cell.basis.map((item, index) => `<li><strong>e${index + 1}</strong> ${escapeHtml(item.label)}</li>`).join("");
+  const display = (cell.display_basis || []).map((item) => `<li><strong>${escapeHtml(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">computational basis is displayed</li>';
+  const named = (cell.named_vectors || []).map((item) => `<li><strong>${escapeHtml(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">no pinned combination ports</li>';
+  const mapMarkup = maps.map((item) => {
+    const direction = item.source_cell_id === cell.id ? "out" : "in";
+    return `<li><button type="button" class="text-button" data-edit-map="${escapeHtml(item.id)}">${direction} d${item.page}</button><span>${escapeHtml(item.status)} · ${escapeHtml(item.coverage)} · ${escapeHtml(matrixText(item.matrix))}</span></li>`;
+  }).join("") || '<li class="empty">no stored matrices at this cell</li>';
+  inspector.innerHTML = `<div class="cell-grade"><strong>${escapeHtml(gradeText(cell.grade))}</strong><span>${escapeHtml(cell.coefficient_context_id)} · ${escapeHtml(cell.status)}</span></div><div class="cell-inspector-grid"><div><h3>Computational basis</h3><ul>${basis}</ul></div><div><h3>Display basis</h3><ul>${display}</ul></div><div><h3>Named vectors</h3><ul>${named}</ul></div></div><h3>Differential matrices</h3><ul class="cell-map-list">${mapMarkup}</ul><p class="source-ref">${escapeHtml(cell.source_ref || "No source locator recorded.")}</p>`;
+  inspector.querySelectorAll("[data-edit-map]").forEach((button) => button.addEventListener("click", () => openMatrixDialog(button.dataset.editMap)));
+  const outgoing = activeDifferentialMaps(ws).filter((item) => item.source_cell_id === cell.id);
+  mapSelect.innerHTML = '<option value="">Choose a map</option>' + outgoing.map((item) => `<option value="${escapeHtml(item.id)}">d${item.page} · ${escapeHtml(item.status)} · ${escapeHtml(item.coverage)}</option>`).join("");
+}
+
+function parseJsonField(value, fallback = []) {
+  const text = String(value || "").trim();
+  if (!text) return fallback;
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed)) throw new Error("Expected a JSON list.");
+  return parsed;
+}
+
+function openCellDialog(cellId = null) {
+  if (readOnlyCatalog()) return toast("Archived research charts are read-only.");
+  const cell = explicitCells().find((item) => item.id === cellId) || null;
+  const form = $("#cell-form");
+  form.reset();
+  form.elements.cell_id.value = cell?.id || "";
+  form.elements.stem.value = cell?.grade?.stem ?? 0;
+  form.elements.filtration.value = cell?.grade?.filtration ?? 0;
+  form.elements.page.value = cell?.page ?? workspace().page;
+  form.elements.coefficient_context_id.value = cell?.coefficient_context_id || "q8-residue-f4";
+  form.elements.basis.value = cell?.basis?.map((item) => item.label).join("\n") || "a\nb";
+  form.elements.display_basis.value = cell?.display_basis?.length ? JSON.stringify(cell.display_basis.map(({ label, coordinates, expression, pinned }) => ({ label, coordinates, expression, pinned })), null, 2) : "";
+  form.elements.named_vectors.value = cell?.named_vectors?.length ? JSON.stringify(cell.named_vectors.map(({ label, coordinates, expression, pinned }) => ({ label, coordinates, expression, pinned })), null, 2) : "";
+  form.elements.status.value = cell?.status || "candidate";
+  form.elements.source_ref.value = cell?.source_ref || "";
+  $("#archive-cell").hidden = !cell;
+  $("#cell-form-result").textContent = "F4 validation runs on the server before saving.";
+  $("#cell-dialog").showModal();
+}
+
+function cellPayload(form) {
+  const basis = String(form.elements.basis.value || "").split(/\r?\n/).map((label) => label.trim()).filter(Boolean).map((label) => ({ label, expression: label }));
+  return {
+    grade: { stem: Number(form.elements.stem.value), filtration: Number(form.elements.filtration.value), representation: {} },
+    page: Number(form.elements.page.value),
+    coefficient_context_id: form.elements.coefficient_context_id.value,
+    basis,
+    display_basis: parseJsonField(form.elements.display_basis.value),
+    named_vectors: parseJsonField(form.elements.named_vectors.value),
+    status: form.elements.status.value,
+    source_ref: form.elements.source_ref.value.trim(),
+  };
+}
+
+async function saveCell(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    const id = form.elements.cell_id.value;
+    const data = await api(id ? `/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/cells/${encodeURIComponent(id)}` : `/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/cells`, {
+      method: id ? "PATCH" : "POST", body: JSON.stringify(cellPayload(form)),
+    });
+    state.selectedCellId = data.cell.id;
+    $("#cell-dialog").close();
+    await loadProject();
+    toast(`Saved rank-${data.cell.basis.length} F4 cell.`);
+  } catch (error) {
+    $("#cell-form-result").textContent = error.message;
+  }
+}
+
+function matrixOptions(selected = "", allowZero = true) {
+  return `${allowZero ? '<option value="">0 (zero cell)</option>' : ""}` + explicitCells().map((cell) => `<option value="${escapeHtml(cell.id)}" ${cell.id === selected ? "selected" : ""}>rank ${cell.basis.length} · ${escapeHtml(gradeText(cell.grade))}</option>`).join("");
+}
+
+function openMatrixDialog(mapId = null) {
+  if (readOnlyCatalog()) return toast("Archived research charts are read-only.");
+  const item = activeDifferentialMaps().find((record) => record.id === mapId) || null;
+  const form = $("#matrix-form");
+  form.reset();
+  form.elements.map_id.value = item?.id || "";
+  form.elements.source_cell_id.innerHTML = matrixOptions(item?.source_cell_id || state.selectedCellId || "");
+  form.elements.target_cell_id.innerHTML = matrixOptions(item?.target_cell_id || "");
+  form.elements.source_cell_id.value = item?.source_cell_id || state.selectedCellId || "";
+  form.elements.target_cell_id.value = item?.target_cell_id || "";
+  form.elements.page.value = item?.page || workspace().page;
+  form.elements.coverage.value = item?.coverage || "complete";
+  form.elements.status.value = item?.status || "candidate";
+  form.elements.source_ref.value = item?.source_ref || "";
+  form.elements.notes.value = item?.notes || "";
+  form.elements.matrix.value = item?.matrix?.map((row) => row.join(", ")).join("\n") || "";
+  $("#archive-matrix").hidden = !item;
+  $("#matrix-form-result").textContent = "Candidate matrices can be previewed but do not change the canonical page.";
+  $("#matrix-dialog").showModal();
+}
+
+function parseMatrix(text, targetRank, sourceRank) {
+  const trimmed = String(text || "").trim();
+  if (!targetRank) return [];
+  if (!sourceRank && !trimmed) return Array.from({ length: targetRank }, () => []);
+  return trimmed.split(/\r?\n/).filter((line) => line.trim()).map((line) => line.split(/[ ,]+/).filter(Boolean));
+}
+
+async function saveMatrix(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  try {
+    const id = form.elements.map_id.value;
+    const sourceId = form.elements.source_cell_id.value || null;
+    const targetId = form.elements.target_cell_id.value || null;
+    const source = explicitCells().find((item) => item.id === sourceId);
+    const target = explicitCells().find((item) => item.id === targetId);
+    const payload = {
+      source_cell_id: sourceId, target_cell_id: targetId,
+      page: Number(form.elements.page.value), coverage: form.elements.coverage.value,
+      status: form.elements.status.value, source_ref: form.elements.source_ref.value.trim(),
+      notes: form.elements.notes.value,
+      matrix: parseMatrix(form.elements.matrix.value, target?.basis.length || 0, source?.basis.length || 0),
+      coefficient_context_id: source?.coefficient_context_id || target?.coefficient_context_id || "q8-residue-f4",
+    };
+    const data = await api(id ? `/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/differential-maps/${encodeURIComponent(id)}` : `/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/differential-maps`, {
+      method: id ? "PATCH" : "POST", body: JSON.stringify(payload),
+    });
+    $("#matrix-dialog").close();
+    await loadProject();
+    toast(`Saved d${data.differential_map.page} matrix; ${data.image_ports.filter((port) => !port.zero).length} nonzero image port(s).`);
+  } catch (error) {
+    $("#matrix-form-result").textContent = error.message;
+  }
+}
+
+function coordinatesInput() {
+  return String($("#cell-vector-coordinates").value || "").split(/[ ,]+/).filter(Boolean);
+}
+
+async function evaluateCellVector() {
+  const cell = selectedCell();
+  const mapId = $("#cell-vector-map").value;
+  if (!cell || !mapId) return toast("Choose a cell and one of its outgoing maps.");
+  try {
+    const data = await api(`/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/cells/${encodeURIComponent(cell.id)}/vector-image`, {
+      method: "POST", body: JSON.stringify({ map_id: mapId, coordinates: coordinatesInput() }),
+    });
+    state.lastVectorResult = data.result;
+    $("#cell-vector-result").textContent = data.result.zero
+      ? `${vectorText(data.result.coordinates)} maps to 0.`
+      : `${vectorText(data.result.coordinates)} maps to ${vectorText(data.result.image_coordinates)} · port ${vectorText(data.result.image_projective_coordinates)}.`;
+  } catch (error) { $("#cell-vector-result").textContent = error.message; }
+}
+
+async function pinCellVector() {
+  const cell = selectedCell();
+  if (!cell) return toast("Choose a cell first.");
+  const coordinates = state.lastVectorResult?.cell_id === cell.id ? state.lastVectorResult.coordinates : coordinatesInput();
+  if (!coordinates.length) return toast("Enter coordinates or evaluate a vector first.");
+  const label = window.prompt("Label for this named vector", vectorText(coordinates));
+  if (!label) return;
+  try {
+    await api(`/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/cells/${encodeURIComponent(cell.id)}`, {
+      method: "PATCH", body: JSON.stringify({ named_vectors: [...(cell.named_vectors || []).map(({ label: oldLabel, coordinates: oldCoordinates, expression, pinned }) => ({ label: oldLabel, coordinates: oldCoordinates, expression, pinned })), { label, coordinates, expression: label, pinned: true }] }),
+    });
+    await loadProject();
+    toast("Pinned an exact projective combination port.");
+  } catch (error) { $("#cell-vector-result").textContent = error.message; }
+}
+
+async function previewCellTransition() {
+  const cell = selectedCell();
+  if (!cell) return toast("Choose a cell first.");
+  const maps = activeDifferentialMaps();
+  const incoming = maps.find((item) => item.target_cell_id === cell.id && item.page === workspace().page);
+  const selectedOutgoing = $("#cell-vector-map").value;
+  const outgoing = maps.find((item) => item.id === selectedOutgoing) || maps.find((item) => item.source_cell_id === cell.id && item.page === workspace().page);
+  try {
+    const data = await api(`/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/page-transitions/preview`, {
+      method: "POST", body: JSON.stringify({
+        cell_id: cell.id, page: workspace().page,
+        incoming_map_id: incoming?.id || null, outgoing_map_id: outgoing?.id || null,
+        incoming_zero: $("#transition-incoming-zero").checked,
+        outgoing_zero: $("#transition-outgoing-zero").checked,
+      }),
+    });
+    const result = data.transition;
+    $("#cell-transition-result").innerHTML = result.status === "complete"
+      ? `<strong>E${result.page + 1} rank ${result.quotient_rank}</strong><span>ker: ${escapeHtml(JSON.stringify(result.kernel_basis))}</span><span>image: ${escapeHtml(JSON.stringify(result.image_basis))}</span><span>quotient basis: ${escapeHtml(JSON.stringify(result.quotient_basis))}</span><em>${result.canonical ? "canonical admitted maps" : "research preview; not persisted"}</em>`
+      : `<strong>${escapeHtml(result.status)}</strong><span>${escapeHtml((result.obligations || result.errors || [result.error]).filter(Boolean).join("; "))}</span>`;
+  } catch (error) { $("#cell-transition-result").textContent = error.message; }
+}
+
 function renderPagePeriodTool() {
   const ws = workspace();
   const root = $("#page-period-tool");
@@ -822,7 +1149,7 @@ function renderLogicGraph() {
   const columnFor = (kind) => {
     if (["source-reference", "coefficient-context", "c3-action"].includes(kind)) return 0;
     if (kind === "proposition") return 1;
-    if (["differential-claim", "differential-event", "cross-graded-product"].includes(kind)) return 2;
+    if (["cell-vector-space", "differential-map", "differential-claim", "differential-event", "cross-graded-product"].includes(kind)) return 2;
     return 3;
   };
   const columns = [[], [], [], []];
@@ -855,7 +1182,10 @@ function renderLogicGraph() {
     const datum = item.conclusion?.datum_type ? ` · ${item.conclusion.datum_type} in ${item.conclusion.spectral_sequence || "unspecified tower"}` : "";
     const period = item.conclusion?.period_identity ? ` · period: ${item.conclusion.period_identity}` : "";
     const implies = item.implies_ids?.length ? ` · implies: ${item.implies_ids.join(", ")}` : "";
-    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"}${admission}${coefficients}${datum}${period}${implies} · ${item.label}`;
+    const basis = item.computational_basis?.length ? ` · basis: ${item.computational_basis.join(", ")}` : "";
+    const matrix = item.matrix ? ` · matrix: ${matrixText(item.matrix)} · ${item.coverage || "unknown coverage"}` : "";
+    const sourceRefs = item.source_refs?.length ? ` · source: ${item.source_refs.join("; ")}` : "";
+    $("#logic-node-detail").textContent = `${item.kind} · ${item.status || "no status"}${admission}${coefficients}${datum}${period}${basis}${matrix}${sourceRefs}${implies} · ${item.label}`;
   }));
   $("#logic-node-detail").textContent = allVisible.length > nodes.length
     ? `Showing ${nodes.length} of ${allVisible.length} typed nodes. Select a node for details.`
@@ -1081,7 +1411,7 @@ function periodsForClassOnPage(ws, item) {
 function periodicClassInstances(ws, bounds) {
   const rendered = [];
   const seen = new Set();
-  for (const item of liveClassesAt(ws)) {
+  for (const item of liveClassesAt(ws).filter((node) => !node.cell_id)) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = [{ grade: item.grade, shift: 0, periodic: false }];
     for (const period of periods) {
@@ -1180,7 +1510,7 @@ function periodicDifferentials(ws, bounds) {
   const byId = new Map(ws.classes.map((item) => [item.id, item]));
   const liveIds = new Set(liveClassesAt(ws).map((item) => item.id));
   const results = [];
-  for (const diff of ws.differentials.filter((item) => item.page === ws.page)) {
+  for (const diff of ws.differentials.filter((item) => item.page === ws.page && !item.linear_map_id)) {
     const source = byId.get(diff.source_id);
     const target = byId.get(diff.target_id);
     if (!source || !target || !liveIds.has(source.id) || !liveIds.has(target.id)) continue;
@@ -1277,6 +1607,82 @@ function drawingPeriodicityPreviewSvg(metrics, bounds, packedPreviewInstances, i
   return markup;
 }
 
+function standardBasisCoordinates(rank, index) {
+  return Array.from({ length: rank }, (_, position) => position === index ? "1" : "0");
+}
+
+function cellPortRecords(ws, cell) {
+  const ports = new Map();
+  const add = (label, coordinates, projectiveCoordinates = coordinates, kind = "named") => {
+    if (!projectiveCoordinates?.length || projectiveCoordinates.every((value) => value === "0")) return;
+    const key = projectiveCoordinates.join(":");
+    if (!ports.has(key)) ports.set(key, { key, label, coordinates, projectiveCoordinates, kind });
+  };
+  cell.basis.forEach((item, index) => {
+    const coordinates = standardBasisCoordinates(cell.basis.length, index);
+    add(item.label, coordinates, coordinates, "basis");
+  });
+  (cell.display_basis || []).forEach((item) => add(item.label, item.coordinates, item.projective_coordinates, "display"));
+  (cell.named_vectors || []).forEach((item) => add(item.label, item.coordinates, item.projective_coordinates, "named"));
+  activeDifferentialMaps(ws).filter((item) => item.target_cell_id === cell.id).forEach((item) => {
+    (item.image_ports || []).filter((port) => !port.zero).forEach((port) => add(
+      vectorText(port.projective_coordinates), port.coordinates, port.projective_coordinates, "image",
+    ));
+  });
+  return [...ports.values()];
+}
+
+function cellChartLayout(ws, metrics, bounds) {
+  const positions = new Map();
+  for (const cell of explicitCells(ws).filter((item) => item.page <= ws.page && inBounds(item.grade, bounds))) {
+    const center = pointFor(cell.grade, metrics);
+    const ports = cellPortRecords(ws, cell);
+    const width = Math.max(48, ports.length * 15 + 12);
+    const byKey = new Map();
+    ports.forEach((port, index) => {
+      const x = center.x + (index - (ports.length - 1) / 2) * 15;
+      byKey.set(port.key, { ...port, x, y: center.y });
+    });
+    positions.set(cell.id, { cell, center, width, ports, byKey });
+  }
+  return positions;
+}
+
+function cellMapSvg(ws, layout) {
+  let markup = "";
+  for (const item of activeDifferentialMaps(ws).filter((record) => record.page === ws.page)) {
+    const source = item.source_cell_id ? layout.get(item.source_cell_id) : null;
+    const target = item.target_cell_id ? layout.get(item.target_cell_id) : null;
+    if (!source) continue;
+    for (const port of item.image_ports || []) {
+      const sourceKey = standardBasisCoordinates(source.cell.basis.length, source.cell.basis.findIndex((basis) => basis.id === port.source_basis_id)).join(":");
+      const from = source.byKey.get(sourceKey) || source.center;
+      if (port.zero || !target) {
+        markup += `<text class="linear-zero-label" x="${from.x + 5}" y="${from.y - 13}">0</text>`;
+        continue;
+      }
+      const to = target.byKey.get((port.projective_coordinates || []).join(":")) || target.center;
+      const admitted = ["established", "verified", "source-verified"].includes(item.status) ? "accepted" : "under-review";
+      markup += `<line class="differential linear-map ${admitted}" data-linear-map="${escapeHtml(item.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>d_${item.page}(${escapeHtml(port.source_label)}) = ${escapeHtml(vectorText(port.coordinates))} · ${escapeHtml(item.status)}${item.coverage === "complete" ? " · complete" : " · partial"}</title></line>`;
+    }
+  }
+  return markup;
+}
+
+function cellGlyphSvg(layout) {
+  let markup = "";
+  for (const { cell, center, width, ports, byKey } of layout.values()) {
+    const selected = state.selectedCellId === cell.id ? "selected" : "";
+    markup += `<g class="vector-cell ${selected}" data-cell="${escapeHtml(cell.id)}" role="button" tabindex="0" aria-label="rank ${cell.basis.length} F4 cell at ${escapeHtml(gradeText(cell.grade))}"><rect class="vector-cell-hull" x="${center.x - width / 2}" y="${center.y - 12}" width="${width}" height="24" rx="10"/><text class="vector-cell-rank" x="${center.x - width / 2 + 4}" y="${center.y - 16}">F4^${cell.basis.length}</text>`;
+    for (const port of ports) {
+      const point = byKey.get(port.key);
+      markup += `<circle class="combination-port ${escapeHtml(port.kind)}" cx="${point.x}" cy="${point.y}" r="4"><title>${escapeHtml(port.label)} · ${escapeHtml(vectorText(port.coordinates))} · projective ${escapeHtml(vectorText(port.projectiveCoordinates))}</title></circle>`;
+    }
+    markup += `<foreignObject class="label-host cell-label-host" x="${center.x + width / 2 + 5}" y="${center.y - 9}" width="190" height="20"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${escapeHtml(cell.named_vectors?.[0]?.label || cell.basis[0]?.label || cell.id)}"></div></foreignObject></g>`;
+  }
+  return markup;
+}
+
 function renderChart() {
   if (!workspace()) return;
   const ws = workspace();
@@ -1326,6 +1732,8 @@ function renderChart() {
   const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, packedPoint(record, m)]));
   const classesById = new Map(ws.classes.map((item) => [item.id, item]));
   const liveIds = new Set(liveClassesAt(ws).map((item) => item.id));
+  const vectorCellLayout = cellChartLayout(ws, m, buffered);
+  markup += cellMapSvg(ws, vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "connections");
   for (const relation of visibleRelations(ws, liveIds)) {
     const source = classesById.get(relation.conclusion.source_id);
@@ -1362,6 +1770,7 @@ function renderChart() {
     const aria = `${record.item.label} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}`;
     markup += `<g class="class-instance" data-point="${record.item.id}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
   }
+  markup += cellGlyphSvg(vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "cycles");
   replaceSvgMarkup(svg, markup);
   renderMathInChart();
@@ -1375,11 +1784,29 @@ function renderChart() {
     onClassClick(node.dataset.point);
   };
   svg.onclick = (event) => {
+    const cellNode = event.target.closest?.("[data-cell]");
+    if (cellNode) {
+      event.stopPropagation();
+      state.selectedCellId = cellNode.dataset.cell;
+      state.selectedClassId = null;
+      renderCellInspector();
+      renderChart();
+      return;
+    }
     const node = event.target.closest?.("[data-point]");
     if (node) activateClassInstance(node, event);
   };
   svg.onkeydown = (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
+    const cellNode = event.target.closest?.("[data-cell]");
+    if (cellNode) {
+      event.preventDefault();
+      state.selectedCellId = cellNode.dataset.cell;
+      state.selectedClassId = null;
+      renderCellInspector();
+      renderChart();
+      return;
+    }
     const node = event.target.closest?.("[data-point]");
     if (!node) return;
     event.preventDefault();
@@ -1400,6 +1827,7 @@ function setPage(page) {
 
 async function extendPageLimit() {
   const ws = workspace();
+  if (readOnlyCatalog(ws)) return toast("Archived research charts are read-only.");
   const next = pageLimit(ws) + 1;
   try {
     const data = await api(`/api/workspaces/${ws.id}/settings`, { method: "PATCH", body: JSON.stringify({ page_limit: next }) });
@@ -1415,6 +1843,7 @@ async function extendPageLimit() {
 }
 
 function setTool(tool) {
+  if (readOnlyCatalog() && tool !== "inspect") return toast("Archived research charts are read-only.");
   state.tool = tool;
   state.connectionStart = null;
   state.connectionPointer = null;
@@ -1424,6 +1853,7 @@ function setTool(tool) {
 async function onClassClick(id) {
   const item = workspace().classes.find((point) => point.id === id);
   if (!item) return;
+  if (readOnlyCatalog() && state.tool !== "inspect") state.tool = "inspect";
   if (state.tool === "differential" || state.tool === "relation") {
     if (!state.connectionStart) {
       state.connectionStart = id;
@@ -1873,6 +2303,8 @@ function handleHotkey(event) {
 }
 
 function bindEvents() {
+  $("#open-legacy-catalog").addEventListener("click", openLegacyCatalog);
+  $("#close-legacy-catalog").addEventListener("click", closeLegacyCatalog);
   $("#workspace-select").addEventListener("change", (event) => {
     state.workspaceId = event.target.value;
     state.selectedClassId = null;
@@ -2049,6 +2481,44 @@ function bindEvents() {
   });
   $("#class-form [name=label]").addEventListener("input", renderClassLabelPreview);
   $("#cancel-class").addEventListener("click", () => $("#class-dialog").close("cancel"));
+  $("#open-cell-editor").addEventListener("click", () => openCellDialog());
+  $("#new-cell-from-panel").addEventListener("click", () => openCellDialog());
+  $("#edit-selected-cell").addEventListener("click", () => state.selectedCellId ? openCellDialog(state.selectedCellId) : openCellDialog());
+  $("#cell-select").addEventListener("change", (event) => {
+    state.selectedCellId = event.target.value || null;
+    state.lastVectorResult = null;
+    renderCellInspector();
+    renderChart();
+  });
+  $("#cell-form").addEventListener("submit", saveCell);
+  $("#cancel-cell").addEventListener("click", () => $("#cell-dialog").close("cancel"));
+  $("#archive-cell").addEventListener("click", async () => {
+    const id = $("#cell-form").elements.cell_id.value;
+    if (!id || !window.confirm("Archive this cell and all incident matrix records? Proof history will be retained.")) return;
+    try {
+      await api(`/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/cells/${encodeURIComponent(id)}`, { method: "DELETE" });
+      $("#cell-dialog").close();
+      state.selectedCellId = null;
+      await loadProject();
+      toast("Cell and incident matrix displays archived; history retained.");
+    } catch (error) { $("#cell-form-result").textContent = error.message; }
+  });
+  $("#open-matrix-editor").addEventListener("click", () => openMatrixDialog());
+  $("#matrix-form").addEventListener("submit", saveMatrix);
+  $("#cancel-matrix").addEventListener("click", () => $("#matrix-dialog").close("cancel"));
+  $("#archive-matrix").addEventListener("click", async () => {
+    const id = $("#matrix-form").elements.map_id.value;
+    if (!id || !window.confirm("Archive this matrix while retaining its proposition and provenance?")) return;
+    try {
+      await api(`/api/v2/workspaces/${encodeURIComponent(state.workspaceId)}/differential-maps/${encodeURIComponent(id)}`, { method: "DELETE" });
+      $("#matrix-dialog").close();
+      await loadProject();
+      toast("Differential matrix archived; proposition retained.");
+    } catch (error) { $("#matrix-form-result").textContent = error.message; }
+  });
+  $("#evaluate-cell-vector").addEventListener("click", evaluateCellVector);
+  $("#pin-cell-vector").addEventListener("click", pinCellVector);
+  $("#preview-cell-transition").addEventListener("click", previewCellTransition);
   $("#rename-form").addEventListener("submit", savePendingRename);
   $("#cancel-rename").addEventListener("click", () => {
     state.pendingRenameId = null;
@@ -2108,9 +2578,9 @@ function downloadTex(kind) {
   window.location.assign(`/api/v2/render/workspaces/${encodeURIComponent(state.workspaceId)}/${kind}.tex?page=${encodeURIComponent(page)}`);
 }
 
-if (PAGE_MODE === "review") bindReviewEvents();
+if (PAGE_MODE === "reviewing") bindReviewEvents();
 else bindEvents();
 
-(PAGE_MODE === "review" ? loadReviewPage() : loadProject()).catch((error) => {
+(PAGE_MODE === "reviewing" ? loadReviewPage() : Promise.all([loadProject(), loadLegacyCatalogManifest()])).catch((error) => {
   document.body.innerHTML = `<pre>Unable to load HFPSS Studio: ${escapeHtml(error.message)}</pre>`;
 });

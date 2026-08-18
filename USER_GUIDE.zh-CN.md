@@ -22,6 +22,36 @@ E:\课程\PACE2025_fly\HFPSS Q_8\DoodleSS\HFPSS-Studio
 `Ctrl+F5`；`http://127.0.0.1:5078/api/health` 会返回应用版本和当前
 project revision，可用于确认不是旧原型或静态测试页。
 
+顶部现在有两个明确分工的模式：
+
+- **Researching** (`/`)：编辑 chart、cell、矩阵、候选命题和周期工具。
+- **Reviewing** (`/review`)：只读检查 Danus admission、前提/后果、系数环境、
+  cell 基与 differential matrix；它不提供画布编辑。
+
+## F4 高秩 cell 与矩阵微分
+
+工具栏 **Cell** 新建一个 `CellVectorSpace`。每个 cell 保存有序 computational
+basis；display basis 必须用 JSON 给出相对计算基的可逆坐标矩阵；named vectors
+可用于固定实际出现的组合端口。例如秩二 cell 可写：
+
+```json
+[{"label":"a+zeta b","coordinates":["1","zeta"]}]
+```
+
+输入 `1+zeta` 会精确化为 `zeta^2`，不会化为零。当前线性代数仅对
+`q8-residue-f4` 开启；Witt/2-adic context 不会被静默模 2 化。
+
+**Matrix d_r** 按“target rows × source columns”录入完整或 partial matrix。
+candidate matrix 可以在 Researching 中预览，但 canonical page 只使用 Danus
+logic graph 已准入的 complete maps。右侧 cell inspector 可以查询任意向量的像、
+固定 projective port，并按需计算
+`kernel(outgoing) / image(incoming)`。缺失 map 不表示零；必须显式选择零映射，
+否则换页结果是 `underdetermined`。
+
+若 incoming differential 命中 `a+b`，Studio 只商去子空间 `<a+b>`；它不会把
+`a` 与 `b` 两个基向量分别删除。图中组合端口按首个非零坐标归一化，所以非零
+标量倍数共享一个可视端口，同时矩阵检查器仍保留准确标量。
+
 ## 画图的基本工作流
 
 1. 顶部 **Workspace** 下拉菜单选择 grading workspace；顶部 **Page (r)**

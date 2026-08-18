@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HFPSS Studio</title>
+  <link rel="icon" href="data:,">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,15 +16,15 @@
   <header class="mode-bar">
     <a class="mode-brand" href="{{ url_for('index') }}">
       <strong>HFPSS Studio</strong>
-      <span>source-backed computation</span>
+      <span>source-backed research</span>
     </a>
     <nav class="mode-tabs" aria-label="Studio mode">
-      <a href="{{ url_for('index') }}" {% if page == "computation" %}class="active" aria-current="page"{% endif %}>Computation</a>
-      <a href="{{ url_for('review') }}" {% if page == "review" %}class="active" aria-current="page"{% endif %}>Review</a>
+      <a href="{{ url_for('index') }}" {% if page == "researching" %}class="active" aria-current="page"{% endif %}>Researching</a>
+      <a href="{{ url_for('review') }}" {% if page == "reviewing" %}class="active" aria-current="page"{% endif %}>Reviewing</a>
     </nav>
   </header>
 
-  {% if page == "computation" %}
+  {% if page == "researching" %}
   <nav class="legacy-toolbar" aria-label="Chart controls">
     <div class="legacy-toolbar-inner">
       <label class="workspace-picker">Workspace <select id="workspace-select" aria-label="Active workspace"></select></label>
@@ -38,6 +39,8 @@
       <span class="toolbar-caption">Tools:</span>
       <button data-tool="inspect" class="tool toolbar-tool active" title="Select and pan (V)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3zM13 13l6 6"/></svg><span class="tool-label">Select</span></button>
       <button data-tool="class" class="tool toolbar-tool" title="Add generator (G)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg><span class="tool-label">Generator</span></button>
+      <button id="open-cell-editor" class="tool toolbar-tool" title="Add an F4 vector-space cell"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h5v5H5zM14 5h5v5h-5zM9.5 14h5v5h-5zM8 10l3 4m5-4-3 4"/></svg><span class="tool-label">Cell</span></button>
+      <button id="open-matrix-editor" class="tool toolbar-tool" title="Add a matrix differential"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4H4v16h3M17 4h3v16h-3M9 8h6M9 12h6M9 16h6"/></svg><span class="tool-label">Matrix d<sub>r</sub></span></button>
       <button data-tool="differential" class="tool toolbar-tool" title="Add differential (D)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg><span class="tool-label">Differential</span></button>
       <button data-tool="relation" class="tool toolbar-tool" title="Add relation (R)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg><span class="tool-label">Relation</span></button>
       <button data-tool="delete" class="tool toolbar-tool" title="Delete element (X)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg><span class="tool-label">Delete</span></button>
@@ -61,8 +64,17 @@
 
   <main class="layout">
     <aside class="left-panel">
+      <section class="panel-section legacy-catalog-panel">
+        <div class="eyebrow">SSEQ VER15.3 ARCHIVE</div>
+        <h2>Research chart catalog</h2>
+        <p class="hint">Open any preserved REU canvas without changing the saved Studio project. Source status comes from <code>formal_notes.tex</code> first, then <code>record/note.tex</code>.</p>
+        <label>Archived canvas<select id="legacy-catalog-select" aria-label="Archived sseq ver15.3 canvas"><option value="">Loading 21 canvases...</option></select></label>
+        <div class="catalog-actions"><button type="button" id="open-legacy-catalog" class="wide">Open read-only chart</button><button type="button" id="close-legacy-catalog" class="wide" hidden>Return to saved project</button></div>
+        <div id="legacy-catalog-summary" class="catalog-summary" hidden></div>
+      </section>
+
       <section class="panel-section">
-        <div class="eyebrow">COMPUTATION</div>
+        <div class="eyebrow">RESEARCHING MODE</div>
         <h1 id="workspace-title">Loading</h1>
         <p id="workspace-meta" class="muted"></p>
         <p id="workspace-summary" class="workspace-summary"></p>
@@ -196,6 +208,24 @@
     </section>
 
     <aside class="right-panel">
+      <section class="panel-section cell-research-panel">
+        <div class="section-head"><div><div class="eyebrow">F4 CELL</div><h2>Basis, maps, and quotient</h2></div><span id="cell-status" class="pill">none</span></div>
+        <label>Cell<select id="cell-select" aria-label="Active vector-space cell"><option value="">No explicit cell selected</option></select></label>
+        <div class="cell-actions"><button type="button" id="edit-selected-cell">Edit cell</button><button type="button" id="new-cell-from-panel">New cell</button></div>
+        <div id="cell-inspector" class="cell-inspector" aria-live="polite"><p class="empty">Select an explicit F4 cell to inspect its basis and differential matrices.</p></div>
+        <div class="coordinate-query">
+          <label>Vector coordinates<input id="cell-vector-coordinates" placeholder="1, zeta, 0"></label>
+          <label>Outgoing map<select id="cell-vector-map"><option value="">Choose a map</option></select></label>
+          <div class="cell-actions"><button type="button" id="evaluate-cell-vector">Evaluate d<sub>r</sub></button><button type="button" id="pin-cell-vector">Pin port</button></div>
+          <div id="cell-vector-result" class="hint">Exact F4 coordinates are preserved; projective ports identify only nonzero scalar multiples.</div>
+        </div>
+        <div class="transition-query">
+          <div class="two-col"><label><input id="transition-incoming-zero" type="checkbox"> incoming is explicitly zero</label><label><input id="transition-outgoing-zero" type="checkbox"> outgoing is explicitly zero</label></div>
+          <button type="button" id="preview-cell-transition" class="wide">Compute ker / image preview</button>
+          <div id="cell-transition-result" class="cell-transition-result">Missing maps remain underdetermined.</div>
+        </div>
+      </section>
+
       <section class="panel-section">
         <div class="section-head"><div><div class="eyebrow">CLASS FATE</div><h2>HFPSS / Tate timeline</h2></div><span id="fate-status" class="pill">none</span></div>
         <div id="fate-inspector" class="fate-inspector" aria-live="polite"><p class="empty">Select a class to inspect its data and two-track fate record.</p></div>
@@ -251,6 +281,38 @@
     </form>
   </dialog>
 
+  <dialog id="cell-dialog" class="cell-dialog">
+    <form id="cell-form">
+      <h2>F4 vector-space cell</h2>
+      <input name="cell_id" type="hidden">
+      <p class="hint">The computational basis controls serialization and matrices. Display and named vectors are F4 coordinates in that basis.</p>
+      <div class="two-col"><label>Stem<input name="stem" type="number" required></label><label>Filtration<input name="filtration" type="number" min="0" required></label></div>
+      <div class="two-col"><label>First page<input name="page" type="number" min="2" value="2" required></label><label>Coefficient context<select name="coefficient_context_id"><option value="q8-residue-f4">F4 residue field</option></select></label></div>
+      <label>Computational basis — one label per line<textarea name="basis" rows="4" required placeholder="a&#10;b&#10;c"></textarea></label>
+      <label>Display basis JSON<textarea name="display_basis" rows="4" spellcheck="false" placeholder='[{"label":"a+b","coordinates":["1","1"]},{"label":"b","coordinates":["0","1"]}]'></textarea></label>
+      <label>Named vectors / pinned ports JSON<textarea name="named_vectors" rows="4" spellcheck="false" placeholder='[{"label":"a+zeta b","coordinates":["1","zeta"]}]'></textarea></label>
+      <div class="two-col"><label>Status<select name="status"><option value="candidate">candidate</option><option value="source-verified">source-verified</option><option value="established">established</option></select></label><label>Source locator<input name="source_ref" placeholder="formal_notes.tex:line-range"></label></div>
+      <div id="cell-form-result" class="hint">F4 validation runs on the server before saving.</div>
+      <div class="dialog-actions"><button type="button" id="archive-cell" class="danger-subtle" hidden>Archive</button><button type="button" id="cancel-cell">Cancel</button><button type="submit" class="primary">Save cell</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="matrix-dialog" class="matrix-dialog">
+    <form id="matrix-form">
+      <h2>Matrix differential</h2>
+      <input name="map_id" type="hidden">
+      <p class="hint">Rows are target coordinates and columns are source coordinates. Use an empty target for a complete zero map into the zero cell.</p>
+      <label>Source cell<select name="source_cell_id"></select></label>
+      <label>Target cell<select name="target_cell_id"></select></label>
+      <div class="two-col"><label>Page r<input name="page" type="number" min="2" value="3" required></label><label>Coverage<select name="coverage"><option value="complete">complete</option><option value="partial">partial</option></select></label></div>
+      <label>Matrix — rows on new lines, entries comma-separated<textarea name="matrix" rows="6" spellcheck="false" placeholder="1, zeta&#10;0, 1"></textarea></label>
+      <div class="two-col"><label>Status<select name="status"><option value="candidate">candidate</option><option value="source-verified">source-verified</option><option value="established">established</option></select></label><label>Source locator<input name="source_ref" placeholder="Required for admitted status"></label></div>
+      <label>Notes<textarea name="notes" rows="3"></textarea></label>
+      <div id="matrix-form-result" class="hint">Candidate matrices can be previewed but do not change the canonical page.</div>
+      <div class="dialog-actions"><button type="button" id="archive-matrix" class="danger-subtle" hidden>Archive</button><button type="button" id="cancel-matrix">Cancel</button><button type="submit" class="primary">Save matrix</button></div>
+    </form>
+  </dialog>
+
   <dialog id="rename-dialog">
     <form id="rename-form">
       <h2>Rename class</h2>
@@ -301,7 +363,7 @@
   <main class="review-page">
     <section class="review-intro">
       <div>
-        <div class="eyebrow">REVIEW MODE</div>
+        <div class="eyebrow">REVIEWING MODE</div>
         <h1>Typed evidence and proposition dependencies</h1>
         <p>Inspect admitted facts, blocked claims, source edges, coefficient contexts, and reverse implications without opening the chart editor.</p>
       </div>

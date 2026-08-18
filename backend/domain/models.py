@@ -6,7 +6,7 @@ from typing import Any, TypeVar
 from uuid import uuid4
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def new_id(prefix: str) -> str:
@@ -47,6 +47,69 @@ class ScalarValue:
 
 
 @dataclass
+class CellBasisVector:
+    """One vector in the ordered computational basis of a page cell."""
+
+    id: str
+    label: str
+    expression: str = ""
+
+
+@dataclass
+class NamedVector:
+    """A researcher-facing vector written in computational coordinates."""
+
+    id: str
+    label: str
+    coordinates: list[str] = field(default_factory=list)
+    expression: str = ""
+    pinned: bool = True
+
+
+@dataclass
+class CellVectorSpace:
+    """A finite-dimensional cell on one page over an exact residue field.
+
+    ``basis`` is canonical for serialization and computation. ``display_basis``
+    is an optional ordered invertible basis used only by the chart.  Named
+    vectors need not form a basis and supply on-demand projective ports.
+    """
+
+    id: str
+    grade: Grade
+    page: int = 2
+    coefficient_context_id: str = "q8-residue-f4"
+    basis: list[CellBasisVector] = field(default_factory=list)
+    display_basis: list[NamedVector] = field(default_factory=list)
+    named_vectors: list[NamedVector] = field(default_factory=list)
+    status: str = "candidate"
+    source_ref: str = ""
+    source_refs: list[str] = field(default_factory=list)
+    convention_id: str = "q8-thesis-plotted-v1"
+    archived: bool = False
+    archived_reason: str = ""
+
+
+@dataclass
+class DifferentialMap:
+    """A matrix for one d_r, stored as target rows by source columns."""
+
+    id: str
+    source_cell_id: str | None
+    target_cell_id: str | None
+    page: int
+    matrix: list[list[str]] = field(default_factory=list)
+    coverage: str = "partial"  # partial | complete
+    status: str = "candidate"
+    proposition_id: str = ""
+    source_ref: str = ""
+    source_refs: list[str] = field(default_factory=list)
+    notes: str = ""
+    archived: bool = False
+    archived_reason: str = ""
+
+
+@dataclass
 class SymbolDefinition:
     id: str
     symbol: str
@@ -81,6 +144,8 @@ class ClassNode:
     manual_periodicity_anchor_class_id: str | None = None
     manual_periodicity_translation: int = 0
     manual_periodicity_exponents: list[int] = field(default_factory=list)
+    cell_id: str | None = None
+    coordinates: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -103,6 +168,7 @@ class Differential:
     manual_periodicity_id: str | None = None
     manual_periodicity_translation: int = 0
     manual_periodicity_exponents: list[int] = field(default_factory=list)
+    linear_map_id: str | None = None
 
 
 @dataclass
@@ -185,6 +251,8 @@ class Workspace:
     differential_events: list[DifferentialEvent] = field(default_factory=list)
     fates: list[ClassFate] = field(default_factory=list)
     propositions: list[Proposition] = field(default_factory=list)
+    cells: list[CellVectorSpace] = field(default_factory=list)
+    differential_maps: list[DifferentialMap] = field(default_factory=list)
     summary: str = ""
     settings: dict[str, Any] = field(default_factory=default_workspace_settings)
 
@@ -480,6 +548,24 @@ def _coerce_proposition(raw: dict[str, Any]) -> Proposition:
     return Proposition(**values)
 
 
+def _coerce_named_vector(raw: dict[str, Any]) -> NamedVector:
+    return NamedVector(**_known_kwargs(NamedVector, raw))
+
+
+def _coerce_cell(raw: dict[str, Any]) -> CellVectorSpace:
+    values = _known_kwargs(CellVectorSpace, raw)
+    values.update({
+        "grade": _coerce_grade(raw.get("grade")),
+        "basis": [CellBasisVector(**_known_kwargs(CellBasisVector, item)) for item in raw.get("basis", [])],
+        "display_basis": [_coerce_named_vector(item) for item in raw.get("display_basis", [])],
+        "named_vectors": [_coerce_named_vector(item) for item in raw.get("named_vectors", [])],
+    })
+    source_ref = str(values.get("source_ref", ""))
+    if not values.get("source_refs") and source_ref:
+        values["source_refs"] = [source_ref]
+    return CellVectorSpace(**values)
+
+
 def project_to_dict(project: Project) -> dict[str, Any]:
     return asdict(project)
 
@@ -499,6 +585,11 @@ def project_from_dict(data: dict[str, Any]) -> Project:
         propositions = [_coerce_proposition(raw) for raw in raw_workspace.get("propositions", [])]
         events = [DifferentialEvent(**_known_kwargs(DifferentialEvent, raw)) for raw in raw_workspace.get("differential_events", [])]
         fates = [ClassFate(**_known_kwargs(ClassFate, raw)) for raw in raw_workspace.get("fates", [])]
+        cells = [_coerce_cell(raw) for raw in raw_workspace.get("cells", [])]
+        differential_maps = [
+            DifferentialMap(**_known_kwargs(DifferentialMap, raw))
+            for raw in raw_workspace.get("differential_maps", [])
+        ]
         workspace_values = _known_kwargs(Workspace, raw_workspace)
         workspace_values.update({
             "classes": classes,
@@ -506,6 +597,8 @@ def project_from_dict(data: dict[str, Any]) -> Project:
             "propositions": propositions,
             "differential_events": events,
             "fates": fates,
+            "cells": cells,
+            "differential_maps": differential_maps,
         })
         workspaces.append(Workspace(**workspace_values))
 

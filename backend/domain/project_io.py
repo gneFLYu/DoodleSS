@@ -603,7 +603,9 @@ def project_summary(project: Project) -> dict[str, int]:
     return {
         "workspaces": len(project.workspaces),
         "classes": sum(len(item.classes) for item in project.workspaces),
+        "cells": sum(len(item.cells) for item in project.workspaces),
         "differentials": sum(len(item.differentials) for item in project.workspaces),
+        "differential_maps": sum(len(item.differential_maps) for item in project.workspaces),
         "propositions": sum(len(item.propositions) for item in project.workspaces),
         "comparisons": len(project.comparisons),
         "periodicity_rules": len(project.periodicity_rules),
@@ -637,9 +639,9 @@ def _validate_raw_envelope(raw: Any) -> None:
             if not isinstance(workspace.get(key), str) or not workspace[key].strip():
                 raise ProjectImportValidationError(f"workspaces[{index}] requires a nonempty {key!r}.")
         _require_list_fields(workspace, f"workspaces[{index}]", (
-            "classes", "differentials", "differential_events", "fates", "propositions",
+            "classes", "cells", "differentials", "differential_maps", "differential_events", "fates", "propositions",
         ))
-        for field in ("classes", "differentials", "propositions"):
+        for field in ("classes", "cells", "differentials", "differential_maps", "propositions"):
             for item_index, item in enumerate(workspace.get(field, [])):
                 if not isinstance(item, Mapping):
                     raise ProjectImportValidationError(f"workspaces[{index}].{field}[{item_index}] must be an object.")
@@ -683,6 +685,13 @@ def _validate_raw_claim_provenance(raw: Mapping[str, Any]) -> None:
                     "An accepted imported differential requires a matching cited differential proposition; "
                     "the importer will not promote a bare arrow."
                 )
+        for linear_map in workspace.get("differential_maps", []):
+            if not isinstance(linear_map, Mapping) or linear_map.get("status") not in {"established", "verified", "source-verified"}:
+                continue
+            if not _has_source_locator(linear_map) or not linear_map.get("proposition_id"):
+                raise ProjectImportValidationError(
+                    "An admitted imported differential map requires a cited local proposition."
+                )
 
 
 def _has_source_locator(proposition: Mapping[str, Any]) -> bool:
@@ -698,10 +707,18 @@ def _validate_project_references(project: Project) -> None:
     all_proposition_ids: list[str] = []
     all_differential_ids: list[str] = []
     for workspace in project.workspaces:
+        from dataclasses import asdict
+        from .cell_linear_algebra import CellLinearAlgebraError, canonical_vector
+        from .cells import cell_from_payload, validate_differential_map
+
         _unique((item.id for item in workspace.classes), f"class in workspace {workspace.id}")
+        _unique((item.id for item in workspace.cells), f"cell in workspace {workspace.id}")
         _unique((item.id for item in workspace.propositions), f"proposition in workspace {workspace.id}")
         _unique((item.id for item in workspace.differentials), f"differential in workspace {workspace.id}")
+        _unique((item.id for item in workspace.differential_maps), f"differential map in workspace {workspace.id}")
         class_ids = {item.id for item in workspace.classes}
+        cell_ids = {item.id for item in workspace.cells}
+        map_ids = {item.id for item in workspace.differential_maps}
         proposition_ids = {item.id for item in workspace.propositions}
         all_proposition_ids.extend(proposition_ids)
         all_differential_ids.extend(item.id for item in workspace.differentials)
@@ -711,6 +728,24 @@ def _validate_project_references(project: Project) -> None:
                 raise ProjectImportValidationError(f"Class {node.id!r} must first appear on an integer page at least 2.")
             if workspace.spectral_sequence != "tate" and node.grade.filtration < 0:
                 raise ProjectImportValidationError(f"HFPSS class {node.id!r} cannot have negative filtration.")
+            if node.cell_id:
+                if node.cell_id not in cell_ids:
+                    raise ProjectImportValidationError(f"Class {node.id!r} refers to a missing cell.")
+                rank = len(next(item for item in workspace.cells if item.id == node.cell_id).basis)
+                try:
+                    canonical_vector(node.coordinates, rank)
+                except CellLinearAlgebraError as error:
+                    raise ProjectImportValidationError(f"Class {node.id!r} has invalid cell coordinates: {error}") from error
+        for cell in workspace.cells:
+            try:
+                cell_from_payload(project, asdict(cell))
+            except CellLinearAlgebraError as error:
+                raise ProjectImportValidationError(f"Cell {cell.id!r} is invalid: {error}") from error
+        for linear_map in workspace.differential_maps:
+            try:
+                validate_differential_map(project, workspace, asdict(linear_map), linear_map)
+            except CellLinearAlgebraError as error:
+                raise ProjectImportValidationError(f"Differential map {linear_map.id!r} is invalid: {error}") from error
         for differential in workspace.differentials:
             if differential.source_id not in class_ids or differential.target_id not in class_ids:
                 raise ProjectImportValidationError(f"Differential {differential.id!r} has an endpoint absent from its workspace.")
@@ -726,6 +761,8 @@ def _validate_project_references(project: Project) -> None:
                 raise ProjectImportValidationError(f"Differential {differential.id!r} violates the Studio d_r bidegree convention.")
             if differential.proposition_id and differential.proposition_id not in proposition_ids:
                 raise ProjectImportValidationError(f"Differential {differential.id!r} refers to a missing local proposition.")
+            if differential.linear_map_id and differential.linear_map_id not in map_ids:
+                raise ProjectImportValidationError(f"Differential {differential.id!r} refers to a missing linear map.")
         for proposition in workspace.propositions:
             for key in ("class_id", "source_id", "target_id", "anchor_class_id"):
                 value = proposition.conclusion.get(key)

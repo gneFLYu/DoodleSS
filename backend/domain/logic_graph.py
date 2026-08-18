@@ -73,6 +73,11 @@ def _proposition_state(project: Project) -> dict[str, dict]:
     return state
 
 
+def admitted_proposition_ids(project: Project) -> set[str]:
+    """Return the premise-complete Danus admission set."""
+    return {ident for ident, state in _proposition_state(project).items() if state["admitted"]}
+
+
 def build_logic_graph(project: Project) -> dict:
     nodes: list[dict] = []
     edges: list[dict] = []
@@ -160,6 +165,47 @@ def build_logic_graph(project: Project) -> dict:
                 superseded = proposition_locations.get(proposition.supersedes_id)
                 if superseded:
                     add_edge(prop_id, superseded, "supersedes")
+
+        for cell in workspace.cells:
+            cell_node_id = f"cell:{workspace.id}:{cell.id}"
+            add_node(
+                cell_node_id,
+                "cell-vector-space",
+                f"rank {len(cell.basis)} cell at ({cell.grade.stem},{cell.grade.filtration})",
+                record_id=cell.id,
+                workspace_id=workspace.id,
+                status=cell.status,
+                coefficient_context_id=cell.coefficient_context_id,
+                computational_basis=[item.label for item in cell.basis],
+                display_basis=[{"label": item.label, "coordinates": item.coordinates} for item in cell.display_basis],
+                named_vectors=[{"label": item.label, "coordinates": item.coordinates} for item in cell.named_vectors],
+                source_refs=cell.source_refs or ([cell.source_ref] if cell.source_ref else []),
+            )
+            add_edge(f"coefficient-context:{cell.coefficient_context_id}", cell_node_id, "defines-scalars")
+
+        for linear_map in workspace.differential_maps:
+            map_node_id = f"differential-map:{workspace.id}:{linear_map.id}"
+            add_node(
+                map_node_id,
+                "differential-map",
+                f"d_{linear_map.page} matrix {linear_map.source_cell_id or '0'} -> {linear_map.target_cell_id or '0'}",
+                record_id=linear_map.id,
+                workspace_id=workspace.id,
+                status=linear_map.status,
+                coverage=linear_map.coverage,
+                matrix=linear_map.matrix,
+                source_cell_id=linear_map.source_cell_id,
+                target_cell_id=linear_map.target_cell_id,
+                proposition_id=linear_map.proposition_id,
+                source_refs=linear_map.source_refs or ([linear_map.source_ref] if linear_map.source_ref else []),
+            )
+            if linear_map.source_cell_id:
+                add_edge(f"cell:{workspace.id}:{linear_map.source_cell_id}", map_node_id, "domain")
+            if linear_map.target_cell_id:
+                add_edge(map_node_id, f"cell:{workspace.id}:{linear_map.target_cell_id}", "codomain")
+            proposition_id = proposition_locations.get(linear_map.proposition_id)
+            if proposition_id:
+                add_edge(proposition_id, map_node_id, "asserts-matrix")
 
         for differential in workspace.differentials:
             claim_id = f"differential:{differential.id}"
