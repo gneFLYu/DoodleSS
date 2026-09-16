@@ -123,8 +123,14 @@ class StudioApiTest(unittest.TestCase):
         self.assertIn("function handleHotkey", script)
         self.assertIn('document.addEventListener("keydown", handleHotkey, true)', script)
         self.assertNotIn("settings.rendering?.periodicity?.[0]", script)
+        self.assertIn("function workspaceRenderPeriods", script)
+        self.assertIn("function latticeCopies", script)
+        self.assertIn("legacy_x_offset", script)
+        self.assertIn("function renderClassList", script)
+        self.assertIn("matching.slice(0, limit)", script)
         markup = (Path(__file__).resolve().parents[1] / "backend" / "templates" / "index.html").read_text(encoding="utf-8")
         self.assertIn('id="cancel-class"', markup)
+        self.assertIn('id="class-filter"', markup)
         self.assertNotIn('method="dialog" id="class-form"', markup)
 
     def test_class_creation_rejects_invalid_inputs(self):

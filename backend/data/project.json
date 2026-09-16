@@ -8426,7 +8426,7 @@
       "certificate_proposition_id": "",
       "supporting_proposition_ids": [],
       "status": "established",
-      "source_ref": "DKLLW24, Table 7 and §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"
+      "source_ref": "DKLLW24 Lemma 4.7, d3 families, and §6.1.2: forward g=kD^3 semiperiod for all chart families, including j-adic bo towers; g^-1 still requires Tate comparison"
     },
     {
       "id": "period_sigma_D_E2",
@@ -8498,7 +8498,7 @@
       "certificate_proposition_id": "",
       "supporting_proposition_ids": [],
       "status": "established",
-      "source_ref": "DKLLW24, §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"
+      "source_ref": "DKLLW24 d3 families and §6.1.2: forward g semiperiod includes j-adic bo towers; g^-1 requires Tate comparison"
     },
     {
       "id": "period_diff_two_d3_u",
@@ -9491,7 +9491,7 @@
       "scope": "Integer-graded Q8 HFPSS only. Applies on E_r for r>=3; the cited chart statement does not authorize E2 copies.",
       "exclusions": [
         "No E2 propagation: the source specifies D-periodicity on E2 and D^8-periodicity on other pages.",
-        "No automatic g=kD^3 propagation: section 6.1.2 excludes v1-local classes in low filtration.",
+        "No automatic g=kD^3 materialization in this D^8-only rule: g is stored as a forward semiperiod for all families, including j-adic bo towers, and g^-1 requires a Tate comparison certificate.",
         "No propagation to other workspaces without a separately scoped rule."
       ],
       "source_ref": "DKLLW24, Proposition 4.1 (local PDF p. 25; journal p. 19): D^8 is invertible in bidegree (64,0); section 6.1.2 (local PDF p. 51; journal p. 40): non-E2 HFPSS pages are (64,0)-periodic by D^8."

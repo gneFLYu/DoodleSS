@@ -580,6 +580,11 @@ body.catalog-mode #find-differential-candidates {
   overflow: auto;
 }
 
+.class-filter {
+  width: 100%;
+  margin: 0 0 10px;
+}
+
 .class-row {
   width: 100%;
   justify-content: space-between;
@@ -623,6 +628,11 @@ body.catalog-mode #find-differential-candidates {
 }
 
 .atlas-cell.imported {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.atlas-cell.source-chart {
   border-color: #93c5fd;
   background: #eff6ff;
 }
@@ -1027,6 +1037,7 @@ body.catalog-mode #find-differential-candidates {
 }
 
 .review-intro,
+.review-audit-card,
 .review-controls,
 .review-graph-card,
 .review-ledger-card {
@@ -1070,6 +1081,91 @@ body.catalog-mode #find-differential-candidates {
 .review-summary span,
 .review-summary small {
   color: var(--muted);
+}
+
+.review-audit-card {
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.review-audit-card h2,
+.review-audit-card h3 {
+  margin: 2px 0 0;
+}
+
+#periodic-fate-audit-status[data-status="complete"] {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+#periodic-fate-audit-status[data-status="underdetermined"] {
+  color: #92400e;
+  border-color: var(--gold);
+  background: #fffbeb;
+}
+
+#periodic-fate-audit-status[data-status="invalid"] {
+  color: var(--rose);
+  border-color: var(--rose);
+  background: #fff7f7;
+}
+
+.audit-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.audit-metrics div {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  background: #f8fafc;
+}
+
+.audit-metrics strong {
+  font-size: 18px;
+}
+
+.audit-metrics span,
+.audit-policy-note,
+.audit-obligation span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.audit-policy-note {
+  margin: 10px 0;
+}
+
+.audit-obligations {
+  display: grid;
+  gap: 8px;
+}
+
+.audit-obligations h3 {
+  font-size: 13px;
+}
+
+.audit-obligation {
+  border-left: 3px solid var(--gold);
+  padding: 8px 10px;
+  background: #fffbeb;
+}
+
+.audit-obligation strong,
+.audit-obligation span {
+  display: block;
+}
+
+.audit-obligation ul {
+  margin: 5px 0 0;
+  padding-left: 18px;
+  color: #4b5563;
+  font-size: 12px;
 }
 
 .review-controls {
@@ -1499,14 +1595,13 @@ dialog.e2-presentation-dialog {
 }
 
 .differential {
-  stroke: var(--red);
-  stroke-width: 2;
+  stroke: #1f2937;
+  stroke-width: 1.8;
   marker-end: url(#arrow);
 }
 
 .differential.periodic {
-  opacity: 0.42;
-  stroke-dasharray: 4 3;
+  opacity: 0.72;
 }
 
 .differential.under-review {
@@ -1550,6 +1645,10 @@ dialog.e2-presentation-dialog {
   pointer-events: none;
   stroke: #64748b;
   stroke-width: 1.5;
+}
+
+.relation-line.periodic {
+  opacity: 0.64;
 }
 
 .relation-line.under-review {
@@ -1618,19 +1717,19 @@ dialog.e2-presentation-dialog {
 #chart[data-tool="rename"] .class-instance { cursor: text; }
 
 .class-point.unknown {
-  --point-color: var(--gray-dot);
+  --point-color: #1f2937;
 }
 
 .class-point.permanent {
-  --point-color: var(--green);
+  --point-color: #1f2937;
 }
 
 .class-point.killed {
-  --point-color: var(--rose);
+  --point-color: #1f2937;
 }
 
 .class-point.target {
-  --point-color: var(--purple);
+  --point-color: #1f2937;
 }
 
 .class-point.square {
@@ -1654,7 +1753,7 @@ dialog.e2-presentation-dialog {
 }
 
 .class-point.periodic {
-  opacity: 0.88;
+  opacity: 0.92;
   stroke-width: 1.25;
 }
 
@@ -1693,8 +1792,10 @@ dialog.e2-presentation-dialog {
 
 @media (max-width: 1040px) {
   .layout {
-    grid-template-columns: 246px 1fr 286px;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
+
+  .right-panel { display: none; }
 
   .legend {
     display: none;
@@ -1719,6 +1820,10 @@ dialog.e2-presentation-dialog {
   .review-controls,
   .review-grid {
     grid-template-columns: 1fr;
+  }
+
+  .audit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .review-graph-card #logic-graph-shell,

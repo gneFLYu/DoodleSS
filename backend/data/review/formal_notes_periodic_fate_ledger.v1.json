@@ -1,0 +1,746 @@
+{
+  "dataset_id": "formal-notes-periodic-fate-ledger-v1",
+  "schema": "hfpss-studio.periodic-fate-ledger",
+  "schema_version": 1,
+  "status": "review-required",
+  "canonical": false,
+  "title": "Period-class-indexed facts and vanishing obligations from formal_notes",
+  "purpose": [
+    "Give one stable identity to every source-certified periodic orbit.",
+    "Organize differentials by source and target period-class ids.",
+    "Reduce high-filtration vanishing checks to finite fundamental domains.",
+    "Provide a read-only machine input for later chart generation."
+  ],
+  "sources": [
+    {
+      "id": "formal-notes",
+      "path": "E:/课程/PACE2025_fly/HFPSS Q_8/REU Projects/Note/formal_notes.tex",
+      "authority": "latest local Overleaf source",
+      "scope": "RO(Q8)-shifted working calculations"
+    },
+    {
+      "id": "reu-latest-fact-chain",
+      "path": "REU_LATEST_FACT_CHAIN.md",
+      "authority": "Danus-style correction and admission layer"
+    },
+    {
+      "id": "dkllw-e2-period-classes",
+      "path": "backend/data/review/dkllw24_q8_e2_period_classes.v1.json",
+      "authority": "review-only integer and single-sigma E2 family classifier"
+    }
+  ],
+  "identity_policy": {
+    "safe_hfpss_id_grammar": "pc.<sector>.d8.<shape>-c<coefficient>-k<k_power>-d<D_power_mod_8>",
+    "hfpss_semiperiod_id_grammar": "pc.<sector>.gd8semi.<shape>-c<coefficient>-r<(D_power-3*k_power)_mod_8>",
+    "conditional_tate_id_grammar": "pc.<sector>.gd8.<shape>-c<coefficient>-r<(D_power-3*k_power)_mod_8>",
+    "sector_is_part_of_identity": true,
+    "coefficient_and_torsion_are_part_of_shape": true,
+    "cell_vector_coordinates_are_part_of_shape": true,
+    "same_object_rule": "D^8 translates have one HFPSS period_class_id.",
+    "semiperiod_rule": "Every applicable family, including bo, has one gd8semi family id. Concrete HFPSS translations use g^sD^(8q) with s>=0 and q integral; this groups a forward period family but does not invert g.",
+    "comparison_rule": "Positive-filtration classes, including bo classes, may additionally share a gd8 comparison id only when both endpoints have a Tate comparison certificate.",
+    "non_identity_rule": "D, D^2, and D^4 may propagate pagewise patterns but never merge HFPSS objects.",
+    "bo_rule": "bo-pattern is a j-adic module/pattern classification, not a low-filtration region. It receives the same forward g,D^8 semiperiod-family treatment as other HFPSS classes.",
+    "mixed_sector_rule": "sigma_i+2sigma_j and 2sigma_i+sigma_j never share an id merely by C3 or Galois transport."
+  },
+  "module_kinds": [
+    {
+      "id": "finite-2-primary",
+      "semantics": "finite residue or 2-primary torsion cell; page transition is checked by finite-rank kernel/image linear algebra"
+    },
+    {
+      "id": "witt-2-adic",
+      "semantics": "W(F4)-type 2-adically complete cell; never silently reduced to an F4 vector space"
+    },
+    {
+      "id": "j-adic-formal-power-series",
+      "parameter": "j=v1^4D^-1",
+      "semantics": "F4[[j]], jF4[[j]], or a declared Witt/torsion analogue; store it separately as a named formal-series family with fixed differential and permanent-cycle templates"
+    }
+  ],
+  "module_assignment_policy": {
+    "bo-pattern": "j-adic-formal-power-series",
+    "other_cells": "resolve from the glyph/coefficient presentation as finite-2-primary, witt-2-adic, or j-adic-formal-power-series",
+    "forbidden_inference": "module kind is not inferred from filtration, visible tower height, or early death page"
+  },
+  "formal_series_policy": {
+    "audit_mode": "separate-fixed-differential-families",
+    "parameter": "j=v1^4D^-1",
+    "finite_rank_audit": false,
+    "completion_certificate_required": false,
+    "storage_rule": "Store one named family and its source-fixed differential/permanent-cycle templates; do not expand all j-powers into finite-dimensional cells.",
+    "vanishing_rule": "A formal-series vanishing obligation is resolved only by a named family whose admitted template explicitly has vanishing_outcome=killed. Finite killed-vector counts are ignored for this module kind."
+  },
+  "formal_series_families": [
+    {
+      "id": "fs.integer.bo",
+      "page_id": "q8-hfpss-e2-integer",
+      "module_kind": "j-adic-formal-power-series",
+      "parameter": "j=v1^4D^-1",
+      "status": "review",
+      "vanishing_outcome": "mixed",
+      "linked_cycle_family_ids": [
+        "bo-integer-d3-pairs",
+        "bo-integer-permanent"
+      ],
+      "fixed_differential_templates": [
+        "d3(D^m g^s v1^(4l+2)h1^n)=D^m g^s v1^(4l)h1^(n+3), for l>=1 and n>=1",
+        "d3(D^m g^s v1^2h1^n)=D^m g^s h1^(n+3), for n>=1"
+      ],
+      "permanent_cycle_templates": [
+        "2D^m v1^(4l+2)",
+        "D^m v1^(4l){1,h1,h1^2}"
+      ],
+      "source_ref": "DKLLW24 Proposition 4.12 and Remark 4.13; local lines 1358-1420"
+    },
+    {
+      "id": "fs.sigma-i.bo",
+      "page_id": "q8-hfpss-e2-sigma-i",
+      "module_kind": "j-adic-formal-power-series",
+      "parameter": "j=v1^4D^-1",
+      "status": "review",
+      "vanishing_outcome": "mixed",
+      "linked_cycle_family_ids": [
+        "bo-sigma-d3-pairs",
+        "bo-sigma-permanent"
+      ],
+      "fixed_differential_templates": [
+        "d3(k^sD^m v1^(4l+2)h1^n u_sigma_i)=k^sD^m v1^(4l)h1^(n+3)u_sigma_i"
+      ],
+      "permanent_cycle_templates": [
+        "2D^m v1^(4l-2)u_sigma_i",
+        "D^m v1^(4l){1,h1,h1^2}u_sigma_i"
+      ],
+      "source_ref": "DKLLW24 local lines 1935-1965"
+    }
+  ],
+  "period_mechanisms": [
+    {
+      "id": "per.hfpss.d8",
+      "semantic": "same-object",
+      "multiplier": "D^8",
+      "shift": {"stem": 64, "filtration": 0},
+      "scope": "all Q8-HFPSS sectors",
+      "certificate_fact_id": "prop_chain_q8_D8_pc"
+    },
+    {
+      "id": "semi.hfpss.g-d8",
+      "semantic": "period-family",
+      "multiplier_semilattice": ["g=kD^3", "D^8"],
+      "exponent_domains": {"g": "integer >= 0", "D^8": "integer"},
+      "shifts": [
+        {"stem": 20, "filtration": 4},
+        {"stem": 64, "filtration": 0}
+      ],
+      "scope": "all applicable Q8-HFPSS families, including j-adic bo-pattern towers",
+      "identity_warning": "same period family does not assert a global HFPSS inverse for g",
+      "certificate_fact_id": "prop_chain_q8_hurewicz_pc"
+    },
+    {
+      "id": "per.tate.g-d8",
+      "semantic": "comparison-identity",
+      "multiplier_lattice": ["g=kD^3", "D^8"],
+      "shifts": [
+        {"stem": 20, "filtration": 4},
+        {"stem": 64, "filtration": 0}
+      ],
+      "scope": "positive-filtration HFPSS-to-TateSS comparison range, including bo when both endpoints are certified",
+      "certificate_fact_id": "dkllw-hfpss-tate-positive-filtration"
+    },
+    {
+      "id": "pat.e3.d",
+      "semantic": "pattern-only",
+      "multiplier": "D",
+      "shift": {"stem": 8, "filtration": 0},
+      "valid_on": "E3 while D is a 3-cycle"
+    },
+    {
+      "id": "pat.e5.d2",
+      "semantic": "pattern-only",
+      "multiplier": "D^2",
+      "shift": {"stem": 16, "filtration": 0},
+      "valid_on": "the asserted d5 pattern"
+    },
+    {
+      "id": "pat.d4",
+      "semantic": "pattern-only",
+      "multiplier": "D^4",
+      "shift": {"stem": 32, "filtration": 0},
+      "valid_on": "the asserted 32-period differential families"
+    }
+  ],
+  "fact_family_period_defaults": {
+    "same_object_period_id": "per.hfpss.d8",
+    "semiperiod_family_id": "semi.hfpss.g-d8",
+    "meaning": "All listed differential and permanent-cycle families inherit the forward g,D^8 semiperiod, including bo-derived families; per-fact pattern_period_ids remain independent."
+  },
+  "fact_families": [
+    {
+      "id": "FN-2I-001",
+      "kind": "differential",
+      "status": "verified-pattern",
+      "source_period_class_ids": ["pc.2i.d8.u-cone-k0-d0"],
+      "target_period_class_ids": ["pc.2i.d8.x2h1-cone-k0-d0"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:283-305"
+    },
+    {
+      "id": "FN-2I-002",
+      "kind": "differential-family",
+      "status": "source-proved",
+      "source_period_class_ids": [
+        "pc.2i.d8.v1six-cone-k0-d0",
+        "pc.2i.d8.h1-v1six-cone-k0-d0"
+      ],
+      "target_period_class_ids": [
+        "pc.2i.d8.h1cubed-cone-k0-d1",
+        "pc.2i.d8.h1four-cone-k0-d1"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e3.d"],
+      "source_ref": "formal_notes.tex:308-320"
+    },
+    {
+      "id": "FN-2I-003",
+      "kind": "differential-and-zero",
+      "status": "admitted",
+      "source_period_class_ids": [
+        "pc.2i.d8.a2-cone-k0-d1",
+        "pc.2i.d8.a2-cone-k0-d2"
+      ],
+      "target_period_class_ids": ["pc.2i.d8.a2-h2-cone-k1-d1"],
+      "zero_map_period_class_ids": ["pc.2i.d8.a2-cone-k0-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e5.d2"],
+      "source_ref": "formal_notes.tex:334-353"
+    },
+    {
+      "id": "FN-2I-004",
+      "kind": "differential-family",
+      "status": "verified-pattern",
+      "source_period_class_ids": ["pc.2i.d8.h2-cone-k0-d1"],
+      "target_period_class_ids": ["pc.2i.d8.h2sq-cone-k1-d1"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e5.d2"],
+      "source_ref": "formal_notes.tex:357-379"
+    },
+    {
+      "id": "FN-2I-005",
+      "kind": "differential-and-zero",
+      "status": "review",
+      "source_period_class_ids": [
+        "pc.2i.d8.unit-c2-k0-d1",
+        "pc.2i.d8.unit-c2-k0-d2"
+      ],
+      "target_period_class_ids": ["pc.2i.d8.h2-c2-k1-d1"],
+      "zero_map_period_class_ids": ["pc.2i.d8.unit-c2-k0-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e5.d2"],
+      "source_ref": "formal_notes.tex:382-399"
+    },
+    {
+      "id": "FN-2I-006",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.xh1-cone-k0-d0"],
+      "target_period_class_ids": ["pc.2i.d8.h1cubed-cone-k1-d0"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e3.d"],
+      "source_ref": "formal_notes.tex:401-420"
+    },
+    {
+      "id": "FN-2I-007",
+      "kind": "restriction",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.a2-cone-k0-d0"],
+      "target_period_class_ids": [],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:424-433"
+    },
+    {
+      "id": "FN-2I-008",
+      "kind": "non-transfer",
+      "status": "rejected",
+      "source_period_class_ids": ["pc.2i.d8.a2-cone-k1-dn"],
+      "target_period_class_ids": [],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:435-446"
+    },
+    {
+      "id": "FN-2I-009",
+      "kind": "differential-family",
+      "status": "verified-pattern",
+      "source_period_class_ids": [
+        "pc.2i.d8.a2-cone-k0-d2",
+        "pc.2i.d8.a2-cone-k0-d6"
+      ],
+      "target_period_class_ids": [
+        "pc.2i.d8.h1-cone-k3-d3",
+        "pc.2i.d8.h1-cone-k3-d7"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:450-470"
+    },
+    {
+      "id": "FN-2I-010",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": [
+        "pc.2i.d8.h2-c2-k1-d2",
+        "pc.2i.d8.h2-c2-k1-d6",
+        "pc.2i.d8.h2-c2-k0-d3"
+      ],
+      "target_period_class_ids": [
+        "pc.2i.d8.h1sq-cone-k3-d3",
+        "pc.2i.d8.h1sq-cone-k3-d7",
+        "pc.2i.d8.h1sq-cone-k2-d4"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:472-482"
+    },
+    {
+      "id": "FN-2I-011",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h1sq-cone-k0-d3"],
+      "target_period_class_ids": ["pc.2i.d8.h2cubed-cone-k2-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:487-494"
+    },
+    {
+      "id": "FN-2I-012",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d3"],
+      "target_period_class_ids": ["pc.2i.d8.unit-c2-k2-d4"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:496-499"
+    },
+    {
+      "id": "FN-2I-013",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d4"],
+      "target_period_class_ids": ["pc.2i.d8.unit-c4-k2-d5"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:501-506"
+    },
+    {
+      "id": "FN-2I-014",
+      "kind": "differential-family",
+      "status": "admitted-pattern",
+      "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d1"],
+      "target_period_class_ids": ["pc.2i.d8.unit-c2-k2-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:508-516"
+    },
+    {
+      "id": "FN-2I-015",
+      "kind": "pattern-relation",
+      "status": "admitted-pattern",
+      "source_period_class_ids": [
+        "pc.2i.d8.h1-cone-k0-d1",
+        "pc.2i.d8.h1-cone-k0-d3"
+      ],
+      "target_period_class_ids": [],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e5.d2"],
+      "source_ref": "formal_notes.tex:517-519"
+    },
+    {
+      "id": "FN-2I-016",
+      "kind": "differential-family",
+      "status": "verified-pattern",
+      "source_period_class_ids": ["pc.2i.d8.h2-cone-k0-d2"],
+      "target_period_class_ids": ["pc.2i.d8.h1sq-cone-k2-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:520-526"
+    },
+    {
+      "id": "FN-2I-017",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h2-c2-k0-d1"],
+      "target_period_class_ids": ["pc.2i.d8.h1sq-cone-k2-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:529-536"
+    },
+    {
+      "id": "FN-2I-018",
+      "kind": "differential-family",
+      "status": "verified-pattern",
+      "source_period_class_ids": ["pc.2i.d8.a2-cone-k0-d4"],
+      "target_period_class_ids": ["pc.2i.d8.h2cubed-cone-k3-d4"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:540-555"
+    },
+    {
+      "id": "FN-2I-019",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h2-cone-k1-d7"],
+      "target_period_class_ids": ["pc.2i.d8.a2-cone-k6-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:558-563"
+    },
+    {
+      "id": "FN-2I-020",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.h2cubed-cone-k0-d7"],
+      "target_period_class_ids": ["pc.2i.d8.unit-c4-k6-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:565-570"
+    },
+    {
+      "id": "FN-2I-021",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.2i.d8.unit-c4-k2-d3"],
+      "target_period_class_ids": ["pc.2i.d8.h2-cone-k7-d5"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:572-577"
+    },
+    {
+      "id": "FN-3I-001",
+      "kind": "differential-and-zero",
+      "status": "source-proved",
+      "source_period_class_ids": [
+        "pc.3i.d8.v1sq-cone-k0-d0",
+        "pc.3i.d8.h1xv1-cone-k0-d0"
+      ],
+      "target_period_class_ids": ["pc.3i.d8.h1cubed-cone-k0-d0"],
+      "zero_map_period_class_ids": ["pc.3i.d8.h1xv1-cone-k0-d0"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e3.d"],
+      "source_ref": "formal_notes.tex:678-705"
+    },
+    {
+      "id": "FN-3I-002",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.a2-cone-k2-d3"],
+      "target_period_class_ids": ["pc.3i.d8.xyh1sq-cone-k3-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.e5.d2"],
+      "source_ref": "formal_notes.tex:707-718"
+    },
+    {
+      "id": "FN-3I-003",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.yh2xh1v1-cone-k0-d1"],
+      "target_period_class_ids": ["pc.3i.d8.xcubed-cone-k1-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:730-742"
+    },
+    {
+      "id": "FN-3I-004",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.xcubed-cone-k0-d2"],
+      "target_period_class_ids": ["pc.3i.d8.v1sq-c2-k2-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:744-746"
+    },
+    {
+      "id": "FN-3I-005",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.xy-cone-k0-d2"],
+      "target_period_class_ids": ["pc.3i.d8.h1xv1-h1-cone-k1-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:748-753"
+    },
+    {
+      "id": "FN-3I-006",
+      "kind": "matrix-differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.xy-cone-k0-d1"],
+      "target_period_class_ids": ["pc.3i.d8.target-cell-line11-cone-k1-d1"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "matrix": [["1"], ["1"]],
+      "target_basis": ["A={yh2+xh1v1}kDu", "B={h1+xv1}h1kDu"],
+      "projective_port": ["1", "1"],
+      "source_ref": "formal_notes.tex:755-762"
+    },
+    {
+      "id": "FN-3I-007",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.xyh1sq-cone-k0-d3"],
+      "target_period_class_ids": ["pc.3i.d8.v1sq-c2-k3-d4"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:764-775"
+    },
+    {
+      "id": "FN-3I-008",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.3i.d8.xyh1-cone-k0-d3"],
+      "target_period_class_ids": ["pc.3i.d8.x2h1-cone-k2-d4"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:777-780"
+    },
+    {
+      "id": "FN-3I-009",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": [
+        "pc.3i.d8.a2-cone-k0-d4",
+        "pc.3i.d8.x2h1-cone-k0-d4"
+      ],
+      "target_period_class_ids": [
+        "pc.3i.d8.h1xv1-cone-k3-d5",
+        "pc.3i.d8.h1xv1-h1-cone-k3-d5"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:782-796"
+    },
+    {
+      "id": "FN-3I-010",
+      "kind": "permanent-and-differential-families",
+      "status": "source-proved",
+      "source_period_class_ids": [
+        "pc.3i.d8.h1xv1-cone-k1-d0",
+        "pc.3i.d8.a2-cone-k0-d2",
+        "pc.3i.d8.v1sq-c2-k0-d1"
+      ],
+      "target_period_class_ids": [
+        "pc.3i.d8.h1xv1-cone-k5-d4",
+        "pc.3i.d8.x2h1-cone-k5-d4"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:799-845"
+    },
+    {
+      "id": "FN-MIX-001",
+      "kind": "differential-family",
+      "status": "source-proved",
+      "source_period_class_ids": [
+        "pc.mix-i2j.d8.v1sq-cone-k0-d0",
+        "pc.mix-i2j.d8.h1xv1-cone-k0-d0"
+      ],
+      "target_period_class_ids": [
+        "pc.mix-i2j.d8.h1cubed-cone-k0-d0",
+        "pc.mix-i2j.d8.v1sq-c2zeta-k1-d0"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:865-885"
+    },
+    {
+      "id": "FN-MIX-002",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.mix-i2j.d8.a2-cone-k2-d3"],
+      "target_period_class_ids": ["pc.mix-i2j.d8.xyh1sq-cone-k3-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:887-900"
+    },
+    {
+      "id": "FN-MIX-003",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.mix-i2j.d8.a2-cone-k0-d1"],
+      "target_period_class_ids": ["pc.mix-i2j.d8.xyh1sq-cone-k1-d1"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:902-916"
+    },
+    {
+      "id": "FN-MIX-004",
+      "kind": "differential",
+      "status": "review",
+      "source_period_class_ids": ["pc.mix-i2j.d8.yh2xh1v1-cone-k0-d1"],
+      "target_period_class_ids": ["pc.mix-i2j.d8.xcubed-cone-k1-d2"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:918-935"
+    },
+    {
+      "id": "FN-MIX-005",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": [
+        "pc.mix-i2j.d8.xy-cone-k0-d1",
+        "pc.mix-i2j.d8.xy-cone-k0-d2"
+      ],
+      "target_period_class_ids": [
+        "pc.mix-i2j.d8.target-cell-line11-cone-k1-d1",
+        "pc.mix-i2j.d8.h1sqxh1v1-cone-k1-d2"
+      ],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": [],
+      "source_ref": "formal_notes.tex:937-954"
+    },
+    {
+      "id": "FN-MIX-006",
+      "kind": "differential-family",
+      "status": "review",
+      "source_period_class_ids": ["pc.mix-i2j.d8.xcubed-cone-k0-d2"],
+      "target_period_class_ids": ["pc.mix-i2j.d8.xyh1-cone-k3-d3"],
+      "same_object_period_id": "per.hfpss.d8",
+      "pattern_period_ids": ["pat.d4"],
+      "source_ref": "formal_notes.tex:956-975"
+    }
+  ],
+  "conditional_comparison_classes": [
+    {
+      "id": "pc.2i.gd8.h1sq-cone-r5",
+      "hfpss_period_class_ids": [
+        "pc.2i.d8.h1sq-cone-k2-d3",
+        "pc.2i.d8.h1sq-cone-k6-d7"
+      ],
+      "comparison_certificate_id": "dkllw-hfpss-tate-positive-filtration",
+      "calculation": "3-3*2 = 7-3*6 = 5 mod 8",
+      "scope_guard": "both occurrences have positive filtration"
+    },
+    {
+      "id": "pc.2i.gd8.a2-cone-r0",
+      "hfpss_period_class_ids": [
+        "pc.2i.d8.a2-cone-k0-d0",
+        "pc.2i.d8.a2-cone-k6-d2"
+      ],
+      "comparison_certificate_id": "dkllw-hfpss-tate-positive-filtration",
+      "calculation": "0-3*0 = 10-3*6 = 0 mod 8",
+      "scope_guard": "the translated target has positive filtration; the zero-line representative itself is not inverted in HFPSS"
+    },
+    {
+      "id": "pc.3i.gd8.x2h1-cone-r5",
+      "hfpss_period_class_ids": [
+        "pc.3i.d8.x2h1-cone-k5-d4",
+        "pc.3i.d8.x2h1-cone-k6-d7"
+      ],
+      "comparison_certificate_id": "dkllw-hfpss-tate-positive-filtration",
+      "calculation": "4-3*5 = 7-3*6 = 5 mod 8",
+      "scope_guard": "both occurrences have positive filtration"
+    }
+  ],
+  "vanishing_audit": {
+    "theorem": {
+      "filtration": 23,
+      "obligation_range": "filtration >= 23",
+      "collapse": "after E23",
+      "source_ref": "DKLLW24 Theorem 4.8 / arXiv v3 lines 1287-1323"
+    },
+    "fundamental_domain_policy": {
+      "all-hfpss-families": "store a finite set of semiperiod anchors with virtual translations g^sD^(8q), s>=0 and q integral; this includes bo families but does not invert g",
+      "tate-certified": "upgrade to the bidirectional g,D8 lattice only where the positive-filtration comparison certificate covers both endpoints",
+      "bo-pattern": "route the formal series to formal_series_families and reuse its fixed differential/permanent-cycle templates; do not enumerate every j-power as a separate finite-dimensional dot",
+      "ro-grading": "enumerate one representative in each of the nine period-quotient sectors",
+      "cell_semantics": "audit finite cells by vector-space rank; audit formal-series families separately by their named fixed templates, never by finite dot or arrow count"
+    },
+    "obligations": [
+      {
+        "id": "obl-enumerate-all-ro-sectors",
+        "kind": "fundamental-domain-enumeration",
+        "period_class_id": null,
+        "cell_dimension": 1,
+        "required_killed_rank": 1,
+        "resolutions": [],
+        "unresolved_reasons": [
+          "formal_notes does not list the complete E2 basis in every one of the nine RO(Q8)/P sectors",
+          "mixed and H sectors are not yet source-complete"
+        ]
+      },
+      {
+        "id": "obl-2i-f26-d9-target",
+        "kind": "cell-subspace",
+        "period_class_id": "pc.2i.gd8.h1sq-cone-r5",
+        "representative": "h1^2 k^6 D^7 u_{2sigma_i}",
+        "grade": {"stem": 34, "filtration": 26},
+        "cell_dimension": 1,
+        "required_killed_rank": 1,
+        "resolutions": [
+          {"fact_id": "FN-2I-016", "role": "receives", "killed_rank": 1, "killed_vectors": [["1"]]}
+        ],
+        "unresolved_reasons": []
+      },
+      {
+        "id": "obl-2i-f26-d21-target",
+        "kind": "cell-subspace",
+        "period_class_id": "pc.2i.gd8.a2-cone-r0",
+        "representative": "{x^2+y^2} k^6 D^10 u_{2sigma_i}",
+        "grade": {"stem": 54, "filtration": 26},
+        "cell_dimension": 1,
+        "required_killed_rank": 1,
+        "resolutions": [
+          {"fact_id": "FN-2I-019", "role": "receives", "killed_rank": 1, "killed_vectors": [["1"]]}
+        ],
+        "unresolved_reasons": []
+      },
+      {
+        "id": "obl-3i-f27-d23-target",
+        "kind": "cell-subspace",
+        "period_class_id": "pc.3i.gd8.x2h1-cone-r5",
+        "representative": "x^2 h1 k^6 D^7 u_{3sigma_i}",
+        "grade": {"stem": 31, "filtration": 27},
+        "cell_dimension": 1,
+        "required_killed_rank": 1,
+        "resolutions": [
+          {"fact_id": "FN-3I-010", "role": "receives", "killed_rank": 1, "killed_vectors": [["1"]]}
+        ],
+        "unresolved_reasons": []
+      },
+      {
+        "id": "obl-3i-rank2-target-cell",
+        "kind": "cell-subspace",
+        "period_class_id": "pc.3i.d8.target-cell-line11-cone-k1-d1",
+        "representative": "span(A,B) with incoming line span(A+B)",
+        "grade": {"stem": 6, "filtration": 6},
+        "cell_dimension": 2,
+        "required_killed_rank": 2,
+        "resolutions": [
+          {"fact_id": "FN-3I-006", "role": "receives", "killed_rank": 1, "killed_vectors": [["1", "1"]]}
+        ],
+        "unresolved_reasons": [
+          "one incoming line kills only rank 1; the quotient still has rank 1 until another admitted map or relation removes it"
+        ]
+      }
+    ]
+  },
+  "render_contract": {
+    "node_key": "semiperiod_class_id plus a concrete (g,D8) translation vector; retain d8 object id separately",
+    "virtual_occurrence_key": "semiperiod_class_id@g<s>,d8<q>",
+    "expand_policy": "materialize only translations intersecting the viewport",
+    "j_adic_cell": "draw one module glyph with an expandable j-tower and attach the named fixed differential-family template; never eagerly materialize all powers of j=v1^4D^-1",
+    "pattern_siblings": "draw as separate anchors linked by a pattern badge; never deduplicate them",
+    "differential_edge_key": "fact_id plus source translation",
+    "high_rank_target": "draw the matrix image at its projective port; quotient only the image subspace",
+    "zero_map": "show maps-to-zero metadata and no arrow to a fake zero node",
+    "status_style": {
+      "admitted": "solid",
+      "admitted-pattern": "solid",
+      "verified-pattern": "solid with unit-review badge",
+      "source-proved": "research preview",
+      "review": "dashed",
+      "rejected": "hidden from canonical pages"
+    },
+    "missing_occurrence": "unknown or outside the printed viewport, never zero"
+  }
+}

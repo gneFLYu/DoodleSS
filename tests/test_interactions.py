@@ -360,8 +360,9 @@ process.stdout.write(JSON.stringify(packed));
 
     def test_chart_key_explains_every_dot_and_arrow_state(self):
         self.assertIn('class="panel-section chart-key"', self.markup)
-        for label in ("Green", "Gray", "Rose", "Purple", "Solid charcoal arrow", "Amber dashed arrow"):
+        for label in ("dot / fat dot / circle / square", "Multiplication lines", "Solid charcoal arrow", "Amber dashed arrow"):
             self.assertIn(label, self.markup)
+        self.assertIn("Page fate controls visibility and arrows", self.markup)
         self.assertIn("do not encode algebraic order", self.markup)
         self.assertIn("function differentialVisualState", self.script)
         self.assertIn('["derived", "reviewed", "established", "proven"]', self.script)

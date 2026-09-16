@@ -20,6 +20,8 @@ class PageModeTests(unittest.TestCase):
         self.assertIn('id="chart"', markup)
         self.assertIn('id="cell-inspector"', markup)
         self.assertIn('id="matrix-dialog"', markup)
+        self.assertNotIn('class="tool toolbar-tool" title="Add a matrix differential"', markup)
+        self.assertIn('Advanced matrix editor', markup)
         self.assertEqual(markup.count('id="legacy-catalog-select"'), 1)
         self.assertNotIn('id="logic-graph"', markup)
 
@@ -32,6 +34,8 @@ class PageModeTests(unittest.TestCase):
         self.assertIn('id="logic-graph"', markup)
         self.assertIn('id="proof-tree"', markup)
         self.assertIn('id="logic-node-detail"', markup)
+        self.assertIn('id="periodic-fate-audit"', markup)
+        self.assertIn('id="periodic-fate-obligations"', markup)
         self.assertNotIn('id="chart"', markup)
         self.assertNotIn('aria-label="Chart controls"', markup)
 

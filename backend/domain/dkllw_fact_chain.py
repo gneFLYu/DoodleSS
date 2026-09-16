@@ -208,7 +208,7 @@ def ensure_dkllw_fact_chain(project: Project) -> Project:
         _conclusion("permanent-cycle", "Q8-HFPSS", cycles=["h1", "h2", "g=kD^3"], period_family_id="period_integer_D8"),
         ["prop_chain_c2_hurewicz_pc", "prop_chain_2bss_int_survivors"], "Restriction to C2",
         "DKLLW24 main.tex lines 1327-1342, Lemma 4.7",
-        "These permanent cycles transport differentials by Leibniz; g also gives the chart's (20,4) repetition away from low v1-local classes.",
+        "These permanent cycles transport differentials by Leibniz. The forward g action gives the chart's (20,4) semiperiod on all families, including j-adic bo towers; only g^{-1} needs a Tate comparison certificate.",
     )
     fact(
         "prop_chain_q8_usigma_pc", "permanent-cycle",

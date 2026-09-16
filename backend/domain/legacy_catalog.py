@@ -144,6 +144,19 @@ def _mapped_id(entry: CatalogEntry, kind: str, legacy_id: str) -> str:
     return f"catalog:{entry.id}:{kind}:{legacy_id}"
 
 
+def _legacy_chart_connection(source: ClassNode, target: ClassNode) -> dict[str, str] | None:
+    """Recover only the three unambiguous DKLLW multiplication slopes."""
+    stem_delta = target.grade.stem - source.grade.stem
+    filtration_delta = target.grade.filtration - source.grade.filtration
+    if stem_delta == 0 and filtration_delta == 0:
+        return {"kind": "vertical-two", "multiplier": "2"}
+    if stem_delta == filtration_delta and stem_delta != 0:
+        return {"kind": "h1", "multiplier": "h_1"}
+    if stem_delta == 3 * filtration_delta and filtration_delta != 0:
+        return {"kind": "h2", "multiplier": "h_2"}
+    return None
+
+
 def catalog_workspace(entry_id: str) -> Workspace:
     """Map one legacy canvas without changing the saved Studio project."""
 
@@ -217,6 +230,10 @@ def catalog_workspace(entry_id: str) -> Workspace:
             "legacy_is_periodic": periodic,
             "catalog_entry_id": entry.id,
         }
+        if kind == "relation":
+            chart_connection = _legacy_chart_connection(nodes_by_id[source_id], nodes_by_id[target_id])
+            if chart_connection:
+                conclusion["chart_connection"] = chart_connection
         source = nodes_by_id[source_id]
         evidence = EVIDENCE_BY_SECTOR.get(entry.sector, {}).get((page, source.grade.stem, source.grade.filtration))
         evidence_label, evidence_formula, evidence_status = evidence or ("", "", "review")

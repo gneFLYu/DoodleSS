@@ -58,6 +58,17 @@ class LegacyCatalogTests(unittest.TestCase):
                 (ROOT / "public" / "static" / filename).read_bytes(),
             )
 
+    def test_current_canvas_relations_recover_published_multiplication_slopes(self):
+        workspace = catalog_workspace_dict("2sigma-dec30")
+        relations = [item for item in workspace["propositions"] if item["kind"] == "relation"]
+        kinds = {
+            item["conclusion"].get("chart_connection", {}).get("kind")
+            for item in relations
+        }
+        self.assertTrue({"vertical-two", "h1", "h2"}.issubset(kinds))
+        offset = next(item for item in workspace["classes"] if item["label"] == "2")
+        self.assertEqual(offset["style"]["legacy_y_offset"], 0.2)
+
     def test_catalog_api_does_not_mutate_saved_project(self):
         before = self.client.get("/api/project").get_json()
         listing = self.client.get("/api/v2/legacy-catalog")

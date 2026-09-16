@@ -444,7 +444,7 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
                 id="period_integer_g", name="g=kD^3 (20,4)-period", workspace_id="ws_integer", rank=1,
                 generators=[PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")], valid_from_page=2,
                 valid_to_page="infinity", status="established",
-                source_ref="DKLLW24, Table 7 and §6.1.2 (PDF pp. 18, 40); excludes low-filtration v1-local classes",
+                source_ref="DKLLW24 Lemma 4.7, d3 families, and §6.1.2: forward g=kD^3 semiperiod for all chart families, including j-adic bo towers; g^-1 still requires Tate comparison",
             ),
         ])
     for family in project.period_families:
@@ -455,14 +455,55 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
             family.valid_from_page = 3
             family.source_ref = "DKLLW24, Proposition 4.1 (local PDF p. 25; journal p. 19) and section 6.1.2 (local PDF p. 51; journal p. 40)"
         if family.id == "period_integer_g":
-            family.source_ref = "DKLLW24, Table 7 and §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"
+            family.source_ref = "DKLLW24 Lemma 4.7, d3 families, and §6.1.2: forward g=kD^3 semiperiod for all chart families, including j-adic bo towers; g^-1 still requires Tate comparison"
 
     if sigma and "period_sigma_D8" not in known:
         project.period_families.extend([
             PeriodFamily("period_sigma_D_E2", "(*-sigma_i) E2 D-period", "ws_sigma_i", 1, [PeriodGenerator(Grade(stem=8), "D")], 2, 2, status="established", source_ref="DKLLW24, §6.1.2 (PDF p. 40)"),
             PeriodFamily("period_sigma_D8", "(*-sigma_i) D^8 64-period", "ws_sigma_i", 1, [PeriodGenerator(Grade(stem=64), "D^8")], 3, "infinity", status="established", source_ref="DKLLW24, section 6.1.2 (local PDF p. 51; journal p. 40)"),
-            PeriodFamily("period_sigma_g", "(*-sigma_i) g=kD^3 (20,4)-period", "ws_sigma_i", 1, [PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")], 2, "infinity", status="established", source_ref="DKLLW24, §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"),
+            PeriodFamily("period_sigma_g", "(*-sigma_i) g=kD^3 (20,4)-period", "ws_sigma_i", 1, [PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")], 2, "infinity", status="established", source_ref="DKLLW24 d3 families and §6.1.2: forward g semiperiod includes j-adic bo towers; g^-1 requires Tate comparison"),
         ])
+    return project
+
+
+def ensure_periodic_rendering_contract(project: Project) -> Project:
+    """Attach the source-backed viewport lattice without materializing dots.
+
+    RECORD.md section 10.4 distinguishes the genuine D^8 object orbit from
+    the forward g=kD^3 semiperiod.  Keeping that distinction in rendering
+    metadata lets the browser draw the infinite chart lazily while avoiding
+    the false assertion that g is invertible in the HFPSS.
+    """
+    computed_q8_workspaces = {
+        "ws_integer", "ws_sigma_i", "ws_2sigma_i", "ws_3sigma_i",
+        "ws_sigma_i_2sigma_j",
+    }
+    for workspace in project.workspaces:
+        if workspace.id not in computed_q8_workspaces:
+            continue
+        rendering = workspace.settings.setdefault("rendering", {})
+        rendering["period_lattice"] = [
+            {
+                "id": "semi.hfpss.g-d8:g",
+                "label": "g=kD^3",
+                "stem": 20,
+                "filtration": 4,
+                "exponent_domain": "nonnegative",
+                "status": "source-backed",
+            },
+            {
+                "id": "per.hfpss.d8",
+                "label": "D^8",
+                "stem": 64,
+                "filtration": 0,
+                "exponent_domain": "integer",
+                "status": "source-backed",
+            },
+        ]
+        rendering["period_lattice_source"] = (
+            "RECORD.md sections 2.4 and 10.4; "
+            "formal_notes_periodic_fate_ledger.v1.json"
+        )
     return project
 
 
@@ -476,6 +517,7 @@ def migrate_project(project: Project) -> Project:
     ensure_c3_action(project)
     migrate_dkl24_q8_corrections(project)
     ensure_source_backed_q8_periodicity_rules(project)
+    ensure_periodic_rendering_contract(project)
     ensure_q8_atlas(project)
     migrate_legacy_period_families(project)
     sync_project_fates(project)

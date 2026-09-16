@@ -88,7 +88,15 @@ class C3ActionTest(unittest.TestCase):
         self.assertNotEqual(sectors["q8-ro-a1-b2"].c3_orbit_id, sectors["q8-ro-a2-b1"].c3_orbit_id)
         preview = c3_transport_preview(project, "q8-ro-a1-b2")
         self.assertFalse(preview["materialization_allowed"])
-        self.assertIn("does not supply the transposition", preview["warning"])
+        self.assertIn("psi separately fixes i and swaps j,k", preview["warning"])
+        self.assertEqual(preview["galois"]["coefficient_automorphism"], "a -> a^2 (zeta <-> zeta^2)")
+
+    def test_s11_records_the_stem_16_sigma_k_transport(self):
+        project = migrate_project(demo_project())
+        preview = c3_transport_preview(project, "q8-ro-a1-b1")
+        self.assertEqual(preview["periodic_transport"]["source_workspace_id"], "ws_sigma_i")
+        self.assertEqual(preview["periodic_transport"]["stem_shift"], 16)
+        self.assertIn("sigma_k", preview["periodic_transport"]["source_representation"])
 
 
 class CrossGradedProductTest(unittest.TestCase):

@@ -4,10 +4,13 @@ const state = {
   catalogEntries: [],
   catalogMode: false,
   logicGraph: { nodes: [], edges: [] },
+  periodicFateLedger: null,
   history: { undo_depth: 0, redo_depth: 0, undo_label: null, redo_label: null },
   workspaceId: null,
+  activeAtlasSectorId: null,
   pageByWorkspace: new Map(),
   selectedClassId: null,
+  classFilter: "",
   selectedCellId: null,
   lastVectorResult: null,
   tool: "inspect",
@@ -30,6 +33,12 @@ const $ = (selector) => document.querySelector(selector);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const PAGE_MODE = document.body.dataset.page || "researching";
 let chartRenderFrame = 0;
+
+const CURRENT_CATALOG_BY_SECTOR = {
+  "q8-ro-a2-b0": "2sigma-dec30",
+  "q8-ro-a3-b0": "3sigma-public",
+  "q8-ro-a1-b2": "mixed-july20",
+};
 
 function scheduleChartRender() {
   if (chartRenderFrame) return;
@@ -138,7 +147,7 @@ function glyphShapeFor(ws, item) {
   const raw = item.style?.module_pattern
     || item.style?.dkllw_glyph
     || item.style?.glyph
-    || "unknown";
+    || "dot";
   const normalized = String(raw).trim().toLowerCase().replaceAll("_", "-").replaceAll(" ", "-");
   if (["fat-dot", "blue-dot"].includes(normalized)) return "fat-dot";
   if (["circle", "red-dot"].includes(normalized)) return "circle";
@@ -211,6 +220,7 @@ async function loadLegacyCatalogManifest() {
     `<option value="${escapeHtml(entry.id)}">[${escapeHtml(entry.status)}] ${escapeHtml(entry.title)}</option>`
   )).join("");
   $("#open-legacy-catalog").disabled = !state.catalogEntries.length;
+  if (state.project) renderGradingAtlas();
 }
 
 function catalogProject(project, ws) {
@@ -218,7 +228,6 @@ function catalogProject(project, ws) {
     ...project,
     workspaces: [ws],
     comparisons: [],
-    grading_sectors: [],
     page_period_cycles: [],
     drawing_periodicity_rules: [],
     manual_periodicities: [],
@@ -230,6 +239,10 @@ function catalogProject(project, ws) {
 async function openLegacyCatalog() {
   const entryId = $("#legacy-catalog-select").value;
   if (!entryId) return;
+  return openLegacyCatalogEntry(entryId);
+}
+
+async function openLegacyCatalogEntry(entryId) {
   const button = $("#open-legacy-catalog");
   button.disabled = true;
   try {
@@ -239,10 +252,12 @@ async function openLegacyCatalog() {
     state.project = catalogProject(state.savedProject, data.workspace);
     state.workspaceId = data.workspace.id;
     state.selectedClassId = null;
+    state.classFilter = "";
     state.tool = "inspect";
     state.connectionStart = null;
     state.view = { zoom: 1, panX: 0, panY: 0 };
     render();
+    fitViewToData();
     toast(`Opened ${data.workspace.name} as a read-only research chart.`);
   } catch (error) {
     toast(error.message);
@@ -251,7 +266,66 @@ async function openLegacyCatalog() {
   }
 }
 
+function openS11TransportView() {
+  const sourceProject = state.savedProject || state.project;
+  const source = sourceProject.workspaces.find((item) => item.id === "ws_sigma_i");
+  if (!source) return;
+  const prefix = "transport:s11:";
+  const classIds = new Map(source.classes.map((item) => [item.id, `${prefix}${item.id}`]));
+  const classes = source.classes.map((item) => ({
+    ...item,
+    id: classIds.get(item.id),
+    label: `\\Sigma^{16}\\omega^2\\left(${item.label}\\right)`,
+    expression: `Sigma^16 omega^2(${item.expression || item.label})`,
+    grade: { ...item.grade, stem: Number(item.grade.stem) + 16 },
+    notes: `${item.notes || ""} Display-only S1,1 transport through the sigma_k page; omega^2 coefficients are retained symbolically.`,
+    sector_id: "q8-ro-a1-b1",
+  }));
+  const fates = (source.fates || []).filter((item) => classIds.has(item.class_id)).map((item) => ({
+    ...item,
+    class_id: classIds.get(item.class_id),
+  }));
+  const settings = structuredClone(source.settings);
+  settings.read_only_catalog = true;
+  settings.catalog_entry = {
+    id: "transport-s11-sigma-k",
+    status: "source-transport",
+    authority: "norm period + 20+H period + C3",
+    filename: "virtual S1,1 chart (no duplicated stored dots)",
+    evidence_ref: "(1+sigma_i+sigma_j+sigma_k+H)-(20+H); sigma_k=omega^2(sigma_i)",
+    statistics: { generators: classes.length, connections: 0, differentials: 0, periodicity_rules: 2 },
+  };
+  const transported = {
+    ...source,
+    id: "transport:q8-ro-a1-b1",
+    name: "Q8 HFPSS — S1,1 via the sigma_k page",
+    grading_label: "* - sigma_i - sigma_j",
+    classes,
+    differentials: [],
+    differential_events: [],
+    fates,
+    propositions: [],
+    cells: [],
+    differential_maps: [],
+    summary: "Display-only stem-16 transport of the sigma_k page. sigma_k lies in the C3 orbit of sigma_i; omega^2 is kept on labels so no F4 unit is silently erased.",
+    settings,
+  };
+  if (!state.catalogMode) state.savedProject = state.project;
+  state.catalogMode = true;
+  state.project = catalogProject(sourceProject, transported);
+  state.workspaceId = transported.id;
+  state.selectedClassId = null;
+  state.classFilter = "";
+  state.tool = "inspect";
+  state.connectionStart = null;
+  state.view = { zoom: 1, panX: 0, panY: 0 };
+  render();
+  fitViewToData();
+  toast("Opened the stem-16 S1,1 transport through the sigma_k page.");
+}
+
 async function closeLegacyCatalog() {
+  state.activeAtlasSectorId = null;
   await loadProject();
   toast("Returned to the saved Studio project.");
 }
@@ -322,11 +396,9 @@ function render() {
     ? `E${documentedLimit} is the latest documented page; later pages are available for workspace additions.`
     : `Showing E${ws.page}; d${ws.page} is drawn only on this page.`;
   $("#vanishing-line").value = ws.settings.vanishing_line || 0;
-  $("#class-count").textContent = visibleClasses.length;
+  renderClassList(ws, visibleClasses);
   $("#tool-hint").textContent = toolHint();
   document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === state.tool));
-  $("#class-list").innerHTML = visibleClasses.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i>${escapeHtml(item.label)}</span><span class="coords">${item.grade.stem}, ${item.grade.filtration}</span></button>`).join("") || '<p class="empty">No surviving classes on this page.</p>';
-  document.querySelectorAll("[data-class]").forEach((button) => button.addEventListener("click", () => onClassClick(button.dataset.class)));
   renderComparisons();
   renderGradingAtlas();
   renderFateInspector();
@@ -340,6 +412,21 @@ function render() {
   constrainView();
   renderChart();
   syncLayoutHeight();
+}
+
+function renderClassList(ws = workspace(), visibleClasses = liveClassesAt(ws)) {
+  const query = String(state.classFilter || "").trim().toLowerCase();
+  const matching = query ? visibleClasses.filter((item) => {
+    const coordinates = `${item.grade.stem},${item.grade.filtration}`;
+    return `${item.label} ${item.expression || ""} ${coordinates}`.toLowerCase().includes(query);
+  }) : visibleClasses;
+  const limit = 250;
+  const listed = matching.slice(0, limit);
+  $("#class-count").textContent = matching.length === visibleClasses.length
+    ? `${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`
+    : `${matching.length}/${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`;
+  $("#class-list").innerHTML = listed.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i>${escapeHtml(item.label)}</span><span class="coords">${item.grade.stem}, ${item.grade.filtration}</span></button>`).join("") || '<p class="empty">No matching surviving classes on this page.</p>';
+  $("#class-list").querySelectorAll("[data-class]").forEach((button) => button.addEventListener("click", () => onClassClick(button.dataset.class)));
 }
 
 function syncLayoutHeight() {
@@ -378,9 +465,14 @@ function renderGradingAtlas() {
   const root = $("#grading-atlas");
   const sectors = state.project.grading_sectors || [];
   root.innerHTML = sectors.map((sector) => {
-    const active = sector.workspace_id === state.workspaceId ? "active" : "";
+    const active = sector.id === state.activeAtlasSectorId || (!state.activeAtlasSectorId && sector.workspace_id === state.workspaceId) ? "active" : "";
     const count = sector.class_ids?.length || 0;
-    return `<button type="button" class="atlas-cell ${active} ${escapeHtml(sector.status)}" data-sector="${sector.id}" title="${escapeHtml(sector.display_label)} · ${escapeHtml(sector.status)}"><strong>S<sub>${sector.a},${sector.b}</sub></strong><span>${count ? `${count} classes` : "not computed"}</span></button>`;
+    const catalog = state.catalogEntries.find((entry) => entry.id === CURRENT_CATALOG_BY_SECTOR[sector.id]);
+    const sourceCount = Number(catalog?.statistics?.generators || 0);
+    const transport = sector.id === "q8-ro-a1-b1" ? "sigma_k + stem 16" : "";
+    const detail = sourceCount ? `${sourceCount} source dots` : (transport || (count ? `${count} anchors` : "not computed"));
+    const sourceClass = sourceCount ? "source-chart" : "";
+    return `<button type="button" class="atlas-cell ${active} ${escapeHtml(sector.status)} ${sourceClass}" data-sector="${sector.id}" title="${escapeHtml(sector.display_label)} · ${escapeHtml(catalog ? `${catalog.status} source chart` : transport || sector.status)}"><strong>S<sub>${sector.a},${sector.b}</sub></strong><span>${escapeHtml(detail)}</span></button>`;
   }).join("");
   root.querySelectorAll("[data-sector]").forEach((button) => button.addEventListener("click", () => selectAtlasSector(button.dataset.sector)));
 }
@@ -388,15 +480,32 @@ function renderGradingAtlas() {
 async function selectAtlasSector(sectorId) {
   const sector = atlasSector(sectorId);
   if (!sector) return;
-  state.workspaceId = sector.workspace_id;
-  state.selectedClassId = null;
-  state.connectionStart = null;
-  state.view = { zoom: 1, panX: 0, panY: 0 };
-  render();
+  state.activeAtlasSectorId = sectorId;
+  const catalogEntryId = CURRENT_CATALOG_BY_SECTOR[sectorId];
+  if (sectorId === "q8-ro-a1-b1") {
+    openS11TransportView();
+  } else if (catalogEntryId && state.catalogEntries.some((entry) => entry.id === catalogEntryId)) {
+    $("#legacy-catalog-select").value = catalogEntryId;
+    await openLegacyCatalogEntry(catalogEntryId);
+  } else {
+    if (state.catalogMode) {
+      state.project = state.savedProject;
+      state.savedProject = null;
+      state.catalogMode = false;
+    }
+    state.workspaceId = sector.workspace_id;
+    state.selectedClassId = null;
+    state.connectionStart = null;
+    state.view = { zoom: 1, panX: 0, panY: 0 };
+    render();
+  }
   try {
     const preview = await api(`/api/v2/c3-actions/omega/orbit/${sectorId}`);
-    const targets = preview.orbit.map((item) => item.result_sector_id || item.normalization_status).join(" → ");
-    $("#c3-summary").textContent = `ω orbit: ${targets}. ${preview.warning}`;
+    const targets = preview.orbit.map((item) => item.result_sector_id || item.display_label).join(" → ");
+    const period = preview.periodic_transport
+      ? ` S1,1 is the stem-${preview.periodic_transport.stem_shift} transport of the sigma_k page via ${preview.periodic_transport.relation}.`
+      : "";
+    $("#c3-summary").textContent = `ω orbit: ${targets}. ψ: ${preview.galois.representation_action}; ${preview.galois.coefficient_automorphism}.${period}`;
   } catch (error) {
     $("#c3-summary").textContent = error.message;
   }
@@ -1192,10 +1301,53 @@ function renderLogicGraph() {
     : `${nodes.length} typed nodes · ${edges.length} visible evidence edges.`;
 }
 
+function renderPeriodicFateAudit() {
+  const payload = state.periodicFateLedger || {};
+  const audit = payload.audit || {};
+  const ledger = payload.ledger || {};
+  const status = audit.status || "unavailable";
+  const statusNode = $("#periodic-fate-audit-status");
+  statusNode.textContent = status;
+  statusNode.dataset.status = status;
+
+  const metrics = [
+    ["Fact families", audit.fact_family_count],
+    ["Period mechanisms", audit.period_mechanism_count],
+    ["Module kinds", audit.module_kind_count],
+    ["Finite obligations", audit.finite_rank_obligation_count],
+    ["Covered", audit.covered_obligation_count],
+    ["Formal-series families", audit.formal_series_family_count],
+  ];
+  $("#periodic-fate-audit-metrics").innerHTML = metrics.map(([label, value]) => (
+    `<div><strong>${Number(value || 0)}</strong><span>${escapeHtml(label)}</span></div>`
+  )).join("");
+
+  const formalPolicy = ledger.formal_series_policy || {};
+  $("#formal-series-audit-note").textContent = formalPolicy.storage_rule
+    ? `Formal series are separate from finite-rank audit. ${formalPolicy.storage_rule}`
+    : "Formal-series families are handled separately from finite-rank obligations.";
+
+  const unresolved = (audit.obligations || []).filter((item) => !item.covered);
+  $("#periodic-fate-obligations").innerHTML = unresolved.length
+    ? `<h3>${unresolved.length} unresolved obligations</h3>${unresolved.map((item) => {
+      const reasons = (item.unresolved_reasons || []).length
+        ? item.unresolved_reasons.map((reason) => `<li>${escapeHtml(reason)}</li>`).join("")
+        : "<li>No resolution has been recorded.</li>";
+      const representative = item.period_class_id || item.id;
+      return `<article class="audit-obligation"><strong>${escapeHtml(item.id)}</strong><span>${escapeHtml(representative)}</span><ul>${reasons}</ul></article>`;
+    }).join("")}`
+    : '<p class="empty">All recorded high-filtration obligations are covered.</p>';
+}
+
 async function loadReviewPage() {
-  const [project, logicGraph] = await Promise.all([api("/api/project"), api("/api/v2/logic-graph")]);
+  const [project, logicGraph, periodicFateLedger] = await Promise.all([
+    api("/api/project"),
+    api("/api/v2/logic-graph"),
+    api("/api/v2/review/periodic-fate-ledger"),
+  ]);
   state.project = project;
   state.logicGraph = logicGraph;
+  state.periodicFateLedger = periodicFateLedger;
   if (!project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   const selector = $("#review-workspace-select");
   selector.innerHTML = project.workspaces.map((item) => (
@@ -1208,6 +1360,7 @@ async function loadReviewPage() {
     + `<span>${Number(admission.review_queue || 0)} in review</span>`
     + `<small>${escapeHtml(admission.policy || "Premise-complete facts enter the admitted DAG.")}</small>`
   );
+  renderPeriodicFateAudit();
   renderProofTree();
   syncLayoutHeight();
 }
@@ -1384,11 +1537,71 @@ function normalizedPeriod(stem, filtration) {
 function usablePeriodFamily(differential) {
   if (!differential.period_family_id) return null;
   const family = (state.project.period_families || []).find((item) => item.id === differential.period_family_id);
-  return family && ["reviewed", "established"].includes(family.status) ? family : null;
+  return family && ["reviewed", "established", "verified", "under-review"].includes(family.status) ? family : null;
+}
+
+function pageWithinPeriodFamily(page, family) {
+  const upper = family.valid_to_page;
+  return page >= Number(family.valid_from_page || 2) && (typeof upper !== "number" || page <= upper);
+}
+
+function workspaceRenderPeriods(ws) {
+  const periods = (ws.settings.rendering?.period_lattice || []).map((item) => ({
+    stem: Number(item.stem) || 0,
+    filtration: Number(item.filtration) || 0,
+    domain: item.exponent_domain === "integer" ? "integer" : "nonnegative",
+    id: item.id,
+  }));
+  for (const family of state.project.period_families || []) {
+    if (family.workspace_id !== ws.id || !["reviewed", "established"].includes(family.status) || !pageWithinPeriodFamily(ws.page, family)) continue;
+    for (const generator of family.generators || []) {
+      const label = String(generator.multiplier_expr || "");
+      periods.push({
+        stem: Number(generator.grade_shift?.stem) || 0,
+        filtration: Number(generator.grade_shift?.filtration) || 0,
+        domain: /^D(?:\^\d+)?$/.test(label) ? "integer" : "nonnegative",
+        id: family.id,
+      });
+    }
+  }
+  const distinct = new Map();
+  for (const period of periods) {
+    if (!period.stem && !period.filtration) continue;
+    distinct.set(`${period.stem}:${period.filtration}:${period.domain}`, period);
+  }
+  return [...distinct.values()];
+}
+
+function latticeCopies(grade, periods, bounds) {
+  const horizontal = periods
+    .filter((item) => item.filtration === 0 && item.domain === "integer" && item.stem)
+    .sort((left, right) => Math.abs(left.stem) - Math.abs(right.stem))[0];
+  const forward = periods.filter((item) => item.domain !== "integer" && item.filtration > 0);
+  const verticalPeriod = forward[0];
+  const copies = [];
+  const sMax = verticalPeriod
+    ? Math.max(0, Math.floor((bounds.filtrationMax - grade.filtration) / verticalPeriod.filtration))
+    : 0;
+  for (let s = 0; s <= sMax; s += 1) {
+    const base = {
+      stem: grade.stem + s * (verticalPeriod?.stem || 0),
+      filtration: grade.filtration + s * (verticalPeriod?.filtration || 0),
+    };
+    const qValues = horizontal ? shiftRange(base, horizontal, bounds) : [0];
+    for (const q of qValues) {
+      const shifted = {
+        ...grade,
+        stem: base.stem + q * (horizontal?.stem || 0),
+        filtration: base.filtration,
+      };
+      if (inBounds(shifted, bounds)) copies.push({ grade: shifted, shift: `${s}:${q}`, periodic: s !== 0 || q !== 0 });
+    }
+  }
+  return copies.length ? copies : (inBounds(grade, bounds) ? [{ grade, shift: "0:0", periodic: false }] : []);
 }
 
 function periodsForClassOnPage(ws, item) {
-  const periods = [];
+  const periods = [...workspaceRenderPeriods(ws)];
   const add = (period) => {
     if (!period || periods.some((known) => known.stem === period.stem && known.filtration === period.filtration)) return;
     periods.push(period);
@@ -1398,12 +1611,13 @@ function periodsForClassOnPage(ws, item) {
     if (differential.page !== ws.page) continue;
     if (differential.source_id !== item.id && differential.target_id !== item.id) continue;
     if (!usablePeriodFamily(differential)) continue;
-    add(normalizedPeriod(differential.period_stem, differential.period_filtration));
+    const period = normalizedPeriod(differential.period_stem, differential.period_filtration);
+    if (period) add({ ...period, domain: "integer" });
   }
   for (const cycle of state.project.page_period_cycles || []) {
     if (cycle.workspace_id !== ws.id || !pagePeriodEligible(ws, cycle, ws.page)) continue;
     const period = normalizedPeriod(cycle.grade?.stem, cycle.grade?.filtration);
-    if (period) add({ ...period, cycleId: cycle.id, invertible: Boolean(cycle.invertible) });
+    if (period) add({ ...period, cycleId: cycle.id, domain: cycle.invertible ? "integer" : "nonnegative" });
   }
   return periods;
 }
@@ -1413,17 +1627,7 @@ function periodicClassInstances(ws, bounds) {
   const seen = new Set();
   for (const item of liveClassesAt(ws).filter((node) => !node.cell_id)) {
     const periods = periodsForClassOnPage(ws, item);
-    const copies = [{ grade: item.grade, shift: 0, periodic: false }];
-    for (const period of periods) {
-      for (const shift of shiftRange(item.grade, period, bounds).filter((value) => period.invertible || value > 0)) {
-        if (shift === 0) continue;
-        copies.push({
-          grade: { ...item.grade, stem: item.grade.stem + shift * period.stem, filtration: item.grade.filtration + shift * period.filtration },
-          shift,
-          periodic: true,
-        });
-      }
-    }
+    const copies = latticeCopies(item.grade, periods, bounds);
     for (const copy of copies) {
       const key = `${item.id}:${copy.grade.stem}:${copy.grade.filtration}`;
       if (seen.has(key) || !inBounds(copy.grade, bounds)) continue;
@@ -1468,6 +1672,18 @@ function packedClassInstances(ws, bounds, metrics, extraInstances = []) {
     shape: glyphShapeFor(ws, record.item),
     size: record.periodic ? 4.2 : 5.5,
   }));
+  if (ws.settings?.read_only_catalog) {
+    return [...instances, ...extraInstances].map((record, index) => ({
+      ...record,
+      dx: Number(record.item?.style?.legacy_x_offset || 0) * metrics.cell,
+      dy: -Number(record.item?.style?.legacy_y_offset || 0) * metrics.cell,
+      size: Math.min(record.size, clamp(metrics.cell * 0.16, 2.2, 5)),
+      hitRadius: clamp(metrics.cell * 0.28, 5, 9),
+      baseYOffset: 0,
+      packIndex: index,
+      packCount: 1,
+    }));
+  }
   return window.HFPSSCellLayout.packInstances([...instances, ...extraInstances], metrics.cell, { baseYOffset: 0.16 });
 }
 
@@ -1498,7 +1714,7 @@ function classGlyphMarkup(record, point, classNames) {
 }
 
 function classLabelMarkup(record, point, metrics, visible) {
-  if (record.periodic || !inBounds(record.grade, visible)) return "";
+  if (record.periodic || record.item.id !== state.selectedClassId || !inBounds(record.grade, visible)) return "";
   const base = pointFor(record.grade, metrics);
   const labelStep = Math.max(13, record.baseYOffset * metrics.cell);
   const labelCenterY = base.y + (record.packIndex - (record.packCount - 1) / 2) * labelStep;
@@ -1514,14 +1730,20 @@ function periodicDifferentials(ws, bounds) {
     const source = byId.get(diff.source_id);
     const target = byId.get(diff.target_id);
     if (!source || !target || !liveIds.has(source.id) || !liveIds.has(target.id)) continue;
-    const period = usablePeriodFamily(diff) && (diff.period_stem || diff.period_filtration)
-      ? { stem: diff.period_stem || 0, filtration: diff.period_filtration || 0 }
-      : null;
-    const shifts = period ? shiftRange(source.grade, period, bounds) : [0];
-    for (const shift of shifts) {
-      const sourceGrade = { ...source.grade, stem: source.grade.stem + shift * (period?.stem || 0), filtration: source.grade.filtration + shift * (period?.filtration || 0) };
-      const targetGrade = { ...target.grade, stem: target.grade.stem + shift * (period?.stem || 0), filtration: target.grade.filtration + shift * (period?.filtration || 0) };
-      if (inBounds(sourceGrade, bounds) || inBounds(targetGrade, bounds)) results.push({ diff, sourceGrade, targetGrade, periodic: shift !== 0 });
+    const periods = [...workspaceRenderPeriods(ws)];
+    if (usablePeriodFamily(diff) && (diff.period_stem || diff.period_filtration)) {
+      periods.push({ stem: diff.period_stem || 0, filtration: diff.period_filtration || 0, domain: "integer" });
+    }
+    const stemDelta = target.grade.stem - source.grade.stem;
+    const filtrationDelta = target.grade.filtration - source.grade.filtration;
+    for (const copy of latticeCopies(source.grade, periods, bounds)) {
+      const sourceGrade = copy.grade;
+      const targetGrade = {
+        ...target.grade,
+        stem: sourceGrade.stem + stemDelta,
+        filtration: sourceGrade.filtration + filtrationDelta,
+      };
+      if (inBounds(sourceGrade, bounds) || inBounds(targetGrade, bounds)) results.push({ diff, sourceGrade, targetGrade, periodic: copy.periodic });
     }
   }
   return results;
@@ -1537,9 +1759,33 @@ function visibleRelations(ws, liveIds) {
   });
 }
 
+function periodicRelations(ws, liveIds, bounds) {
+  const classes = new Map(ws.classes.map((item) => [item.id, item]));
+  const periods = workspaceRenderPeriods(ws);
+  const results = [];
+  for (const proposition of visibleRelations(ws, liveIds)) {
+    const source = classes.get(proposition.conclusion.source_id);
+    const target = classes.get(proposition.conclusion.target_id);
+    if (!source || !target) continue;
+    const stemDelta = target.grade.stem - source.grade.stem;
+    const filtrationDelta = target.grade.filtration - source.grade.filtration;
+    for (const copy of latticeCopies(source.grade, periods, bounds)) {
+      const targetGrade = {
+        ...target.grade,
+        stem: copy.grade.stem + stemDelta,
+        filtration: copy.grade.filtration + filtrationDelta,
+      };
+      if (inBounds(copy.grade, bounds) || inBounds(targetGrade, bounds)) {
+        results.push({ proposition, source, target, sourceGrade: copy.grade, targetGrade, periodic: copy.periodic });
+      }
+    }
+  }
+  return results;
+}
+
 function constrainView() {
   if (!workspace()) return;
-  state.view.zoom = clamp(state.view.zoom, 0.055, 16);
+  state.view.zoom = clamp(state.view.zoom, 0.18, 16);
   const m = chartMetrics();
   // The only camera guard: never move the x-axis into the upper half.
   // Horizontal panning and movement toward arbitrarily high filtration remain free.
@@ -1735,16 +1981,16 @@ function renderChart() {
   const vectorCellLayout = cellChartLayout(ws, m, buffered);
   markup += cellMapSvg(ws, vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "connections");
-  for (const relation of visibleRelations(ws, liveIds)) {
-    const source = classesById.get(relation.conclusion.source_id);
-    const target = classesById.get(relation.conclusion.target_id);
-    if (!source || !target) continue;
-    const from = instancePoints.get(classInstanceKey(source.id, source.grade)) || pointFor(source.grade, m);
-    const to = instancePoints.get(classInstanceKey(target.id, target.grade)) || pointFor(target.grade, m);
+  for (const item of periodicRelations(ws, liveIds, buffered)) {
+    const relation = item.proposition;
+    const source = item.source;
+    const target = item.target;
+    const from = instancePoints.get(classInstanceKey(source.id, item.sourceGrade)) || pointFor(item.sourceGrade, m);
+    const to = instancePoints.get(classInstanceKey(target.id, item.targetGrade)) || pointFor(item.targetGrade, m);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
     const chartConnection = relation.conclusion?.chart_connection;
     const chartClass = chartConnection?.kind ? `dkllw-${chartConnection.kind}` : "";
-    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
+    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass} ${item.periodic ? "periodic" : ""}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
   }
   for (const item of periodicDifferentials(ws, buffered)) {
     const from = instancePoints.get(classInstanceKey(item.diff.source_id, item.sourceGrade)) || pointFor(item.sourceGrade, m);
@@ -1768,7 +2014,8 @@ function renderChart() {
     const label = classLabelMarkup(record, point, m, visible);
     const periodicAttribute = record.periodic ? ' data-periodic-copy="true"' : "";
     const aria = `${record.item.label} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}`;
-    markup += `<g class="class-instance" data-point="${record.item.id}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
+    const tooltip = `${record.item.label} · ${gradeText(record.grade)}${record.periodic ? " · virtual period-family translate" : ""}`;
+    markup += `<g class="class-instance" data-point="${record.item.id}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
   }
   markup += cellGlyphSvg(vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "cycles");
@@ -2236,7 +2483,34 @@ async function applyProjectImport() {
 }
 
 function resetView() {
-  state.view = { zoom: 1, panX: 0, panY: 0 };
+  fitViewToData();
+}
+
+function fitViewToData() {
+  const ws = workspace();
+  if (!ws) return;
+  const nodes = liveClassesAt(ws).filter((item) => !item.archived);
+  if (!nodes.length) {
+    state.view = { zoom: 1, panX: 0, panY: 0 };
+    renderChart();
+    return;
+  }
+  const stems = nodes.map((item) => Number(item.grade.stem));
+  const filtrations = nodes.map((item) => Number(item.grade.filtration));
+  const stemMin = Math.min(...stems);
+  const stemMax = Math.max(...stems);
+  const filtrationMax = Math.max(0, ...filtrations);
+  const { width, height } = dimensions();
+  const baseCell = Number(ws.settings.rendering?.base_cell || 28);
+  const horizontalZoom = (width - 76) / (Math.max(1, stemMax - stemMin + 3) * baseCell);
+  const verticalZoom = (height - 64) / (Math.max(1, filtrationMax + 2) * baseCell);
+  const zoom = clamp(Math.min(horizontalZoom, verticalZoom, 1.25), 0.18, 16);
+  const cell = baseCell * zoom;
+  state.view = {
+    zoom,
+    panX: -((stemMin + stemMax) / 2 + 0.5) * cell,
+    panY: 0,
+  };
   constrainView();
   renderChart();
 }
@@ -2248,7 +2522,7 @@ function onWheel(event) {
   const x = event.clientX - rect.left;
   const y = event.clientY - rect.top;
   const before = gradeFloatAt(x, y);
-  state.view.zoom = clamp(state.view.zoom * (event.deltaY < 0 ? 1.11 : 0.9), 0.055, 16);
+  state.view.zoom = clamp(state.view.zoom * (event.deltaY < 0 ? 1.11 : 0.9), 0.18, 16);
   const after = pointFor(before);
   state.view.panX += x - after.x;
   state.view.panY += y - after.y;
@@ -2308,6 +2582,8 @@ function bindEvents() {
   $("#workspace-select").addEventListener("change", (event) => {
     state.workspaceId = event.target.value;
     state.selectedClassId = null;
+    state.classFilter = "";
+    $("#class-filter").value = "";
     state.suggestions = [];
     state.candidateResults = null;
     state.periodicityPreview = null;
@@ -2315,6 +2591,10 @@ function bindEvents() {
     state.view = { zoom: 1, panX: 0, panY: 0 };
     state.connectionStart = null;
     render();
+  });
+  $("#class-filter").addEventListener("input", (event) => {
+    state.classFilter = event.target.value;
+    renderClassList();
   });
   $("#open-support-workspace").addEventListener("click", () => {
     const workspaceId = $("#support-workspace-select").value;

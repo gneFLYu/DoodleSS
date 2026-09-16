@@ -1,0 +1,769 @@
+{
+  "dataset_id": "dkllw24-q8-e2-period-classes",
+  "schema": "hfpss-studio.review.dkllw24-q8-e2-period-classes",
+  "schema_version": 1,
+  "status": "review-required",
+  "canonical": false,
+  "reviewed_by": null,
+  "reviewed_at": null,
+  "title": "[DKLLW24] integer and single-sigma Q8-HFPSS E2 patterns",
+  "purpose": "A source-located review dataset for the two Q8-HFPSS E2 patterns computed by the 2-Bockstein spectral sequence. It records finite parametric families rather than pretending that the figures enumerate every class.",
+  "scope": {
+    "prime": 2,
+    "height": 2,
+    "group": "Q8",
+    "spectrum": "E_2",
+    "pages": [
+      "integer-graded Q8-HFPSS E2",
+      "(*-sigma_i)-graded Q8-HFPSS E2"
+    ],
+    "transported_pages": [
+      "(*-sigma_j)-graded Q8-HFPSS E2",
+      "(*-sigma_k)-graded Q8-HFPSS E2"
+    ],
+    "excluded": [
+      "mixed RO(Q8) pages",
+      "a proof that every displayed unit coefficient is canonically normalized",
+      "automatic admission into canonical HFPSS-Studio workspaces"
+    ]
+  },
+  "sources": [
+    {
+      "id": "DKLLW24",
+      "kind": "primary-paper",
+      "citation": "Z. Duan, H. J. Kong, G. Li, Y. Lu, and G. Wang, RO(G)-graded homotopy fixed point spectral sequence for height 2 Morava E-theory.",
+      "url": "https://arxiv.org/abs/2209.01830",
+      "local_source": "E:/课程/PACE2025_fly/HFPSS Q_8/arXiv-2209.01830v3/main.tex",
+      "locators": [
+        "lines 619-649: Galois base change and W(F4) coefficients",
+        "lines 887-1040: integer 2-BSS, Tables 1-3",
+        "lines 1048-1199: (*-sigma_i) 2-BSS, Tables 4-6, hidden h1/h2 extensions, Tate E2",
+        "lines 1358-1420: integer d3 and bo-pattern",
+        "lines 1935-1965: (*-sigma_i) d3 and analogous bo-pattern",
+        "lines 2482-2542: chart multiplication keys and page periodicities"
+      ]
+    },
+    {
+      "id": "BG18",
+      "kind": "primary-paper",
+      "citation": "I. Bobkova and P. G. Goerss, Topological resolutions in K(2)-local homotopy theory at the prime 2, J. Topol. 11 (2018), 918-957.",
+      "url": "https://arxiv.org/abs/1610.00158",
+      "locators": [
+        "Definition 2.1: bo-patterns are the image in K(1)-local homotopy",
+        "Remark 2.2: KO-patterns would be a more accurate name"
+      ]
+    }
+  ],
+  "coefficient_contexts": [
+    {
+      "id": "f4-residue-2bss-e1",
+      "ring": "F4",
+      "presentation": "F2[zeta]/(zeta^2+zeta+1)",
+      "role": "residue-field E1-page of the 2-BSS",
+      "exact_scalar_rules": [
+        "zeta^2=zeta+1",
+        "1+zeta=zeta^2",
+        "1+zeta is nonzero"
+      ]
+    },
+    {
+      "id": "witt-f4-q8-hfpss-e2",
+      "ring": "W(F4)",
+      "completed_coefficients": "W(F4)[[u_1]][u^{+/-1}]",
+      "role": "integral coefficient context reconstructed by the 2-BSS and completion",
+      "warning": "The Q8-HFPSS E2 page is not obtained by silently reducing every coefficient modulo 2. Unit ambiguity in W(F4) must remain explicit."
+    }
+  ],
+  "symmetry_and_coefficients": {
+    "c3": {
+      "group": "C3=G24/Q8",
+      "representation_orbit": [
+        "sigma_i",
+        "sigma_j",
+        "sigma_k"
+      ],
+      "integer_eigenspace_anchors": [
+        {
+          "anchor": "1",
+          "eigenvalue": "1"
+        },
+        {
+          "anchor": "D",
+          "eigenvalue": "zeta^2"
+        },
+        {
+          "anchor": "D^2",
+          "eigenvalue": "zeta"
+        }
+      ],
+      "module_statement": "After inverting Delta=D^3, H^*(Q8,A)[D^-1] is free of rank 3 over H^*(G24,A)[Delta^-1] on 1,D,D^2.",
+      "transport_policy": "The three single-sigma pages have the same pattern after transporting the representation and basis. Exact labels may acquire a unit in F4^x or W(F4)^x; store the transported scalar rather than erasing it.",
+      "source_ref": "DKLLW24 lines 896-919 and 255"
+    },
+    "galois": {
+      "group": "Gal(F4/F2)=C2",
+      "frobenius": {
+        "zeta": "zeta^2",
+        "zeta^2": "zeta"
+      },
+      "normalizer_action": "psi fixes sigma_i and swaps sigma_j with sigma_k; at group level (i,j,k) maps to (-i,-k,-j)",
+      "coefficient_rule": "psi is semilinear: every transported F4 coefficient is conjugated by a -> a^2, so zeta and zeta^2 are exchanged",
+      "pattern_statement": "The extended-stabilizer Frobenius action supplies filtered topological naturality for the psi transport; it is distinct from the cyclic C3 action omega.",
+      "source_ref": "Beaudry 2017 explicit supersingular-curve automorphisms, pp. 10-12; REU coefficientpuzzle.tex lines 29-43",
+      "scope_warning": "The psi transport swaps j and k with coefficient conjugation. It does not identify coefficients unchanged and does not by itself supply an i-j transposition."
+    },
+    "normalization_policy": {
+      "allowed_nonzero_residue_units": [
+        "1",
+        "zeta",
+        "zeta^2"
+      ],
+      "store": [
+        "basis used on each orbit representative",
+        "actual scalar when known",
+        "up-to-unit status when only a line is identified"
+      ],
+      "forbid": [
+        "replacing an unknown nonzero unit by 1 without a normalization certificate",
+        "identifying zeta and zeta^2",
+        "identifying C3 transport with Galois conjugation"
+      ]
+    }
+  },
+  "classification_semantics": {
+    "not_a_disjoint_map_theoretic_partition": "Every positive-filtration HFPSS E2 class, including a positive-filtration bo-pattern class, lies in the HFPSS-to-TateSS isomorphism range. The bo/tate-visible tags below instead record storage and proof provenance.",
+    "bo_tag": "Use for the v1-local KO-shaped d3 source/target/permanent families singled out by DKLLW24. Their cells are j-adic formal-power-series modules with j=v1^4D^-1; bo is not a low-filtration tag and visible tower height is not its definition.",
+    "tate_visible_complement_tag": "Use for the remaining positive-filtration families as proof-provenance metadata, not as the only families allowed to carry g repetition.",
+    "short_h1_tower_warning": "Slope-one edges are h1 multiplication. A tower may be drawn short because early differentials kill most of it; this does not turn the bo family into a low-filtration-only object.",
+    "periodicity_correction": "All applicable HFPSS families, including bo, use the forward g^sD^(8q) semiperiod with s>=0. Only a Tate comparison certificate upgrades g to a bidirectional translation.",
+    "bg18_vs_chart_usage": "BG18 defines bo-patterns on homotopy as the image in K(1)-local homotopy. DKLLW24 uses the same name at the spectral-sequence chart level for the KO-shaped d3 pattern and its specified survivors. The dataset records the DKLLW24 chart usage and keeps the BG18 definition as provenance."
+  },
+  "comparison_and_periodicity": {
+    "hfpss_to_tatess": {
+      "e2_positive_filtration": "isomorphism",
+      "e2_zero_filtration": "surjection",
+      "differential_correspondence": "one-to-one for differentials whose source has nonnegative filtration",
+      "tate_e2_construction": "Invert k in the Q8-HFPSS E2 page and replace the zero line by the cokernel of the norm map.",
+      "source_ref": "DKLLW24 Lemma 2.6 and Remark 3.9; local lines 486-510 and 1195-1199"
+    },
+    "generators": [
+      {
+        "id": "period-e2-D",
+        "class": "D",
+        "shift": {
+          "stem": 8,
+          "filtration": 0
+        },
+        "invertible_on": [
+          "2-BSS charts",
+          "Q8-HFPSS E2 chart"
+        ],
+        "not_valid_as": "a pagewise HFPSS period after d5(D) becomes nonzero",
+        "source_ref": "DKLLW24 lines 2531 and 2541"
+      },
+      {
+        "id": "period-hfpss-D8",
+        "class": "D^8",
+        "shift": {
+          "stem": 64,
+          "filtration": 0
+        },
+        "invertible_on": [
+          "Q8-HFPSS",
+          "Q8-TateSS"
+        ],
+        "role": "genuine HFPSS period identity",
+        "source_ref": "DKLLW24 Proposition 4.1; local lines 1232-1250"
+      },
+      {
+        "id": "period-tate-g",
+        "class": "g=kD^3",
+        "shift": {
+          "stem": 20,
+          "filtration": 4
+        },
+        "invertible_on": [
+          "Q8-TateSS"
+        ],
+        "hfpss_role": "forward semiperiod multiplication on every applicable family, including bo; it becomes bidirectional only through a positive-filtration Tate comparison certificate",
+        "bo_role": "g^s with s>=0 is part of the bo period family; the missing inverse at the lower boundary is recorded separately from family membership",
+        "source_ref": "DKLLW24 lines 976-978, 2118-2126, and 2541"
+      }
+    ],
+    "period_class_policy": {
+      "all-hfpss-families": {
+        "object_equivalence_generators": ["D^8"],
+        "semiperiod_generators": ["D^8", "g"],
+        "exponent_domains": {"D^8": "integer", "g": "integer >= 0"},
+        "scope": "bo-pattern and non-bo families alike",
+        "meaning": "D^8 gives object identity; g groups forward translates into one semiperiod family without asserting g^-1 in HFPSS"
+      },
+      "tate-certified": {
+        "comparison_lattice_generators": [
+          "D^8",
+          "g"
+        ],
+        "validity": "Both signs of the g exponent require a Tate comparison certificate and positive-filtration endpoints; bo membership is not an exclusion. D^8 is globally invertible in the HFPSS."
+      },
+      "representative_warning": "The paper draws a full periodic range, not every representative. HFPSS-Studio should expand parametric families virtually and must not treat missing dots outside the printed window as zero."
+    }
+  },
+  "pages": [
+    {
+      "id": "q8-hfpss-e2-integer",
+      "label": "integer-graded Q8-HFPSS E2",
+      "orientation_type": "integer/orientable",
+      "computed_by": "integer 2-BSS E_infinity followed by completion",
+      "two_bss": {
+        "input": "H^*(Q8,F4[v1,u^-1])[D^-1][h0]",
+        "target": "H^*(Q8,W(F4)[v1,u^-1])[D^-1]",
+        "h0_detects": "2",
+        "differential_generators": [
+          {
+            "page": 1,
+            "formula": "d1(v1^(2q+1))=2v1^(2q)h1",
+            "parameters": "q is any integer allowed by the localized expression"
+          },
+          {
+            "page": 1,
+            "formula": "d1(Dx)=2h2^2"
+          },
+          {
+            "page": 1,
+            "formula": "d1(x)=2y^2"
+          },
+          {
+            "page": 1,
+            "formula": "d1(y)=2x^2"
+          },
+          {
+            "page": 2,
+            "formula": "d2(v1^2)=4h2"
+          },
+          {
+            "page": 3,
+            "formula": "d3(yh2^2)=8kD"
+          }
+        ],
+        "source_ref": "DKLLW24 Table 1; local lines 985-1004"
+      },
+      "e2_multiplicative_generators": [
+        {
+          "id": "int-k",
+          "expression": "k",
+          "grade": {
+            "stem": -4,
+            "filtration": 4
+          },
+          "source_torsion_label": "Z/8",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "int-x2",
+          "expression": "x^2",
+          "grade": {
+            "stem": -2,
+            "filtration": 2
+          },
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "int-y2",
+          "expression": "y^2",
+          "grade": {
+            "stem": -2,
+            "filtration": 2
+          },
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "int-xh1",
+          "expression": "xh1",
+          "grade": {
+            "stem": 0,
+            "filtration": 2
+          },
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "int-h1",
+          "expression": "h1",
+          "grade": {
+            "stem": 1,
+            "filtration": 1
+          },
+          "source_torsion_label": "Z/2",
+          "family_hint": "expression-sensitive"
+        },
+        {
+          "id": "int-h2",
+          "expression": "h2",
+          "grade": {
+            "stem": 3,
+            "filtration": 1
+          },
+          "source_torsion_label": "Z/4",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "int-v1-2-h1",
+          "expression": "v1^2h1",
+          "grade": {
+            "stem": 5,
+            "filtration": 1
+          },
+          "source_torsion_label": "Z/2",
+          "family_hint": "bo-pattern-d3-source"
+        },
+        {
+          "id": "int-D",
+          "expression": "D",
+          "grade": {
+            "stem": 8,
+            "filtration": 0
+          },
+          "source_torsion_label": "Z",
+          "family_hint": "E2-page-period-generator"
+        },
+        {
+          "id": "int-v1-4",
+          "expression": "v1^4",
+          "grade": {
+            "stem": 8,
+            "filtration": 0
+          },
+          "source_torsion_label": "Z",
+          "family_hint": "bo-pattern"
+        }
+      ],
+      "relations_by_filtration": {
+        "1": [
+          "v1^4h2"
+        ],
+        "2": [
+          "h1h2",
+          "v1^2h1*h2",
+          "Dy^2-h2^2",
+          "xh1*v1^4",
+          "x^2*v1^4",
+          "y^2*v1^4"
+        ],
+        "3": [
+          "xh1*h2",
+          "xh1*v1^2h1",
+          "x^2*v1^2h1",
+          "y^2h1",
+          "y^2*v1^2h1",
+          "D*xh1*h1-h2^3"
+        ],
+        "4": [
+          "h1^4-v1^4k",
+          "(xh1)^2",
+          "(x^2)^2",
+          "(y^2)^2",
+          "h2^4",
+          "x^2*xh1",
+          "y^2*xh1",
+          "x^2*y^2",
+          "xh1*h1^2",
+          "x^2*h1^2",
+          "y^2*h1^2",
+          "h2^2*x^2-4kD",
+          "y^2*h2^2",
+          "xh1*h2^2"
+        ]
+      },
+      "hidden_extensions": [
+        "ext-integer-h2"
+      ],
+      "cycle_family_ids": [
+        "bo-integer-d3-pairs",
+        "bo-integer-permanent",
+        "tate-visible-integer-complement"
+      ],
+      "source_ref": "DKLLW24 Tables 2-3; local lines 1008-1040"
+    },
+    {
+      "id": "q8-hfpss-e2-sigma-i",
+      "label": "(*-sigma_i)-graded Q8-HFPSS E2",
+      "orientation_type": "mod-2 orientable but integrally non-orientable",
+      "orientation_class": {
+        "expression": "u_sigma_i",
+        "grade": {
+          "stem": 1,
+          "filtration": 0,
+          "representation": {
+            "sigma_i": -1
+          }
+        },
+        "statement": "Modulo 2, multiplication by u_sigma_i identifies the twisted E1 page abstractly with the integer E1 page; d1(u_sigma_i) records the failure of integral orientation."
+      },
+      "computed_by": "(*-sigma_i) 2-BSS E_infinity followed by completion",
+      "two_bss": {
+        "input": "H^*(Q8,F4[v1,u^-1])[D^-1]{u_sigma_i}[h0]",
+        "differential_generators": [
+          {
+            "page": 1,
+            "formula": "d1(u_sigma_i)=2(x+y)u_sigma_i"
+          },
+          {
+            "page": 1,
+            "formula": "d1(xu_sigma_i)=2(x^2+y^2)u_sigma_i"
+          },
+          {
+            "page": 1,
+            "formula": "d1(v1u_sigma_i)=2(h1+xv1)u_sigma_i"
+          },
+          {
+            "page": 1,
+            "formula": "d1(h2u_sigma_i)=2(x+y)h2u_sigma_i"
+          },
+          {
+            "page": 2,
+            "formula": "d2(xh1^2u_sigma_i)=4kv1^2u_sigma_i"
+          }
+        ],
+        "source_ref": "DKLLW24 Table 4; local lines 1048-1144"
+      },
+      "e2_module_generators": [
+        {
+          "id": "sigma-x2-plus-y2",
+          "expression": "(x^2+y^2)u_sigma_i",
+          "display_grade": {
+            "stem": -2,
+            "filtration": 2
+          },
+          "actual_ro_grade": "-1-sigma_i in stem notation of Table 5",
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "sigma-x-plus-y",
+          "expression": "(x+y)u_sigma_i",
+          "display_grade": {
+            "stem": -1,
+            "filtration": 1
+          },
+          "actual_ro_grade": "-sigma_i",
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible"
+        },
+        {
+          "id": "sigma-h1-plus-xv1",
+          "expression": "(h1+xv1)u_sigma_i",
+          "display_grade": {
+            "stem": 1,
+            "filtration": 1
+          },
+          "actual_ro_grade": "2-sigma_i",
+          "source_torsion_label": "Z/2",
+          "family_hint": "tate-visible-extra-d3-source"
+        },
+        {
+          "id": "sigma-v1-2",
+          "expression": "v1^2u_sigma_i",
+          "display_grade": {
+            "stem": 4,
+            "filtration": 0
+          },
+          "actual_ro_grade": "5-sigma_i",
+          "source_torsion_label": "Z",
+          "family_hint": "bo-pattern-d3-source",
+          "source_note": "The arXiv v3 TeX row at line 1167 prints (0,2), but |v1|=(2,0), |u_sigma_i|=(1-sigma_i,0), and Proposition 5.7 places this class at display bidegree (4,0). This dataset uses the degree-consistent (4,0) and leaves the discrepancy for review."
+        }
+      ],
+      "relations_by_filtration": {
+        "1": [
+          "(h1+xv1)u_sigma_i*v1^4-v1^2u_sigma_i*v1^2h1",
+          "v1^2u_sigma_i*h2",
+          "(x+y)u_sigma_i*v1^4"
+        ],
+        "2": [
+          "(h1+xv1)u_sigma_i*h2",
+          "(h1+xv1)u_sigma_i*v1^2h1-v1^2u_sigma_i*h1^2",
+          "v1^2u_sigma_i*x^2",
+          "v1^2u_sigma_i*y^2",
+          "v1^2u_sigma_i*xh1",
+          "v1^2u_sigma_i*h2^2",
+          "(x+y)u_sigma_i*v1^2h1",
+          "(x^2+y^2)u_sigma_i*v1^4"
+        ],
+        "3": [
+          "(h1+xv1)u_sigma_i*x^2-(x^2+y^2)u_sigma_i*h1",
+          "(h1+xv1)u_sigma_i*y^2",
+          "(x^2+y^2)u_sigma_i*v1^2h1",
+          "(x+y)u_sigma_i*h1^2-(h1+xv1)u_sigma_i*xh1",
+          "(x+y)u_sigma_i*x^2-(x+y)u_sigma_i*y^2"
+        ],
+        "4": [
+          "(x^2+y^2)u_sigma_i*h1^2",
+          "(x^2+y^2)u_sigma_i*h2^2",
+          "(x^2+y^2)u_sigma_i*x^2",
+          "(x^2+y^2)u_sigma_i*y^2",
+          "(x^2+y^2)u_sigma_i*xh1",
+          "(h1+xv1)u_sigma_i*h1^3-v1^2u_sigma_i",
+          "4v1^2u_sigma_i*k"
+        ]
+      },
+      "hidden_extensions": [
+        "ext-sigma-h1",
+        "ext-sigma-h2"
+      ],
+      "cycle_family_ids": [
+        "bo-sigma-d3-pairs",
+        "bo-sigma-permanent",
+        "tate-visible-sigma-complement"
+      ],
+      "orbit_transport": {
+        "to": [
+          "q8-hfpss-e2-sigma-j",
+          "q8-hfpss-e2-sigma-k"
+        ],
+        "policy": "Transport the whole pattern through the C3 symmetry, with a recorded basis map and exact F4/W(F4) unit coefficient."
+      },
+      "source_ref": "DKLLW24 Tables 5-6; local lines 1148-1195"
+    }
+  ],
+  "hidden_extensions": [
+    {
+      "id": "ext-integer-h2",
+      "page_scope": "integer Q8-HFPSS E2 reconstructed from the 2-BSS",
+      "multiplier": "h2",
+      "source": "x^2h2",
+      "target": "4kD",
+      "formula": "h2*(x^2h2)=4kD",
+      "transport": "D^n at E2 only; transport beyond E2 requires survival of every factor",
+      "source_ref": "DKLLW24 Remark 3.4; local lines 980-983; Bauer 2008 Eq. (7.13)"
+    },
+    {
+      "id": "ext-sigma-h1",
+      "page_scope": "(*-sigma_i) Q8-HFPSS E2 reconstructed from the 2-BSS",
+      "multiplier": "h1",
+      "parameters": {
+        "m": "integer >= 0",
+        "n": "any integer"
+      },
+      "source": "k^m x^2h1 D^n u_sigma_i",
+      "target": "2k^(m+1)v1^2D^n u_sigma_i",
+      "formula": "h1*(k^m x^2h1 D^n u_sigma_i)=2k^(m+1)v1^2D^n u_sigma_i",
+      "source_ref": "DKLLW24 Lemma 3.6; local lines 1094-1112"
+    },
+    {
+      "id": "ext-sigma-h2",
+      "page_scope": "(*-sigma_i) Q8-HFPSS E2 reconstructed from the 2-BSS",
+      "multiplier": "h2",
+      "parameters": {
+        "m": "integer >= 0",
+        "n": "any integer"
+      },
+      "source": "k^m x^3D^n u_sigma_i",
+      "target": "2k^(m+1)v1^2D^n u_sigma_i",
+      "formula": "h2*(k^m x^3D^n u_sigma_i)=2k^(m+1)v1^2D^n u_sigma_i",
+      "source_ref": "DKLLW24 Lemma 3.6; local lines 1094-1123"
+    }
+  ],
+  "cycle_families": [
+    {
+      "id": "bo-integer-d3-pairs",
+      "page": "q8-hfpss-e2-integer",
+      "kind": "bo-pattern",
+      "role": "classes supporting or receiving the integer d3 pattern",
+      "differentials": [
+        "d3(D^m g^s v1^(4l+2)h1^n)=D^m g^s v1^(4l)h1^(n+3), for l>=1 and n>=1",
+        "d3(D^m g^s v1^2h1^n)=D^m g^s h1^(n+3), for n>=1"
+      ],
+      "parameters": {
+        "m": "any integer",
+        "s": "integer >= 0",
+        "l": "integer >= 1",
+        "n": "integer >= 1"
+      },
+      "module_kind": "j-adic-formal-power-series",
+      "formal_series_family_id": "fs.integer.bo",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "source_ref": "DKLLW24 lines 1358-1389"
+    },
+    {
+      "id": "bo-integer-permanent",
+      "page": "q8-hfpss-e2-integer",
+      "kind": "bo-pattern",
+      "role": "integer v1-local permanent families after the d3 pattern",
+      "expressions": [
+        "2D^m v1^(4l+2)",
+        "D^m v1^(4l)",
+        "D^m v1^(4l)h1",
+        "D^m v1^(4l)h1^2"
+      ],
+      "parameters": {
+        "m": "any integer",
+        "l": "integer >= 1"
+      },
+      "module_kind": "j-adic-formal-power-series",
+      "formal_series_family_id": "fs.integer.bo",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "name_explanation": "Together with the d3 source/target pairs these match many copies of pi_*KO. In BG18 the bo-pattern is the K(1)-local image; BG18 remarks that KO-pattern is the more accurate name.",
+      "source_ref": "DKLLW24 Proposition 4.12 and Remark 4.13; BG18 Definition 2.1 and Remark 2.2"
+    },
+    {
+      "id": "tate-visible-integer-complement",
+      "page": "q8-hfpss-e2-integer",
+      "kind": "tate-visible",
+      "role": "positive-filtration integer classes not selected by the bo classifiers above",
+      "classifier": "filtration>0 and expression is outside bo-integer-d3-pairs and bo-integer-permanent",
+      "module_kind": "cell-resolved",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "comparison_period_class": "tate-g-D8-lattice",
+      "zero_line_warning": "Filtration zero is only a surjective comparison to TateSS, so it is never admitted by this classifier without an extra norm-cokernel certificate.",
+      "source_ref": "DKLLW24 Lemma 2.6, Remark 3.9, and chart convention lines 2541-2542"
+    },
+    {
+      "id": "bo-sigma-d3-pairs",
+      "page": "q8-hfpss-e2-sigma-i",
+      "kind": "bo-pattern",
+      "role": "the v1-local single-sigma d3 family inherited from the integer module pattern",
+      "differentials": [
+        "d3(k^sD^m v1^(4l+2)h1^n u_sigma_i)=k^sD^m v1^(4l)h1^(n+3)u_sigma_i"
+      ],
+      "parameters": {
+        "s": "any integer allowed after Tate inversion; nonnegative on the HFPSS source module",
+        "m": "any integer on E2",
+        "l": "integer >= 0",
+        "n": "integer >= 0"
+      },
+      "distinction": "The additional d3((h1+xv1)u_sigma_i)=2kv1^2u_sigma_i is recorded as a separate generator differential; it does not change the j-adic module classification of the bo towers.",
+      "module_kind": "j-adic-formal-power-series",
+      "formal_series_family_id": "fs.sigma-i.bo",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "source_ref": "DKLLW24 lines 1941-1965 and 2045-2061"
+    },
+    {
+      "id": "bo-sigma-permanent",
+      "page": "q8-hfpss-e2-sigma-i",
+      "kind": "bo-pattern",
+      "role": "single-sigma v1-local permanent families after the first d3 pattern",
+      "expressions": [
+        "2D^m v1^(4l-2)u_sigma_i",
+        "D^m v1^(4l)u_sigma_i",
+        "D^m v1^(4l)h1u_sigma_i",
+        "D^m v1^(4l)h1^2u_sigma_i"
+      ],
+      "parameters": {
+        "m": "integer >= 0 in the proposition as printed",
+        "l": "integer >= 1"
+      },
+      "module_kind": "j-adic-formal-power-series",
+      "formal_series_family_id": "fs.sigma-i.bo",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "source_ref": "DKLLW24 lines 1954-1963"
+    },
+    {
+      "id": "tate-visible-sigma-complement",
+      "page": "q8-hfpss-e2-sigma-i",
+      "kind": "tate-visible",
+      "role": "positive-filtration single-sigma classes outside the v1-local bo classifiers",
+      "classifier": "filtration>0 and expression is outside bo-sigma-d3-pairs and bo-sigma-permanent",
+      "notable_generator_differential": "d3((h1+xv1)u_sigma_i)=2kv1^2u_sigma_i",
+      "module_kind": "cell-resolved",
+      "object_period_class": "hfpss-D8-object-orbit",
+      "period_class": "hfpss-g-D8-semiperiod",
+      "comparison_period_class": "tate-g-D8-lattice",
+      "source_ref": "DKLLW24 Lemma 2.6, Proposition 5.8, and chart convention lines 2541-2542"
+    }
+  ],
+  "named_period_classes": [
+    {
+      "id": "hfpss-D8-object-orbit",
+      "family_kind": "all-hfpss",
+      "equivalence": "x~D^(8q)x",
+      "non_equivalences": [
+        "this object-orbit id alone does not identify x with gx",
+        "x is not identified with Dx after E2",
+        "x is not identified with D^4x"
+      ]
+    },
+    {
+      "id": "hfpss-g-D8-semiperiod",
+      "family_kind": "all-hfpss-including-bo",
+      "family_relation": "{g^sD^(8q)x | s>=0, q integral}",
+      "translation_parameters": {"s": "integer >= 0", "q": "integer"},
+      "identity_warning": "sharing this id means one semiperiod family, not that g has a global HFPSS inverse"
+    },
+    {
+      "id": "tate-g-D8-lattice",
+      "family_kind": "tate-certified-positive-filtration",
+      "equivalence": "x~D^(8q)g^r x when a positive-filtration Tate comparison certificate covers both endpoints",
+      "integer_parameters": [
+        "q",
+        "r"
+      ],
+      "non_equivalences": [
+        "no g^-1 pullback through filtration zero without an additional theorem",
+        "no automatic extension to mixed RO(Q8) pages"
+      ]
+    }
+  ],
+  "chart_semantics": {
+    "multiplication_edges": {
+      "vertical": "multiplication by 2",
+      "slope-1": "multiplication by h1",
+      "slope-1-over-3": "multiplication by h2",
+      "dashed-2bss-only": "hidden extension"
+    },
+    "module_glyphs": {
+      "dot": "k",
+      "blue-dot": "k[[j]]",
+      "red-dot": "k[[j]]{j}",
+      "square": "W(k)",
+      "k_for_Q8": "F4",
+      "j_for_Q8": "v1^4D^-1"
+    },
+    "module_kinds": {
+      "finite-2-primary": "finite residue or 2-primary torsion cell",
+      "witt-2-adic": "W(F4)-type 2-adically complete cell",
+      "j-adic-formal-power-series": "F4[[j]], jF4[[j]], or a declared Witt/torsion analogue; one module glyph represents infinitely many j-powers",
+      "cell-resolved": "read the concrete glyph/coefficient presentation before assigning one of the three algebraic kinds"
+    },
+    "classification_warning": "Neither filtration nor the visible height of an h1 tower determines module kind.",
+    "source_ref": "DKLLW24 Tables 10-11 and Remarks 6.1-6.2; local lines 2482-2525"
+  },
+  "source_discrepancies": [
+    {
+      "id": "dkllw-arxiv-v3-eigenvalue-typo",
+      "description": "Local main.tex line 918 truncates the displayed list of coefficient eigenvalues. The surrounding argument explicitly requires 1,zeta,zeta^2."
+    },
+    {
+      "id": "dkllw-arxiv-v3-sigma-v1-2-grade",
+      "description": "Table 5 source line 1167 prints (0,2) for v1^2u_sigma_i, while generator degrees and Proposition 5.7 give display bidegree (4,0). The dataset records (4,0)."
+    }
+  ],
+  "review_checks": [
+    {
+      "id": "review-c3-vs-galois",
+      "question": "Do the chosen sigma_j and sigma_k bases make every transported zeta coefficient explicit without identifying C3 with Gal(F4/F2)?"
+    },
+    {
+      "id": "review-bo-boundary",
+      "question": "Should the extra sigma_i d3 on (h1+xv1)u_sigma_i remain in the Tate-visible complement, or should the project adopt a broader chart-level bo label?"
+    },
+    {
+      "id": "review-torsion-labels",
+      "question": "Should source labels Z/2^n be normalized in Studio as W(F4)/2^n modules, while preserving the literal table labels?"
+    },
+    {
+      "id": "review-g-certificates",
+      "question": "For each future g-translation, has Studio checked that both endpoints stay in the positive-filtration HFPSS-to-TateSS isomorphism range?"
+    },
+    {
+      "id": "review-figure-completeness",
+      "question": "Are missing printed representatives treated as virtual translates rather than absent classes?"
+    }
+  ]
+}

@@ -417,16 +417,16 @@ def research_project() -> Project:
             id="period_integer_g", name="g=kD^3 (20,4)-period", workspace_id=integer.id, rank=1,
             generators=[PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")],
             valid_from_page=2, valid_to_page="infinity", status="established",
-            source_ref="DKLLW24, Table 7 and \u00a76.1.2 (PDF pp. 18, 40); excludes low-filtration v1-local classes",
+            source_ref="DKLLW24 Lemma 4.7, d3 families, and §6.1.2: forward g=kD^3 semiperiod for all chart families, including j-adic bo towers; g^-1 still requires Tate comparison",
         ),
     ]
     for family in project.period_families:
         if family.id == "period_integer_g":
-            family.source_ref = "DKLLW24, Table 7 and §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"
+            family.source_ref = "DKLLW24 Lemma 4.7, d3 families, and §6.1.2: forward g=kD^3 semiperiod for all chart families, including j-adic bo towers; g^-1 still requires Tate comparison"
     project.period_families.extend([
         PeriodFamily("period_sigma_D_E2", "(*-sigma_i) E2 D-period", sigma.id, 1, [PeriodGenerator(Grade(stem=8), "D")], 2, 2, status="established", source_ref="DKLLW24, §6.1.2 (PDF p. 40)"),
         PeriodFamily("period_sigma_D8", "(*-sigma_i) D^8 64-period", sigma.id, 1, [PeriodGenerator(Grade(stem=64), "D^8")], 2, "infinity", status="established", source_ref="DKLLW24, §6.1.2 (PDF p. 40)"),
-        PeriodFamily("period_sigma_g", "(*-sigma_i) g=kD^3 (20,4)-period", sigma.id, 1, [PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")], 2, "infinity", status="established", source_ref="DKLLW24, §6.1.2 (PDF p. 40); excludes low-filtration v1-local classes"),
+        PeriodFamily("period_sigma_g", "(*-sigma_i) g=kD^3 (20,4)-period", sigma.id, 1, [PeriodGenerator(Grade(stem=20, filtration=4), "g=kD^3")], 2, "infinity", status="established", source_ref="DKLLW24 d3 families and §6.1.2: forward g semiperiod includes j-adic bo towers; g^-1 requires Tate comparison"),
     ])
     # The shipped research workspace deliberately includes the small,
     # D-localized, source-backed E2 catalogue.  Arbitrary persisted projects

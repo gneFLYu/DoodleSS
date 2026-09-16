@@ -66,6 +66,10 @@ from domain.page_periodicity import (
 from domain.models import ClassNode, Differential, Grade, Project, Proposition, Workspace, new_id, project_from_dict, project_to_dict
 from domain.project_io import ProjectImportValidationError, import_digest, prepare_project_import
 from domain.periods import LEGACY_DIFFERENTIAL_PERIODS
+from domain.periodic_fate_ledger import (
+    audit_periodic_fate_ledger,
+    load_periodic_fate_ledger,
+)
 from domain.periodicity import (
     PeriodicityOperationError,
     materialize_periodic_translate,
@@ -207,6 +211,16 @@ def legacy_catalog_entry(entry_id: str):
         return jsonify({"error": "Unknown legacy catalog entry."}), 404
     except (FileNotFoundError, ProjectImportValidationError, json.JSONDecodeError) as error:
         return jsonify({"error": str(error)}), 422
+
+
+@app.get("/api/v2/review/periodic-fate-ledger")
+def periodic_fate_ledger():
+    """Expose the review-only period-class ledger with a computed audit."""
+    try:
+        ledger = load_periodic_fate_ledger()
+    except (FileNotFoundError, json.JSONDecodeError) as error:
+        return jsonify({"error": str(error)}), 422
+    return jsonify({"ledger": ledger, "audit": audit_periodic_fate_ledger(ledger)})
 
 
 @app.get("/api/project/export")

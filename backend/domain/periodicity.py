@@ -29,8 +29,9 @@ class PeriodicityOperationError(ValueError):
 def ensure_source_backed_q8_periodicity_rules(project: Project) -> Project:
     """Install exactly one D^8 rule for the established integer Q8 branch.
 
-    The source also discusses a (20,4) g=kD^3 period with low-filtration
-    exceptions.  That exception is not encoded as an automatic operation.
+    The project separately records the (20,4) forward g=kD^3 semiperiod for
+    every family, including j-adic bo towers.  It is not encoded by this
+    *D^8-only* materializer because g is not being inverted here.
     """
 
     integer = next((item for item in project.workspaces if item.id == "ws_integer"), None)
@@ -57,7 +58,7 @@ def ensure_source_backed_q8_periodicity_rules(project: Project) -> Project:
         ),
         exclusions=[
             "No E2 propagation: the source specifies D-periodicity on E2 and D^8-periodicity on other pages.",
-            "No automatic g=kD^3 propagation: section 6.1.2 excludes v1-local classes in low filtration.",
+            "No automatic g=kD^3 materialization in this D^8-only rule: g is stored as a forward semiperiod for all families, including j-adic bo towers, and g^-1 requires a Tate comparison certificate.",
             "No propagation to other workspaces without a separately scoped rule.",
         ],
         source_ref=D8_RULE_SOURCE,
