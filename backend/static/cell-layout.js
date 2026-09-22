@@ -6,6 +6,9 @@
   "use strict";
 
   const clampValue = (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value));
+  const DEFAULT_DOT_SIZE_THRESHOLD = 1.5;
+  const DEFAULT_DOT_FILL_RATIO = 0.42;
+  const DEFAULT_DOT_SHRINK_EXPONENT = 0.65;
 
   function stableRecordKey(record) {
     const explicitOrder = Number.isFinite(Number(record.order)) ? Number(record.order) : 0;
@@ -90,7 +93,15 @@
       const inset = clampValue(cell * 0.08, 0.01, 4);
       const gap = clampValue(cell * 0.05, 0.01, 2);
       const span = Math.max(0.5, cell - 2 * inset);
-      let radius = clampValue(cell * 0.105, 0.55, 7);
+      const threshold = Math.max(0.5, Number(options.dotSizeThreshold) || DEFAULT_DOT_SIZE_THRESHOLD);
+      const fillRatio = clampValue(Number(options.dotFillRatio) || DEFAULT_DOT_FILL_RATIO, 0.2, 0.48);
+      const exponent = Math.max(0.35, Number(options.dotShrinkExponent) || DEFAULT_DOT_SHRINK_EXPONENT);
+      const nominalRadius = clampValue(cell * 0.105, 0.55, 7);
+      const fillRadius = clampValue(cell * fillRatio / envelope, 0.01, 7);
+      const lowZoomBlend = Math.pow(clampValue(nominalRadius / threshold, 0, 1), exponent);
+      let radius = nominalRadius < threshold
+        ? fillRadius + (nominalRadius - fillRadius) * lowZoomBlend
+        : nominalRadius;
       for (const group of cells.values()) {
         const slots = Math.ceil(Math.sqrt(group.length));
         radius = Math.min(radius, Math.max(0.01, (span - gap * (slots - 1)) / (2 * slots * envelope)));

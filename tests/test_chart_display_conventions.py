@@ -92,6 +92,22 @@ def test_uniform_glyph_size_scales_with_zoom(packed_samples):
     assert all(left < right for left, right in itertools.pairwise(radii))
 
 
+def test_low_zoom_threshold_eases_sparse_glyph_toward_cell_fill():
+    sample = run_node(r"""
+const layout = require(input.path);
+const options = {uniformSize: true, glyphEnvelope: 1.35};
+const records = [{key: 'a', cellKey: '0:0', size: 5.5}, {key: 'b', cellKey: '1:0', size: 5.5}];
+const low = layout.packInstances(records, 2, options);
+const normal = layout.packInstances(records, 28, options);
+process.stdout.write(JSON.stringify({low, normal}));
+""", {"path": str(LAYOUT)})
+    low_radius = sample["low"][0]["size"]
+    normal_radius = sample["normal"][0]["size"]
+    assert all(node["size"] == pytest.approx(low_radius) for node in sample["low"])
+    assert 0.35 <= 1.35 * low_radius / 2 <= 0.45
+    assert low_radius < normal_radius
+
+
 def test_full_glyph_envelopes_stay_in_cells_without_colliding(packed_samples):
     for sample in packed_samples:
         groups = {}
