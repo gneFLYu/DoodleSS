@@ -14,7 +14,7 @@ class InteractionContractTest(unittest.TestCase):
         cls.script = (ROOT / "backend" / "static" / "app.js").read_text(encoding="utf-8")
         cls.layout = (ROOT / "backend" / "static" / "cell-layout.js").read_text(encoding="utf-8")
         cls.styles = (ROOT / "backend" / "static" / "style.css").read_text(encoding="utf-8")
-        cls.guide = (ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
+        cls.guide = (ROOT / "USER_GUIDE.md").read_text(encoding="utf-8")
 
     def test_undo_redo_buttons_and_hotkeys_are_wired(self):
         self.assertIn('id="undo-action"', self.markup)
@@ -284,7 +284,7 @@ process.stdout.write(JSON.stringify(packed));
         self.assertIn("/legacy-export?page=", self.script)
         for phrase in (
             "Import JSON → Preview → Apply",
-            "当前",
+            "Import into current page",
             "candidate/manual-unverified",
         ):
             self.assertIn(phrase, self.guide)

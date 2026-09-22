@@ -2,7 +2,7 @@
 
 A local-first, proof-aware workbench for RO(G)-graded spectral sequences, beginning with the Q8 HFPSS for height-2 Morava E-theory at characteristic 2.
 
-中文快速入门、完整交互工作流、来源导入与能力边界见 [HFPSS Studio 中文操作手册](USER_GUIDE.zh-CN.md)。
+For a quick start, the complete interaction workflow, source import rules, and capability boundaries, see [the HFPSS Studio user guide](USER_GUIDE.md).
 
 ## What is usable now
 
@@ -30,7 +30,7 @@ The project's sources use the integer-graded HFPSS as input and derive RO(Q8) sh
 There is one application to run and inspect:
 
 ```text
-E:\课程\PACE2025_fly\HFPSS Q_8\DoodleSS\HFPSS-Studio
+E:\FenglinYu\HFPSS Q_8\DoodleSS-github
 ```
 
 Run `run-latest.ps1` from that directory (or use the command below), then open **http://127.0.0.1:5078/**. The chart itself identifies the selected workspace and page in its header; that is the current live page, not a static export.

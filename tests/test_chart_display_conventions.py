@@ -92,8 +92,21 @@ def test_uniform_glyph_size_scales_with_zoom(packed_samples):
     assert all(left < right for left, right in itertools.pairwise(radii))
 
 
+def test_e2_orientation_display_has_only_the_two_catalogue_families():
+    result = app_helper(["e2OrientationPattern"], r"""
+    [
+      e2OrientationPattern({settings:{rendering:{enumerated_e2_pattern:'integer'}}}),
+      e2OrientationPattern({settings:{rendering:{enumerated_e2_pattern:'sigma_i'}}}),
+      e2OrientationPattern({settings:{rendering:{enumerated_e2_pattern:'unexpected'}}})
+    ]
+    """)
+    assert result["result"] == ["oriented", "non-oriented", "unspecified"]
+
+
 def test_low_zoom_threshold_eases_sparse_glyph_toward_cell_fill():
     sample = run_node(r"""
+const fs = require('fs');
+const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const layout = require(input.path);
 const options = {uniformSize: true, glyphEnvelope: 1.35};
 const records = [{key: 'a', cellKey: '0:0', size: 5.5}, {key: 'b', cellKey: '1:0', size: 5.5}];

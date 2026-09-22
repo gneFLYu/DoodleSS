@@ -216,6 +216,13 @@ function workspaceDisplayName(ws) {
   return sector ? `Q8 HFPSS · ${compactSectorLabel(sector)}` : ws.name;
 }
 
+function e2OrientationPattern(ws) {
+  const pattern = ws?.settings?.rendering?.enumerated_e2_pattern;
+  if (pattern === "integer") return "oriented";
+  if (pattern === "sigma_i") return "non-oriented";
+  return "unspecified";
+}
+
 function toast(message) {
   const target = $("#toast");
   target.textContent = message;
@@ -424,7 +431,7 @@ function render() {
   $("#chart").dataset.tool = state.tool;
 
   $("#workspace-title").textContent = workspaceDisplayName(ws);
-  $("#workspace-meta").textContent = `${ws.group} · ${ws.theory} · characteristic ${ws.characteristic} · ${ws.grading_label}`;
+  $("#workspace-meta").textContent = `${ws.group} · ${ws.theory} · characteristic ${ws.characteristic} · ${ws.grading_label} · ${e2OrientationPattern(ws)} E2 pattern`;
   $("#workspace-summary").textContent = ws.summary || "No research summary has been recorded for this workspace.";
   $("#page-label").textContent = `E${ws.page}`;
   if ($("#vanishing-line")) $("#vanishing-line").value = ws.settings.vanishing_line || 0;
@@ -2298,7 +2305,7 @@ function beginChartPageRender(ws) {
     const documentBaseline = state.project?.research_brief?.document_baseline === true;
     baselineNote.hidden = !documentBaseline;
     baselineNote.textContent = documentBaseline
-      ? "文档基线：未确定项暂按文档采用；保留已核实修正，不代表全部独立验证。"
+      ? "Document baseline: unresolved items follow the documented chart; verified corrections are retained, but this does not represent independent verification of every claim."
       : "";
   }
   const sector = (state.project.grading_sectors || []).find(item => item.workspace_id === ws.id);
@@ -2734,7 +2741,10 @@ function renderChart() {
     const displayLabel = periodicDisplayLabel(record);
     const representativeText = record.readOnlyRepresentative ? (record.uncertain ? " · Potential representative; outgoing map incomplete · read-only" : " · Computed quotient representative · read-only") : "";
     const aria = `${displayLabel} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}${seriesText}${representativeText}`;
-    const tooltip = `${displayLabel} · ${gradeText(record.grade)}${record.periodic ? ` · ${record.item.label} translated by the shared D^m/g lattice` : ""}${truncation ? ` · ${truncation.text}` : ""}${record.modulePorts ? ` · ${quotientDescription(record)}` : ""}${representativeText}`;
+    const unitPeriodText = record.item.style?.multiplicative_unit && !record.periodic
+      ? " · W(F4)[[j]] 2-adic unit tower; virtual copies use forward g and D^8"
+      : "";
+    const tooltip = `${displayLabel} · ${gradeText(record.grade)}${record.periodic ? ` · ${record.item.label} translated by the shared D^m/g lattice` : ""}${unitPeriodText}${truncation ? ` · ${truncation.text}` : ""}${record.modulePorts ? ` · ${quotientDescription(record)}` : ""}${representativeText}`;
     const seriesAttribute = truncation ? ` data-series-bottom-order="${truncation.order}"` : "";
     const readOnlyAttribute = record.readOnlyRepresentative ? ' data-readonly-representative="true"' : "";
     markup += `<g class="class-instance" data-point="${escapeHtml(record.item.id)}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute}${seriesAttribute}${readOnlyAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
