@@ -7,6 +7,48 @@ from .models import Project, Proposition
 
 REVIEWED_AT = "2026-08-11"
 COEFFICIENTS = ["coefficient-context:q8-witt-f4"]
+# Only these old managed conclusions were superseded by the researcher's
+# explicit choice. Do not turn this into a generic overwrite of research facts.
+_NORMALIZATION_REFRESH = {
+    "prop_reu_thom_normalization": (
+        "Fixing the representation does not automatically fix a selected generator without a unit; this remains a review obligation."
+    ),
+    "prop_reu_d3_unit": (
+        "The equation c=c^2 is valid, but the exact Thom normalization is not yet admitted."
+    ),
+}
+_VERIFIED_PATTERN_REFRESH = {
+    "prop_reu_d11_corrected_pattern": (
+        "Does not use the rejected restriction lemma at formal_notes.tex lines 435-446."
+    ),
+    "prop_reu_d9_corrected_pattern": (
+        "Supersedes the old d9 on (10,2), which the correction declares a 21-cycle."
+    ),
+    "prop_reu_d7_corrected_pattern": (
+        "The dated correction explicitly retains the (9,1) d7."
+    ),
+}
+_MANAGED_REFRESH_NOTES = {**_NORMALIZATION_REFRESH, **_VERIFIED_PATTERN_REFRESH}
+_MIXED_SUMMARY_REFRESH = {
+    "prop_reu_mixed_sector_guard": {
+        "statement": "C3 and the registered periods do not identify sigma_i+2sigma_j with 2sigma_i+sigma_j.",
+        "notes": "Leibniz coefficients can cancel in one mixed sector and not the other.",
+    },
+    "prop_reu_mixed_formulas_review": {
+        "statement": "The exact mixed-sector formulas in formal_notes.tex lines 811-920 are admitted.",
+        "notes": "Several proofs contain TBD premises, zeta-sensitive aliases, or an invalid use of D^4 as a Q8 period identity.",
+    },
+}
+_SUPERSEDED_PATTERN_PREMISES = {
+    "prop_reu_d11_corrected_pattern": {"prop_reu_a2sigma_pc", "prop_chain_q8_d11"},
+    "prop_reu_d9_corrected_pattern": {"prop_reu_d11_corrected_pattern", "prop_chain_q8_d23"},
+    "prop_reu_d7_corrected_pattern": {"prop_reu_d5_a2sigma", "prop_chain_c4_hidden_2"},
+}
+_EXACT_PURE_NORMALIZATION = {
+    "id": "pure-sigma-i-galois-fixed", "value": 1, "field": "F4",
+    "preserves_witt_layers": True,
+    "derivation": "The chosen psi-fixed source and target give c=c^2, hence nonzero c=1.",
+}
 
 
 def ensure_reu_fact_chain(project: Project) -> Project:
@@ -18,7 +60,7 @@ def ensure_reu_fact_chain(project: Project) -> Project:
     if not required.issubset(workspaces):
         return project
     known = {
-        proposition.id
+        proposition.id: proposition
         for workspace in project.workspaces
         for proposition in workspace.propositions
     }
@@ -37,10 +79,14 @@ def ensure_reu_fact_chain(project: Project) -> Project:
         status: str = "established",
         hypotheses: list[str] | None = None,
     ) -> None:
-        if ident in known:
+        existing = known.get(ident)
+        mixed_refresh = _MIXED_SUMMARY_REFRESH.get(ident)
+        refresh_legacy_mixed = bool(existing is not None and mixed_refresh
+                                    and existing.statement == mixed_refresh["statement"])
+        if existing is not None and ident not in _MANAGED_REFRESH_NOTES and not refresh_legacy_mixed:
             return
         source_ref = source_refs[0] if source_refs else ""
-        workspaces[workspace_id].propositions.append(Proposition(
+        proposition = Proposition(
             id=ident,
             kind=kind,
             statement=statement,
@@ -58,9 +104,40 @@ def ensure_reu_fact_chain(project: Project) -> Project:
                 "Keep D^8 as the Q8-HFPSS period identity; repeated D^4 siblings are distinct anchors.",
             ],
             reviewer="Codex REU source-chain audit",
-            reviewed_at=REVIEWED_AT,
-        ))
-        known.add(ident)
+            reviewed_at="2026-09-21" if ident in _MANAGED_REFRESH_NOTES or mixed_refresh else REVIEWED_AT,
+        )
+        if existing is None:
+            workspaces[workspace_id].propositions.append(proposition)
+            known[ident] = proposition
+            return
+        # Refresh saved projects as well as fresh seeds. Preserve additional
+        # research fields, premises and references; remove only exact obsolete
+        # managed premises/boilerplate superseded by independent certificates.
+        for field in ("kind", "statement", "status", "rule", "reviewer", "reviewed_at"):
+            setattr(existing, field, getattr(proposition, field))
+        existing.conclusion.update(proposition.conclusion)
+        if refresh_legacy_mixed and ident == "prop_reu_mixed_sector_guard":
+            old_guard = existing.conclusion.get("unsupported_transport")
+            if old_guard == "sigma_i+2sigma_j <-> 2sigma_i+sigma_j":
+                existing.conclusion["historical_c3_only_guard"] = existing.conclusion.pop("unsupported_transport")
+        for field in ("premise_ids", "hypotheses", "verification_checks"):
+            retained = getattr(existing, field)
+            if field == "premise_ids":
+                obsolete = _SUPERSEDED_PATTERN_PREMISES.get(ident, set())
+                retained = [value for value in retained if value not in obsolete]
+            setattr(existing, field, list(dict.fromkeys(
+                [*getattr(proposition, field), *retained]
+            )))
+        existing.source_refs = list(dict.fromkeys([
+            *proposition.source_refs, *existing.source_refs,
+            *([existing.source_ref] if existing.source_ref else []),
+        ]))
+        existing.source_ref = proposition.source_ref
+        remaining_notes = existing.notes
+        old_note = _MANAGED_REFRESH_NOTES.get(ident, (mixed_refresh or {}).get("notes", ""))
+        for managed_note in (old_note, proposition.notes):
+            remaining_notes = remaining_notes.replace(managed_note, "").strip()
+        existing.notes = proposition.notes + ("\n\n" + remaining_notes if remaining_notes else "")
 
     add(
         "prop_reu_topological_galois",
@@ -108,14 +185,16 @@ def ensure_reu_fact_chain(project: Project) -> Project:
     )
     add(
         "prop_reu_thom_normalization",
-        "normalization-obligation",
+        "normalization-choice",
         r"The selected Thom generator satisfies psi(u_{2sigma_i})=u_{2sigma_i} exactly.",
-        {"normalization": "psi-fixed Thom generator", "precision": "exact"},
+        {"normalization": "psi-fixed Thom generator", "precision": "exact",
+         "scope": "chosen pure *-n sigma_i bases", "preserves_witt_layers": True},
         ["prop_reu_psi_representations"],
         "ChooseAndVerifyThomGenerator",
-        ["REU coefficientpuzzle.tex lines 39-43"],
-        "Fixing the representation does not automatically fix a selected generator without a unit; this remains a review obligation.",
-        status="under-review",
+        ["Researcher declaration: chosen psi-fixed pure *-n sigma_i generators and Thom classes",
+         "REU coefficientpuzzle.tex lines 39-43"],
+        "The researcher has fixed this normalization. It is a choice of psi-fixed pure-sector generators, not an inference from representation invariance alone. Witt factors 2 and 4 and mixed-sector coefficients are not normalized away.",
+        status="verified",
     )
     add(
         "prop_reu_a2sigma_pc",
@@ -162,6 +241,11 @@ def ensure_reu_fact_chain(project: Project) -> Project:
             "scope": "*-2sigma_i",
             "formula": "d3(u_{2sigma_i})=x^2 h1 u_{2sigma_i}",
             "precision": "exact-after-normalization",
+            "coefficient_normalization": {
+                "id": "pure-sigma-i-galois-fixed", "value": 1, "field": "F4",
+                "derivation": "psi-fixed source and nonzero target imply c=c^2; c in F4* implies c=1",
+                "preserves_witt_layers": True,
+            },
         },
         [
             "prop_reu_d3_nonzero_line",
@@ -170,8 +254,8 @@ def ensure_reu_fact_chain(project: Project) -> Project:
         ],
         "FilteredNaturalityAndFrobeniusFixedUnit",
         ["REU Note/record/coefficientpuzzle.tex lines 15-58"],
-        "The equation c=c^2 is valid, but the exact Thom normalization is not yet admitted.",
-        status="under-review",
+        "Naturality and the chosen psi-fixed source and target give c=c^2, hence the nonzero F4 scalar is 1. This does not set a Witt coefficient or a power series equal to 1, and does not fix a coefficient in a mixed sector moved by psi.",
+        status="verified",
     )
     add(
         "prop_reu_d5_a2sigma",
@@ -192,87 +276,108 @@ def ensure_reu_fact_chain(project: Project) -> Project:
     add(
         "prop_reu_d11_corrected_pattern",
         "differential",
-        r"The corrected d11 family on the (x^2+y^2)D^(2,6) anchors is 32-periodic up to the restriction unit.",
+        r"The verified d11 family on (x^2+y^2)D^(2,6)u has exact nonzero F_4 coefficient 1 in the chosen psi-fixed basis.",
         {
             "datum_type": "differential",
             "spectral_sequence": "Q8-HFPSS",
             "page": 11,
             "scope": "*-2sigma_i",
             "period_pattern": 32,
-            "precision": "up-to-W(F4)-unit",
+            "precision": "exact-after-normalization",
+            "coefficient_normalization": dict(_EXACT_PURE_NORMALIZATION),
+            "period_kind": "repeated-differential-pattern",
+            "period_is_invertible": False,
         },
-        ["prop_reu_a2sigma_pc", "prop_chain_q8_d11"],
-        "CorrectedRestrictionAndPeriodSibling",
+        ["formal_prop_fn-2i-009_1"],
+        "VerifiedRestrictionCertificateAndGaloisNormalization",
         [
             "REU formal_notes.tex lines 450-470",
             "REU Note/record/note.tex Dec. correction, lines 1248-1255",
         ],
-        "Does not use the rejected restriction lemma at formal_notes.tex lines 435-446.",
+        "The canonical FN009 certificate proves the two D2/D6 blocks separately by C4 restriction and earlier-target exclusion. Their common 32-stem pattern is not permanence of Q8 D4; use D8 for invertible repetition. The rejected restriction lemma is not a premise.",
         status="verified",
     )
     add(
         "prop_reu_d9_corrected_pattern",
         "differential",
-        r"The corrected d9(h2 D^2 u)=h1^2 k^2 D^3 u family is 32-periodic up to a unit.",
+        r"The verified d9(h2 D^(2,6)u)=h1^2 k^2 D^(3,7)u has exact F_4 coefficient 1; the source's two-multiple survives.",
         {
             "datum_type": "differential",
             "spectral_sequence": "Q8-HFPSS",
             "page": 9,
             "scope": "*-2sigma_i",
             "period_pattern": 32,
-            "precision": "up-to-W(F4)-unit",
+            "precision": "exact-after-normalization",
+            "coefficient_normalization": dict(_EXACT_PURE_NORMALIZATION),
+            "period_kind": "repeated-differential-pattern",
+            "period_is_invertible": False,
         },
-        ["prop_reu_d11_corrected_pattern", "prop_chain_q8_d23"],
-        "CorrectionVanishingAndDegree",
+        ["formal_prop_fn-2i-016_1"],
+        "VerifiedD11ProductBoundaryAndEarlierSourceExclusion",
         [
             "REU formal_notes.tex lines 520-526",
             "REU Note/record/note.tex lines 1232-1238",
         ],
-        "Supersedes the old d9 on (10,2), which the correction declares a 21-cycle.",
+        "The canonical FN016 certificate forces the target to be zero already on E11 using D^-1h1 multiplication of FN009. Earlier incoming-source exclusion forces d9, without a d23 or vanishing-line premise. At low filtration the W/4 source retains its two-layer; the nonzero F4 scalar is 1.",
         status="verified",
     )
     add(
         "prop_reu_d7_corrected_pattern",
         "differential",
-        r"The corrected d7(h1 D u)=2 k^2 D^2 u family and its sibling form a 16-pattern.",
+        r"The verified d7(h1 D^(1,3)u)=2 k^2 D^(2,4)u branches form a common 16-stem pattern with exact F_4 unit 1.",
         {
             "datum_type": "differential",
             "spectral_sequence": "Q8-HFPSS",
             "page": 7,
             "scope": "*-2sigma_i",
             "period_pattern": 16,
+            "precision": "exact-after-normalization",
+            "coefficient_normalization": dict(_EXACT_PURE_NORMALIZATION),
+            "period_kind": "repeated-differential-pattern",
+            "period_is_invertible": False,
         },
-        ["prop_reu_d5_a2sigma", "prop_chain_c4_hidden_2"],
-        "TransferBoundAndPermanentCycleExclusion",
+        ["formal_prop_fn-2i-014_1", "formal_prop_fn-2i-012_1"],
+        "VerifiedTransferAndD9ProductCertificates",
         [
-            "REU formal_notes.tex lines 508-518",
+            "REU formal_notes.tex lines 496-499,508-518",
             "REU Note/record/note.tex lines 1232-1238",
         ],
-        "The dated correction explicitly retains the (9,1) d7.",
+        "FN014 and FN012 independently certify the H1/H5 and H3/H7 blocks and the exact two-layer E7 targets. Combining these branches gives a repeated 16-stem pattern, not an invertible D2. Retain the positive-j source ideals; the Witt factor 2 is not normalized away.",
+        status="verified",
     )
     add(
         "prop_reu_mixed_sector_guard",
         "transport-guard",
-        r"C3 and the registered periods do not identify sigma_i+2sigma_j with 2sigma_i+sigma_j.",
-        {"unsupported_transport": "sigma_i+2sigma_j <-> 2sigma_i+sigma_j"},
-        ["prop_dkllw_mixed_ro_guard"],
-        "OrbitAndPeriodAudit",
+        r"C3 alone does not interchange the two mixed sectors; omega psi gives a semilinear isomorphism from sigma_i+2sigma_j to 2sigma_i+sigma_j.",
+        {"c3_only_transport": False, "scope": "extended-stabilizer filtered towers",
+         "semilinear_transport": {
+             "source": "sigma_i+2sigma_j", "target": "2sigma_i+sigma_j",
+             "action": "omega psi", "omega_power": 1, "reflected": True, "stem_shift": 0,
+             "scalar_action": "a -> a^2", "basis_convention": "transported source coordinates",
+             "display_conversion": "Expand endpoint eigenunits separately; the arrow coefficient uses the target/source unit ratio.",
+         }},
+        ["prop_reu_topological_galois", "prop_reu_psi_representations", "prop_reu_galois_generators"],
+        "SemilinearNormalizerTransport",
         [
             "REU Note/record/note.tex lines 1081-1087 and 1344-1348",
-            "REU formal_notes.tex lines 925-932",
+            "REU formal_notes.tex lines 997-1003 (historical C3-only warning)",
+            "Researcher-specified extended Galois action; backend/domain/actions.py and atlas_transport.py",
         ],
-        "Leibniz coefficients can cancel in one mixed sector and not the other.",
+        "Apply psi first, fixing sigma_i and interchanging sigma_j,sigma_k, then omega. Frobenius preserves zero sums: a genuine transported differential cannot vanish in only one of the two sectors. Copying untransformed basis coefficients is not this semilinear map. This does not determine the unresolved source parameters c or b.",
         workspace_id="ws_sigma_i_2sigma_j",
     )
     add(
         "prop_reu_mixed_formulas_review",
         "mixed-differential-family",
-        r"The exact mixed-sector formulas in formal_notes.tex lines 811-920 are admitted.",
-        {"scope": "*-sigma_i-2sigma_j", "verdict": "review-only"},
+        r"Mixed-sector formulas are reviewed individually: the verified d3, P d5, Q zero-d5 and d11 coexist with unresolved relative d5 coefficients and late claims.",
+        {"scope": "*-sigma_i-2sigma_j", "verdict": "review-only",
+         "independent_facts": ["FN-MIX-001", "FN-MIX-004", "FN-MIX-005-Q-zero", "FN-MIX-006"],
+         "unresolved_parameters": ["mixed_d5_A", "mixed_d5_B"],
+         "no_blanket_admission": True},
         ["prop_reu_d3_unit", "prop_reu_mixed_sector_guard"],
         "CorrectedAliasLeibniz",
-        ["REU formal_notes.tex lines 811-920"],
-        "Several proofs contain TBD premises, zeta-sensitive aliases, or an invalid use of D^4 as a Q8 period identity.",
+        ["REU formal_notes.tex lines 881-991", "Canonical independent certificates in backend/domain/formal_notes_chart.py"],
+        "Use each canonical claim's certificate and current admission status. The nonzero-b repair does not assign b; the corrected d11 coefficient is zeta^2. A printed D4 repeat does not identify pages by a permanent D4 unit, and no late historical row is admitted by this summary.",
         workspace_id="ws_sigma_i_2sigma_j",
         status="under-review",
     )
@@ -351,4 +456,3 @@ def ensure_reu_fact_chain(project: Project) -> Project:
         hypotheses=[],
     )
     return project
-

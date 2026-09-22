@@ -47,18 +47,19 @@ class AtlasTest(unittest.TestCase):
         )
         self.assertEqual(len({item.workspace_id for item in project.grading_sectors}), 16)
 
-    def test_empty_sector_is_not_computed_not_zero_and_survives_round_trip(self):
+    def test_every_sector_has_a_thom_e2_pattern_and_survives_round_trip(self):
         project = migrate_project(demo_project())
         sector = next(item for item in project.grading_sectors if item.id == "q8-ro-a2-b1")
-        self.assertEqual(sector.status, "not-computed")
-        self.assertEqual(sector.class_ids, [])
+        self.assertEqual(sector.status, "imported")
+        self.assertTrue(sector.class_ids)
 
         restored = migrate_project(project_from_dict(project_to_dict(project)))
         restored_sector = next(item for item in restored.grading_sectors if item.id == sector.id)
-        self.assertEqual(restored_sector.status, "not-computed")
+        self.assertEqual(restored_sector.status, "imported")
+        self.assertEqual(restored_sector.class_ids, sector.class_ids)
         self.assertEqual(restored_sector.workspace_id, sector.workspace_id)
 
-    def test_normalization_requires_source_scoped_certificate_outside_tile(self):
+    def test_published_four_sigma_period_normalizes_outside_tile(self):
         project = migrate_project(demo_project())
         exact = normalize_to_q8_sector(project, {"sigma_i": -1, "sigma_j": -2})
         reduced = normalize_to_q8_sector(project, {"sigma_i": -4})
@@ -66,7 +67,8 @@ class AtlasTest(unittest.TestCase):
         self.assertEqual(exact.sector_id, "q8-ro-a1-b2")
         self.assertEqual(exact.status, "exact")
         self.assertEqual(reduced.sector_id, "q8-ro-a0-b0")
-        self.assertEqual(reduced.status, "requires-certificate")
+        self.assertEqual(reduced.status, "exact")
+        self.assertEqual(reduced.stem_shift, 0)
         self.assertEqual(reduced.normalization_path, ["q8-rel-four-sigma-i"])
 
 
@@ -87,14 +89,14 @@ class C3ActionTest(unittest.TestCase):
         sectors = {item.id: item for item in project.grading_sectors}
         self.assertNotEqual(sectors["q8-ro-a1-b2"].c3_orbit_id, sectors["q8-ro-a2-b1"].c3_orbit_id)
         preview = c3_transport_preview(project, "q8-ro-a1-b2")
-        self.assertFalse(preview["materialization_allowed"])
+        self.assertTrue(preview["materialization_allowed"])
         self.assertIn("psi separately fixes i and swaps j,k", preview["warning"])
         self.assertEqual(preview["galois"]["coefficient_automorphism"], "a -> a^2 (zeta <-> zeta^2)")
 
-    def test_s11_records_the_stem_16_sigma_k_transport(self):
+    def test_s11_records_the_stem_16_three_sigma_k_transport(self):
         project = migrate_project(demo_project())
         preview = c3_transport_preview(project, "q8-ro-a1-b1")
-        self.assertEqual(preview["periodic_transport"]["source_workspace_id"], "ws_sigma_i")
+        self.assertEqual(preview["periodic_transport"]["source_workspace_id"], "ws_3sigma_i")
         self.assertEqual(preview["periodic_transport"]["stem_shift"], 16)
         self.assertIn("sigma_k", preview["periodic_transport"]["source_representation"])
 
@@ -199,7 +201,7 @@ class AtlasApiTest(unittest.TestCase):
 
         orbit = self.client.get("/api/v2/c3-actions/omega/orbit/q8-ro-a1-b2")
         self.assertEqual(orbit.status_code, 200)
-        self.assertFalse(orbit.get_json()["materialization_allowed"])
+        self.assertTrue(orbit.get_json()["materialization_allowed"])
 
 
 if __name__ == "__main__":

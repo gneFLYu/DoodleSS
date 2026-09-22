@@ -112,7 +112,7 @@ def render_chart_tex(project: Project, workspace: Workspace, page: int | None = 
     page = int(page or workspace.page)
     nodes = [
         item for item in workspace.classes
-        if not item.archived and item.page <= page and class_is_live_on_page(workspace, item.id, page)
+        if not item.archived and item.page <= page and class_is_live_on_page(workspace, item.id, page, project=project)
     ]
     node_ids = {item.id for item in nodes}
     differentials = _visible_differentials(workspace, page, node_ids)

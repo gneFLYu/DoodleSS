@@ -126,9 +126,13 @@ def migrate_legacy_periods(project: Project) -> Project:
 
 
 def load_project() -> Project:
-    if not DATA_PATH.exists():
-        return migrate_legacy_periods(demo_project())
-    return migrate_legacy_periods(project_from_dict(json.loads(DATA_PATH.read_text(encoding="utf-8"))))
+    project = (project_from_dict(json.loads(DATA_PATH.read_text(encoding="utf-8")))
+               if DATA_PATH.exists() else demo_project())
+    if project.id == "hfpss_studio":
+        # The working chart follows the user's document-first baseline.
+        # Strict source audits can retain an explicit False in the project.
+        project.research_brief.setdefault("document_baseline", True)
+    return migrate_legacy_periods(project)
 
 
 def save_project(project: Project) -> None:
@@ -255,7 +259,7 @@ def export_legacy_canvas(workspace_id: str):
         return jsonify({"error": "page must be at least 2."}), 400
     visible = [
         item for item in workspace.classes
-        if not item.archived and class_is_live_on_page(workspace, item.id, page)
+        if not item.archived and class_is_live_on_page(workspace, item.id, page, project=project)
     ]
     visible_ids = {item.id for item in visible}
     generators = [{
@@ -631,7 +635,7 @@ def materialize_e2_presentation():
             workspace = find_workspace(project, presentation.workspace_id)
             checkpoint(project, f"Materialize explicit E2 presentation {presentation.name}")
             result = materialize_explicit_presentation(project, presentation)
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
             save_project(project)
         return jsonify({
             "presentation": presentation_to_dict(presentation),
@@ -1083,7 +1087,7 @@ def delete_class(workspace_id: str, class_id: str):
             source_ref="Local workspace edit",
             source_refs=["Local workspace edit"],
         ))
-        sync_workspace_fates(workspace)
+        sync_workspace_fates(workspace, project=project)
         save_project(project)
     return jsonify({"deleted": class_id, "revision": project.revision})
 
@@ -1121,7 +1125,7 @@ def clear_workspace_canvas(workspace_id: str):
             for node in active_nodes:
                 node.archived = True
                 node.archived_reason = reason
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
             save_project(project)
 
         return jsonify({
@@ -1153,7 +1157,7 @@ def create_differential(workspace_id: str):
             return jsonify({"error": f"Under q8-thesis-plotted-v1, d_{page} must shift (stem, filtration) by (-1, +{page})."}), 400
         if target.grade.representation != source.grade.representation:
             return jsonify({"error": "Under q8-thesis-plotted-v1, a differential must preserve the representation coordinate."}), 400
-        if not class_is_live_on_page(workspace, source_id, page) or not class_is_live_on_page(workspace, target_id, page):
+        if not class_is_live_on_page(workspace, source_id, page, project=project) or not class_is_live_on_page(workspace, target_id, page, project=project):
             return jsonify({"error": "Both endpoints must be live on the claimed page."}), 400
         status = body.get("status", "candidate")
         source_refs = body.get("source_refs", [])
@@ -1188,7 +1192,7 @@ def create_differential(workspace_id: str):
         checkpoint(project, f"Add differential d_{page}({source.label}) = {target.label}")
         workspace.differentials.append(differential)
         workspace.propositions.append(proposition)
-        sync_workspace_fates(workspace)
+        sync_workspace_fates(workspace, project=project)
         save_project(project)
     return jsonify({"differential": differential.__dict__, "revision": project.revision}), 201
 
@@ -1209,7 +1213,7 @@ def differential_candidates(workspace_id: str):
         if isinstance(raw_page, bool):
             raise CandidateEnumerationError("page must be an integer at least 2.")
         page = int(raw_page)
-        candidates = enumerate_differential_candidates(workspace, source_id, page)
+        candidates = enumerate_differential_candidates(workspace, source_id, page, project=project)
         comparison_candidates = []
         comparison_id = body.get("comparison_id")
         if comparison_id is not None:
@@ -1255,7 +1259,7 @@ def materialize_periodicity_translate(workspace_id: str):
             workspace = find_workspace(project, workspace_id)
             checkpoint(project, "Materialize source-backed periodic translate")
             result = materialize_periodic_translate(project, workspace, body)
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
             save_project(project)
         return jsonify({**result, "persisted": True, "revision": project.revision}), 201
     except (KeyError, TypeError, ValueError, PeriodicityOperationError) as error:
@@ -1417,7 +1421,7 @@ def preview_manual_periodicity_operation(workspace_id: str):
     try:
         project = load_project()
         workspace = find_workspace(project, workspace_id)
-        return jsonify(preview_manual_periodicity(workspace, request.get_json(force=True)))
+        return jsonify(preview_manual_periodicity(workspace, request.get_json(force=True), project=project))
     except (KeyError, TypeError, ValueError, ManualPeriodicityError) as error:
         return jsonify({"error": str(error)}), 400
 
@@ -1430,7 +1434,7 @@ def materialize_manual_periodicity_operation(workspace_id: str):
         with LOCK:
             project = load_project()
             workspace = find_workspace(project, workspace_id)
-            preview = preview_manual_periodicity(workspace, body)
+            preview = preview_manual_periodicity(workspace, body, project=project)
             if preview["conflicts"]:
                 raise ManualPeriodicityError("Resolve preview conflicts before materializing manual drawing copies.")
             changing = any(item["action"] == "create" for item in preview["cycle_copies"] + preview["differential_copies"])
@@ -1444,7 +1448,7 @@ def materialize_manual_periodicity_operation(workspace_id: str):
                 })
             checkpoint(project, "Materialize manual-unverified periodicity copies")
             result = materialize_manual_periodicity(project, workspace, body)
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
             save_project(project)
         return jsonify({
             **result,
@@ -1531,7 +1535,7 @@ def _drawing_batch_response(workspace_id: str, mode: str, apply: bool):
             label = "Apply all manual periodicity rules to box" if mode == "all-rules-box" else "Apply manual periodicity to differentials only"
             checkpoint(project, label)
             result = materialize_batch_preview(project, workspace, preview)
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
             save_project(project)
         return jsonify({**result, "preview_summary": summary, "revision": project.revision, **history_status(history_key())}), 201
     except (KeyError, TypeError, ValueError, ManualPeriodicityError) as error:

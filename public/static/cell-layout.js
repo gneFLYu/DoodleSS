@@ -27,14 +27,15 @@
     const count = ordered.length;
     const rows = Math.ceil(Math.sqrt(count));
     const columns = Math.ceil(count / rows);
-    const edgeInset = clampValue(cell * 0.08, 0.45, 4);
+    const minimum = options.uniformSize ? 0.01 : 0.45;
+    const edgeInset = clampValue(cell * 0.08, minimum, 4);
     const usableSpan = Math.max(0.5, cell - 2 * edgeInset);
-    const collisionGap = clampValue(cell * 0.05, 0.45, 2);
-    const largestRequestedSize = Math.max(...ordered.map((record) => Math.max(0.5, Number(record.size) || 5.5)));
+    const collisionGap = clampValue(cell * 0.05, minimum, 2);
+    const largestRequestedSize = Math.max(...ordered.map((record) => Math.max(options.uniformSize ? minimum : 0.5, Number(record.size) || 5.5)));
     const sizeLimitForSlots = (slots) => slots > 1
       ? (usableSpan - collisionGap * (slots - 1)) / (2 * slots)
       : usableSpan / 2;
-    const maximumPackedSize = Math.max(0.45, Math.min(sizeLimitForSlots(columns), sizeLimitForSlots(rows)));
+    const maximumPackedSize = Math.max(minimum, Math.min(sizeLimitForSlots(columns), sizeLimitForSlots(rows)));
     const sizeScale = Math.min(1, maximumPackedSize / largestRequestedSize);
     const largestPackedSize = largestRequestedSize * sizeScale;
     const minimumSeparation = 2 * largestPackedSize + collisionGap;
@@ -54,7 +55,7 @@
       const itemsBeforeRow = row * columns;
       const itemsInRow = Math.min(columns, count - itemsBeforeRow);
       const column = index - itemsBeforeRow;
-      const size = Math.max(0.45, (Number(record.size) || 5.5) * sizeScale);
+      const size = Math.max(minimum, (Number(record.size) || 5.5) * sizeScale);
       const dx = (column - (itemsInRow - 1) / 2) * stepX;
       const dy = (row - (rows - 1) / 2) * stepY;
       const maximumHitRadius = Number.isFinite(neighborDistance)
@@ -80,6 +81,26 @@
       const key = String(record.cellKey || "");
       if (!cells.has(key)) cells.set(key, []);
       cells.get(key).push(record);
+    }
+    // One viewport-wide size: an anchor, periodic copy and quotient port
+    // are not different kinds of generators merely because of their origin.
+    if (options.uniformSize && cells.size) {
+      const cell = Math.max(1, Number(cellSize) || 1);
+      const envelope = Math.max(1, Number(options.glyphEnvelope) || 1);
+      const inset = clampValue(cell * 0.08, 0.01, 4);
+      const gap = clampValue(cell * 0.05, 0.01, 2);
+      const span = Math.max(0.5, cell - 2 * inset);
+      let radius = clampValue(cell * 0.105, 0.55, 7);
+      for (const group of cells.values()) {
+        const slots = Math.ceil(Math.sqrt(group.length));
+        radius = Math.min(radius, Math.max(0.01, (span - gap * (slots - 1)) / (2 * slots * envelope)));
+      }
+      for (const [key, group] of cells) cells.set(key, group.map(record => ({...record, size: radius * envelope})));
+      const packed = [];
+      for (const key of [...cells.keys()].sort()) {
+        packed.push(...packCell(cells.get(key), cellSize, options).map(record => ({...record, size: record.size / envelope})));
+      }
+      return packed;
     }
     const packed = [];
     for (const key of [...cells.keys()].sort()) packed.push(...packCell(cells.get(key), cellSize, options));

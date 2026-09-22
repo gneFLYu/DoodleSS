@@ -1,4 +1,5 @@
 import sys
+import re
 from pathlib import Path
 import unittest
 
@@ -13,6 +14,7 @@ from domain.e2_import import (
 )
 from domain.migrations import migrate_project
 from domain.models import ClassNode, CrossGradedProduct, Differential, Grade, Project, Proposition, Workspace
+from domain.algebra_labels import parse_algebra_label
 
 
 class E2CatalogueTest(unittest.TestCase):
@@ -20,16 +22,54 @@ class E2CatalogueTest(unittest.TestCase):
         integer = verified_e2_classes("integer")
         sigma = verified_e2_classes("sigma_i")
 
-        self.assertEqual(len(integer), 9)
-        self.assertEqual(len(sigma), 4)
-        self.assertEqual(next(item for item in integer if item.id == "e2_integer_D").stem, 8)
-        shifted = next(item for item in sigma if item.id == "e2_sigma_xplusy_usigma_i")
+        self.assertEqual(len(integer), 120)
+        self.assertEqual(len(sigma), 120)
+        self.assertEqual(len({(item.stem, item.filtration) for item in integer}), 88)
+        self.assertEqual(len({(item.stem, item.filtration) for item in sigma}), 96)
+        self.assertEqual(
+            {item.label for item in integer if (item.stem, item.filtration) == (2, 2)},
+            {"h_1^2"},
+        )
+        self.assertEqual(
+            {item.label for item in integer if (item.stem, item.filtration) == (6, 2)},
+            {"x^2D", "y^2D", "v_1^2h_1^2"},
+        )
+        self.assertEqual(
+            {item.label for item in sigma if (item.stem, item.filtration) == (2, 2)},
+            {r"(yh_2+xh_1v_1)u_{\sigma_i}", r"(h_1^2+xh_1v_1)u_{\sigma_i}"},
+        )
+        sigma_v12 = next(item for item in sigma if item.label == r"v_1^2u_{\sigma_i}")
+        self.assertEqual((sigma_v12.stem, sigma_v12.filtration), (4, 0))
+        self.assertFalse(any(r"\Theta_i" in item.label for item in sigma))
+        self.assertEqual(next(item for item in integer if item.label == "D").stem, 8)
+        unit = next(item for item in integer if item.label == "1")
+        self.assertEqual((unit.stem, unit.filtration, unit.pattern_key), (0, 0, "I00"))
+        shifted = next(item for item in sigma if item.stem == -1 and item.filtration == 1)
         self.assertEqual((shifted.stem, shifted.filtration), (-1, 1))
         self.assertEqual(shifted.representation, {"sigma_i": -1})
         for item in (*integer, *sigma):
             self.assertIn("PDF p.", item.source_ref)
             self.assertIn("D-localized", item.scope)
             self.assertEqual(item.review_status, "source-verified")
+
+    def test_every_catalogue_label_has_its_independently_computed_bidegree(self):
+        # Both tables use x,y in (-1,1); D is (8,0).  Enumerating a visually
+        # plausible motif at the wrong coordinate must fail independently of
+        # the implementation's stored pattern keys and coordinate deltas.
+        degrees = {"x": (-1, 1), "y": (-1, 1), "h_1": (1, 1), "h_2": (3, 1),
+                   "v_1": (2, 0), "k": (-4, 4), "D": (8, 0)}
+        for record in verified_e2_classes():
+            label = record.label.replace(r"a_{\sigma_i}", "(x+y)")
+            label = re.sub(r"u_\{[^}]*\}", "", label)
+            label = label.replace(r"\{", "(").replace(r"\}", ")")
+            group = re.search(r"\(([^()]*)\)", label)
+            terms = ([label[:group.start()] + term + label[group.end():] for term in group.group(1).split("+")]
+                     if group else [label or "1"])
+            for term in terms:
+                parsed = parse_algebra_label(term, unit_labels=("D",))
+                actual = tuple(sum(degrees[factor.label][i] * factor.power for factor in parsed.factors)
+                               for i in (0, 1))
+                self.assertEqual(actual, (record.stem, record.filtration), (record.id, record.label, term))
 
     def test_relations_are_cited_propositions_not_automatic_rewrites(self):
         relations = verified_e2_relations()
@@ -52,7 +92,7 @@ class LegacyReviewTest(unittest.TestCase):
         reviews = {item.point.legacy_id: item for item in plan.point_reviews}
 
         self.assertEqual(reviews["verified"].status, "source-match")
-        self.assertEqual(reviews["verified"].verified_record_id, "e2_integer_k")
+        self.assertIsNotNone(reviews["verified"].verified_record_id)
         self.assertEqual(reviews["wrong-page"].status, "out-of-scope")
         self.assertEqual(reviews["unknown"].status, "needs-manual-review")
         self.assertEqual(reviews["no-stage"].status, "needs-stage-attestation")
@@ -83,15 +123,28 @@ class MaterializationTest(unittest.TestCase):
         second = materialize_verified_e2_records(workspace, "integer")
 
         self.assertIn("existing-D", first["existing_classes"])
-        self.assertEqual(len(workspace.classes), 9)
+        self.assertEqual(len(workspace.classes), 120)
         self.assertEqual(len(workspace.differentials), 0)
-        self.assertEqual(len(workspace.propositions), 14)  # nine class witnesses and five relations
+        self.assertGreater(len(workspace.propositions), 125)  # cells, cited relations, and chart edges
         self.assertFalse(second["added_classes"])
         self.assertFalse(second["added_propositions"])
-        source = next(item for item in workspace.propositions if item.id == "source_e2_integer_k")
+        source = next(item for item in workspace.propositions if item.id.startswith("source_e2_integer_cell_"))
         self.assertEqual(source.status, "established")
         self.assertIn("PDF p. 16", source.source_ref)
         self.assertIn("does not assert survival", source.notes)
+
+    def test_enumerated_catalogue_carries_series_glyphs_and_periodic_edges(self):
+        workspace = Workspace(id="ws_sigma_i", name="sigma")
+        materialize_verified_e2_records(workspace, "sigma_i")
+        self.assertEqual(len(workspace.classes), 120)
+        self.assertIn("j-series", {item.style.get("dkllw_glyph") for item in workspace.classes})
+        edges = [item for item in workspace.propositions if item.conclusion.get("chart_connection")]
+        self.assertTrue(edges)
+        self.assertTrue(all(item.conclusion.get("period_scope") == ["D^8", "kD^3"] for item in edges))
+        integer = Workspace(id="ws_integer", name="integer")
+        materialize_verified_e2_records(integer, "integer")
+        unit = next(item for item in integer.classes if item.label == "1")
+        self.assertTrue(unit.style.get("multiplicative_unit"))
 
     def test_materialization_rejects_wrong_target_workspace(self):
         workspace = Workspace(id="ws_integer", name="integer")

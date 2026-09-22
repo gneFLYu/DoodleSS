@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "id": "table-q8-source-comparison-v1",
+  "status": "review-required",
+  "scope": "Provenance comparison only; not a mathematical verification of every table row.",
+  "runtime_admission": false,
+  "coverage": {
+    "scope": "All active differential rows in the local two-sigma, three-sigma and mixed RO tables; not a claim that all rows are mathematically verified.",
+    "two_sigma_rows": 18,
+    "three_sigma_rows": 16,
+    "mixed_rows": 15,
+    "total_rows": 49,
+    "additional_review_only_mixed_rows": 5,
+    "excluded_commented_two_sigma_lines": [374, 375],
+    "published_integer_and_sigma_tables": "Outside this local-RO crosswalk; covered by the separate DKLLW published-table inventory."
+  },
+  "source": {
+    "id": "table-q8",
+    "name": "table_Q8.tex",
+    "path": "E:/课程/PACE2025_fly/HFPSS Q_8/REU Projects/table_Q8.tex",
+    "sha256": "b5923f0328b9cbf71866779b74af49518e035c7d1584d4dd662f937db0df5bac",
+    "role": "local-summary",
+    "line_numbering": "one-based, at the recorded SHA256",
+    "authority": "Compare against active formal_notes and independent primary-source proofs; the summary never assigns coefficients or admits runtime maps by itself."
+  },
+  "comparison_sources": {
+    "formal-notes": {
+      "name": "formal_notes.tex",
+      "path": "E:/课程/PACE2025_fly/HFPSS Q_8/REU Projects/Note/formal_notes.tex",
+      "authority": "Current working notes; TBD, questioned, withdrawn and commented-out claims retain their review qualifications."
+    },
+    "dkllw": {
+      "name": "DKLLW24 main.tex",
+      "path": "E:/课程/PACE2025_fly/HFPSS Q_8/arXiv-2209.01830v3/main.tex",
+      "authority": "Primary published computation, especially Tables 8 and 9 and their cited proofs."
+    },
+    "runtime": {
+      "path": "backend/domain/formal_notes_chart.py",
+      "ledger": "backend/data/review/formal_notes_periodic_fate_ledger.v1.json",
+      "scope": "Crosswalk targets only; this artifact is not imported by the runtime."
+    }
+  },
+  "period_policy": {
+    "permanent_horizontal_unit": "D^8",
+    "permanent_horizontal_stem": 64,
+    "forward_family": {"multiplier": "g=kD^3", "stem": 20, "filtration": 4, "exponents": "nonnegative in HFPSS"},
+    "printed_32": "Period 32 records a repeated differential pattern. It does not assert that D^4 is a permanent unit; separately proved D^4-shifted anchors may each repeat by D^8.",
+    "printed_8_and_16": "Shorter repeats require the relevant page's cycle/Leibniz argument and may not be reused at arbitrary later pages.",
+    "historical_periods": "A printed period on a review-only formula is itself a recorded claim, not an admitted transport rule.",
+    "forbidden_inference": "Do not cancel g in HFPSS or infer a +32 sibling from D^8 alone."
+  },
+  "two_sigma_crosswalk": [
+    {"line": 372, "page": 3, "source_degree": [0, 0], "target_degree": [-1, 3], "printed_period_stem": 8, "formula": "d3(u_2sigma_i)=x^2h1u_2sigma_i", "formal_lines": [283, 320], "runtime_refs": ["FN-2I-001", "diff_two_d3_u"], "comparison": "formula-agrees"},
+    {"line": 373, "page": 3, "source_degree": [4, 0], "target_degree": [3, 3], "printed_period_stem": 8, "formula": "d3(v1^6D^-1u_2sigma_i)=h1^3u_2sigma_i", "formal_lines": [308, 320], "runtime_refs": ["FN-2I-002", "formal_diff_two_d3_v6_derived"], "comparison": "coefficient-ideal-conflict", "runtime_admission": false, "note": "The printed target omits j. The separately derived runtime primitive uses v1^4h1^3=jD h1^3 at source (12,0); its short-period translate hits jh1^3, not the constant. See TQ8-2I-L0373."},
+    {"line": 377, "page": 5, "source_degree": [0, 2], "target_degree": [-1, 7], "printed_period_stem": 8, "formula": "d5(xh1u_2sigma_i)=h1^3ku_2sigma_i", "formal_lines": [401, 420], "runtime_refs": ["FN-2I-006", "diff_two_d5_xh1"], "comparison": "formula-agrees"},
+    {"line": 378, "page": 5, "source_degree": [8, 0], "target_degree": [7, 5], "printed_period_stem": 16, "formula": "d5(2Du_2sigma_i)=2h2kDu_2sigma_i", "formal_lines": [382, 399], "runtime_refs": ["FN-2I-005", "diff_two_d5_2D"], "comparison": "formula-agrees"},
+    {"line": 379, "page": 5, "source_degree": [11, 1], "target_degree": [10, 6], "printed_period_stem": 16, "formula": "d5(h2Du_2sigma_i)=h2^2kDu_2sigma_i", "formal_lines": [357, 379], "runtime_refs": ["FN-2I-004", "diff_two_d5_h2D"], "comparison": "formula-agrees"},
+    {"line": 380, "page": 5, "source_degree": [6, 2], "target_degree": [5, 7], "printed_period_stem": 16, "formula": "d5((x^2+y^2)Du_2sigma_i)=(x^2+y^2)h2kDu_2sigma_i", "formal_lines": [334, 353], "runtime_refs": ["FN-2I-003"], "comparison": "formula-agrees", "note": "Record the exact sum direction; agreement does not mean that the two same-cell coordinates die independently."},
+    {"line": 384, "page": 7, "source_degree": [9, 1], "target_degree": [8, 8], "printed_period_stem": 32, "formula": "d7(h1Du_2sigma_i)=2k^2D^2u_2sigma_i", "formal_lines": [508, 516], "runtime_refs": ["FN-2I-014"], "comparison": "formula-agrees"},
+    {"line": 385, "page": 7, "source_degree": [25, 1], "target_degree": [24, 8], "printed_period_stem": 32, "formula": "d7(h1D^3u_2sigma_i)=2k^2D^4u_2sigma_i", "formal_lines": [496, 499], "runtime_refs": ["FN-2I-012"], "comparison": "formula-agrees"},
+    {"line": 386, "page": 7, "source_degree": [1, 1], "target_degree": [0, 8], "printed_period_stem": 32, "formula": "d7(h1u_2sigma_i)=4k^2Du_2sigma_i", "formal_lines": [501, 506], "runtime_refs": ["FN-2I-013"], "comparison": "agrees-with-repeated-pattern-sibling", "formal_source_degree": [33, 1], "formal_target_degree": [32, 8], "pattern_stem_shift": -32, "note": "Formal states the D4 block; the table states the D0 sibling of the 32-pattern. This is not an identification by a permanent D4 unit, nor a consequence of D8 alone."},
+    {"line": 391, "page": 9, "source_degree": [26, 2], "target_degree": [25, 11], "printed_period_stem": 32, "formula": "d9(h1^2D^3u_2sigma_i)=h2^3k^2D^3u_2sigma_i", "formal_lines": [487, 494], "runtime_refs": ["FN-2I-011", "diff_two_d9"], "comparison": "formula-agrees"},
+    {"line": 392, "page": 9, "source_degree": [27, 1], "target_degree": [26, 10], "printed_period_stem": 32, "formula": "d9(2h2D^3u_2sigma_i)=h1^2k^2D^4u_2sigma_i", "formal_lines": [472, 482], "runtime_refs": ["FN-2I-010"], "comparison": "formula-agrees", "note": "Compare the printed low companion, not just formal's other source 2kh2D2 at (15,5)."},
+    {"line": 393, "page": 9, "source_degree": [19, 1], "target_degree": [18, 10], "printed_period_stem": 32, "formula": "d9(h2D^2u_2sigma_i)=h1^2k^2D^3u_2sigma_i", "formal_lines": [520, 526], "runtime_refs": ["FN-2I-016"], "comparison": "formula-agrees"},
+    {"line": 394, "page": 9, "source_degree": [11, 1], "target_degree": [10, 10], "printed_period_stem": 32, "formula": "d9(2h2Du_2sigma_i)=h1^2k^2D^2u_2sigma_i", "formal_lines": [529, 536], "runtime_refs": ["FN-2I-017"], "comparison": "formula-agrees", "note": "The source is the surviving two-layer, not the odd h2D constant that supports d5."},
+    {"line": 398, "page": 11, "source_degree": [14, 2], "target_degree": [13, 13], "printed_period_stem": 32, "formula": "d11((x^2+y^2)D^2u_2sigma_i)=h1k^3D^3u_2sigma_i", "formal_lines": [450, 470], "runtime_refs": ["FN-2I-009", "diff_two_d11"], "comparison": "formula-agrees"},
+    {"line": 402, "page": 13, "source_degree": [30, 2], "target_degree": [29, 15], "printed_period_stem": 64, "formula": "d13((x^2+y^2)D^4u_2sigma_i)=h2^3k^3D^4u_2sigma_i", "formal_lines": [540, 555], "runtime_refs": ["FN-2I-018", "diff_two_d13"], "comparison": "formula-agrees"},
+    {"line": 407, "page": 21, "source_degree": [35, 1], "target_degree": [34, 22], "printed_period_stem": 64, "formula": "d21(h2D^4u_2sigma_i)=(x^2+y^2)k^5D^7u_2sigma_i", "formal_lines": [558, 563], "runtime_refs": ["FN-2I-019", "formal_diff_two_d21_h2_low_derived"], "comparison": "agrees-with-independent-derived-code", "runtime_claim_status": "verified", "proof_method": "finite-source-audit-and-forward-g-detection", "formal_source_degree": [55, 5], "formal_target_degree": [54, 26], "note": "The active formal proposition is the forward-g image. Code first verifies the low source through E21 and then uses its nonzero forward-g differential to force this map; it does not cancel g in HFPSS. The target is the finite A line, and the low source's double is retained."},
+    {"line": 408, "page": 21, "source_degree": [1, 3], "target_degree": [0, 24], "printed_period_stem": 64, "formula": "d21(y^2h2u_2sigma_i)=4k^6D^3u_2sigma_i", "formal_lines": [565, 570], "runtime_refs": ["FN-2I-020"], "comparison": "formula-agrees", "runtime_claim_status": "verified", "identity": "y^2h2u_2sigma_i=h2^3D^-1u_2sigma_i by Dy^2=h2^2", "note": "Independent finite-quotient proof gives the two-column map [1,1] and retains the Euler-product kernel; table agreement alone is not its proof."},
+    {"line": 409, "page": 21, "source_degree": [40, 0], "target_degree": [39, 21], "printed_period_stem": 64, "formula": "d21(4D^5u_2sigma_i)=h2k^5D^7u_2sigma_i", "formal_lines": [572, 577], "runtime_refs": ["FN-2I-021", "formal_diff_two_d21_four_f0_derived"], "comparison": "agrees-with-independent-derived-code", "runtime_claim_status": "verified", "proof_method": "finite-filtration-zero-audit-and-forward-g2-detection", "formal_source_degree": [16, 8], "formal_target_degree": [15, 29], "note": "The g^2 product of this filtration-zero source is the D8 translate of formal FN021. Code separately verifies the source through E21, then applies naturality; this is not a filtration-zero Tate lift or cancellation of g. Only the source's four constant maps, not higher Witt layers or positive-j terms."}
+  ],
+  "two_sigma_notes": [
+    {
+      "id": "TQ8-2I-CAPTION",
+      "source_lines": [352, 353],
+      "status": "editorial-warning",
+      "text": "The two-sigma caption explicitly says Need Correction!; it is not a blanket rejection of every listed equation."
+    },
+    {
+      "id": "TQ8-2I-L0373",
+      "source_lines": [373, 373],
+      "formal_lines": [308, 320],
+      "fact_id": "FN-2I-002",
+      "status": "coefficient-ideal-conflict",
+      "page": 3,
+      "source_degree": [4, 0],
+      "target_degree": [3, 3],
+      "printed_period_stem": 8,
+      "printed_formula": "d3(v1^6 D^-1 u_2sigma_i)=h1^3 u_2sigma_i",
+      "correct_primitive_consequence": "d3(v1^6 D^-1 u_2sigma_i)=j h1^3 u_2sigma_i, with j=v1^4 D^-1",
+      "reason": "The missing j changes which coefficient ideal is hit even though the printed bidegree is correct. The analogous formal FN002 source v1^6 has target v1^4 h1^3=jD h1^3, not D h1^3.",
+      "runtime_admission": false
+    },
+    {
+      "id": "TQ8-2I-L0408",
+      "source_lines": [408, 408],
+      "formal_lines": [565, 570],
+      "fact_id": "FN-2I-020",
+      "status": "formula-agrees-proof-separate",
+      "page": 21,
+      "source_degree": [1, 3],
+      "target_degree": [0, 24],
+      "printed_period_stem": 64,
+      "printed_formula": "d21(y^2 h2 u_2sigma_i)=4k^6D^3u_2sigma_i",
+      "identity": "y^2 h2 u_2sigma_i=h2^3D^-1u_2sigma_i by Dy^2=h2^2",
+      "note": "The table agrees with formal; admission must use the independent finite-quotient proof, not this matching label."
+    },
+    {
+      "id": "TQ8-2I-PCS",
+      "source_lines": [415, 416],
+      "status": "historical-permanence-claims",
+      "named_claims": ["h2u_2sigma_i", "4Du_2sigma_i"],
+      "note": "Do not use this list as a substitute for a cycle proof. The independent FN020 obstruction needs 4Du only through E23, not a blanket permanence assumption."
+    }
+  ],
+  "three_sigma_crosswalk": [
+    {"line": 439, "page": 3, "source_degree": [4, 0], "target_degree": [3, 3], "printed_period_stem": 8, "formal_lines": [678, 700], "runtime_refs": ["FN-3I-001"], "comparison": "formula-agrees", "note": "The table omits the companion zero d3(C), which formal and code retain."},
+    {"line": 443, "page": 5, "source_degree": [10, 2], "target_degree": [9, 7], "printed_period_stem": 16, "formal_lines": [730, 742], "runtime_refs": ["FN-3I-003"], "comparison": "formula-agrees"},
+    {"line": 444, "page": 5, "source_degree": [13, 3], "target_degree": [12, 8], "printed_period_stem": 16, "formal_lines": [744, 746], "runtime_refs": ["FN-3I-004"], "comparison": "omitted-thom-factor", "note": "Both printed targets omit u_3sigma_i. Code restores it; this is not an integer-graded target."},
+    {"line": 445, "page": 5, "source_degree": [15, 1], "target_degree": [14, 6], "printed_period_stem": 16, "formal_lines": [748, 753], "runtime_refs": ["FN-3I-005"], "comparison": "formula-agrees", "identity": "(h1+xv1)h1=h1^2+xh1v1"},
+    {"line": 446, "page": 5, "source_degree": [7, 1], "target_degree": [6, 6], "printed_period_stem": 16, "formal_lines": [755, 762], "runtime_refs": ["FN-3I-006"], "comparison": "formula-agrees", "note": "The target is the single line P+Q, not two independently killed columns."},
+    {"line": 447, "page": 5, "source_degree": [6, 2], "target_degree": [5, 7], "printed_period_stem": 16, "formal_lines": [707, 728], "runtime_refs": ["FN-3I-002", "formal_diff_three_d5_tate_positive_derived"], "comparison": "commented-low-row-independently-derived", "note": "Formal's low corollary is commented out. Code supplies an independent positive-filtration Tate transport of the active high FN002, not an admission of commented text."},
+    {"line": 452, "page": 9, "source_degree": [25, 3], "target_degree": [24, 12], "printed_period_stem": 32, "formal_lines": [764, 775], "runtime_refs": ["FN-3I-007"], "comparison": "formula-agrees", "note": "The target is the Witt two-layer, not the odd S40 coefficient."},
+    {"line": 453, "page": 9, "source_degree": [17, 1], "target_degree": [16, 10], "printed_period_stem": 32, "formal_lines": [], "runtime_refs": ["DER-3I-D9-C"], "comparison": "agrees-with-independent-derived-code", "note": "No separate active formal proposition states this row."},
+    {"line": 455, "page": 9, "source_degree": [32, 2], "target_degree": [31, 11], "printed_period_stem": 32, "formal_lines": [], "runtime_refs": ["DER-3I-EULER-D9-B"], "comparison": "agrees-with-independent-derived-code", "note": "Code uses the published D^-1 h1 13-cycle detector, not the withdrawn Ck permanence proof."},
+    {"line": 456, "page": 9, "source_degree": [25, 1], "target_degree": [24, 10], "printed_period_stem": 32, "formal_lines": [], "runtime_refs": ["DER-3I-EULER-D9-C"], "comparison": "agrees-with-independent-derived-code", "note": "Code uses DKLLW Table 8 rows 12-13 and the permanent u_4sigma Euler detector."},
+    {"line": 457, "page": 9, "source_degree": [18, 2], "target_degree": [17, 11], "printed_period_stem": 32, "formal_lines": [], "runtime_refs": ["DER-3I-D9-Q"], "comparison": "agrees-with-independent-derived-code"},
+    {"line": 458, "page": 9, "source_degree": [24, 2], "target_degree": [23, 11], "printed_period_stem": 32, "formal_lines": [777, 780], "runtime_refs": ["FN-3I-008"], "comparison": "formula-agrees"},
+    {"line": 463, "page": 11, "source_degree": [30, 2], "target_degree": [29, 13], "printed_period_stem": 32, "formal_lines": [782, 796], "runtime_refs": ["FN-3I-009"], "comparison": "formula-agrees"},
+    {"line": 464, "page": 11, "source_degree": [31, 3], "target_degree": [30, 14], "printed_period_stem": 32, "formal_lines": [782, 796], "runtime_refs": ["FN-3I-009"], "comparison": "formula-agrees", "note": "The target denotes Q; code computes the actual quotient, rather than deleting the same-cell P independently."},
+    {"line": 469, "page": 19, "source_degree": [14, 2], "target_degree": [13, 21], "printed_period_stem": 32, "formal_lines": [851, 860], "runtime_refs": ["FN-3I-010"], "comparison": "formula-agrees-with-withdrawn-proof", "claim_status": "review", "runtime_admission": false, "note": "The shared late proof depends on the withdrawn Euler-permanence argument; agreement is not evidence of admission."},
+    {"line": 474, "page": 23, "source_degree": [12, 0], "target_degree": [11, 23], "printed_period_stem": 32, "formal_lines": [811, 848], "runtime_refs": ["FN-3I-010"], "comparison": "formula-agrees-with-withdrawn-proof", "claim_status": "review", "runtime_admission": false, "formula": "d23(2v1^2 D u_3sigma_i)=x^2h1k^5D^4u_3sigma_i", "degree_check": "(-1,3)+5(-4,4)+4(8,0)=(11,23); the target degree is correct.", "note": "The issue is the withdrawn proof and the independently audited source-cycle/naturality conflict, NOT a table/formal target discrepancy or bidegree error."}
+  ],
+  "three_sigma_omissions": [
+    {
+      "id": "TQ8-3I-P-D9-OMISSION",
+      "status": "comparison-finding",
+      "page": 9,
+      "source_degree": [18, 2],
+      "target_degree": [17, 11],
+      "runtime_refs": ["DER-3I-D9-P"],
+      "formula": "d9((yh2+xh1v1)D^2u_3sigma_i)=(x+y)h1^2k^2D^3u_3sigma_i",
+      "note": "The local table lists Q at the same source bidegree (line457), but omits the distinct P row. Current code proves both blocks D2/D6 independently modulo D8."
+    }
+  ],
+  "mixed_crosswalk": [
+    {"line": 505, "page": 3, "source_degree": [4, 0], "target_degree": [3, 3], "printed_period_stem": 8, "formal_lines": [881, 901], "runtime_refs": ["FN-MIX-001"], "comparison": "formula-agrees"},
+    {"line": 507, "page": 3, "source_degree": [1, 1], "target_degree": [0, 4], "printed_period_stem": 8, "formal_lines": [881, 901], "runtime_refs": ["FN-MIX-001"], "comparison": "formula-agrees", "note": "The actual coefficient is 2*zeta: code retains the Witt two-layer and the separate F4 scalar zeta."},
+    {"line": 511, "page": 5, "source_degree": [6, 2], "target_degree": [5, 7], "printed_period_stem": 16, "formal_lines": [903, 932], "runtime_refs": ["FN-MIX-002", "FN-MIX-003"], "comparison": "coefficient-choice-conflict", "table_coefficient": "zeta", "formal_coefficient": "1", "runtime_parameter": "mixed_d5_A", "note": "The annihilator argument does not by itself determine c. The table's c=zeta is a historical choice, not a runtime assignment."},
+    {"line": 512, "page": 5, "source_degree": [14, 2], "target_degree": [13, 7], "printed_period_stem": 16, "formal_lines": [], "runtime_refs": ["DER-MIX-D5-A-EVEN"], "comparison": "coefficient-choice-conflict", "table_coefficient": "zeta^2", "runtime_expression": "c+1", "note": "The table is internally consistent with c=zeta. Formal's printed c=1 would make this even-D map zero. The even equation is not separately printed in active formal notes."},
+    {"line": 513, "page": 5, "source_degree": [10, 2], "target_degree": [9, 7], "printed_period_stem": 16, "formal_lines": [934, 951], "runtime_refs": ["FN-MIX-004"], "comparison": "formula-agrees"},
+    {"line": 514, "page": 5, "source_degree": [7, 1], "target_degree": [6, 6], "printed_period_stem": 16, "formal_lines": [953, 970], "runtime_refs": ["FN-MIX-005"], "comparison": "printed-formula-agrees-relative-unit-unresolved", "runtime_claim_status": "review", "table_coefficient_choice": "b=1 in P+bQ", "proof_gap": "mixed-relative-unit-unresolved", "original_proof_gap": "mixed-F4-target-choice-not-exhaustive", "omitted_target_directions": ["P+zeta Q", "P+zeta^2 Q"], "cycle_subpremise": "verified-H2-cycle-and-nonzero-b", "repair_certificate_id": "DER-MIX-D5-B-NONZERO", "note": "P+Q=(yh2+h1^2)u. Formal961 omits P+zeta Q and P+zeta^2 Q. The independent repair starts with every alpha P+beta Q, proves alpha=0 for d5(B), and excludes b=0 using the H2 Euler cycle and a complete incoming inventory. It does not determine b among the three nonzero units, so the printed b=1 formula stays review."},
+    {"line": 515, "page": 5, "source_degree": [15, 1], "target_degree": [14, 6], "printed_period_stem": 16, "formal_lines": [953, 970], "runtime_refs": ["FN-MIX-005"], "comparison": "printed-formula-agrees-relative-unit-unresolved", "runtime_claim_status": "review", "table_coefficient_choice": "b=1 in bQ", "proof_gap": "mixed-relative-unit-unresolved", "original_proof_gap": "mixed-F4-target-choice-not-exhaustive", "omitted_target_directions": ["P+zeta Q", "P+zeta^2 Q"], "cycle_subpremise": "verified-H2-cycle-and-nonzero-b", "repair_certificate_id": "DER-MIX-D5-B-NONZERO", "note": "This is the Leibniz companion of line514 with the same unresolved b, not an independent unit-1 formula. The full F4 repair proves b nonzero, not its exact value. It separately justifies zero d5(Q) by square-zero and injection on the finite candidate target."},
+    {"line": 520, "page": 9, "source_degree": [8, 2], "target_degree": [7, 11], "printed_period_stem": 32, "formal_lines": [875, 875], "runtime_refs": ["DER-MIX-PHI-D9-D1", "DER-MIX-PHI-D9-D5"], "comparison": "agrees-with-independent-derived-code", "runtime_claim_status": "verified", "proof_method": "permanent-Phi-Euler-transport-and-finite-target-survival", "runtime_D_powers": [1, 5], "proof_refs": ["formal_notes.tex:875,881-901", "Note/record/note.tex:762-779", "DKLLW24 main.tex:488-524,833-878", "DER-3I-EULER-D9-C"], "note": "No explicit active formal d9 row; target (x^2+y^2)h1u equals x^2h1u. Both D1 and D5 anchors are independently verified from the pure 3sigma C D7 and C D3 maps using omega^2, permanent Phi^-1, Euler a_sigma_j and finite source/target survival. The coefficient stays linked to the corresponding pure-source parameter; cancelling the transport scalars is proved, not selected from the printed unit 1. Each anchor repeats by D8 and forward g, independently of mixed c,b. The printed 32-period is the paired anchors, not a permanent D4 unit."},
+    {"line": 521, "page": 9, "source_degree": [0, 2], "target_degree": [-1, 11], "printed_period_stem": 32, "formal_lines": [875, 875], "runtime_refs": ["DER-MIX-PHI-D9-D0", "DER-MIX-PHI-D9-D4"], "comparison": "agrees-with-independent-derived-code", "runtime_claim_status": "verified", "proof_method": "permanent-Phi-Euler-transport-and-finite-target-survival", "runtime_D_powers": [0, 4], "proof_refs": ["formal_notes.tex:875,881-901", "Note/record/note.tex:762-779", "DKLLW24 main.tex:488-524,833-878", "DER-3I-D9-C"], "note": "Both D0 and D4 anchors are independently verified from the pure 3sigma C D6 and C D2 maps, with their source coefficients linked rather than independently assigned. Permanent Phi/Euler transport and finite target survival do not depend on mixed c,b. Each anchor repeats by D8 and forward g; the separately proved pair reproduces the printed 32-pattern without using D4 as a permanent unit or cancelling g in HFPSS."},
+    {"line": 527, "page": 11, "source_degree": [13, 3], "target_degree": [12, 14], "printed_period_stem": 32, "formal_lines": [972, 991], "runtime_refs": ["FN-MIX-006", "formal_diff_mixed_d11_r_D6_sibling"], "comparison": "printed-unit-corrected-by-independent-proof", "runtime_claim_status": "verified", "runtime_D_powers": [2, 6], "printed_coefficient": "1", "formal_coefficient": "1", "runtime_coefficient": "zeta^2", "runtime_source_unit": 1, "runtime_target_unit": 3, "conditional_coefficient": "lambda*zeta^2", "printed_formula": "d11(x^3D^2u_mix)=Bh1k^3D^3u_mix", "corrected_formula": "d11(x^3D^2u_mix)=zeta^2 Bh1k^3D^3u_mix", "proof_method": "independent-pure-source-and-finite-target-proof", "note": "The original table and formal formulas both print coefficient 1 and are preserved as source claims. B(x^2+zeta^2*y^2)=zeta*x^3 reveals the missing unit; the independent proof now determines the normalized runtime coefficient zeta^2 with source unit 1. Both D2 and D6 anchors are independently proved, with finite source/target survival independent of mixed c,b. Each repeats by D8 and forward g; neither the table's 32-pattern nor formal990 makes D4 a permanent unit. This does not admit the distinct R=x^2h1 -> Q row528."},
+    {"line": 528, "page": 11, "source_degree": [15, 3], "target_degree": [14, 14], "printed_period_stem": 32, "formal_lines": [], "runtime_refs": [], "comparison": "additional-historical-row", "inventory_id": "TQ8-MIX-L0528", "note": "The proposed Q target and its D6 sibling die on d9 on the c=1, b!=0 branch by the conditional Q-d9 family and forward g^3 D^-8 transport. Other coefficient branches remain review; this is not an unconditional rejection or an admitted arrow."},
+    {"line": 533, "page": 17, "source_degree": [24, 2], "target_degree": [23, 19], "printed_period_stem": 64, "formal_lines": [], "runtime_refs": ["DER-MIX-D17-V-D3"], "comparison": "independently-derived-nonzero-unit", "inventory_id": "TQ8-MIX-L0533"},
+    {"line": 537, "page": 19, "source_degree": [29, 3], "target_degree": [28, 22], "printed_period_stem": 64, "formal_lines": [], "runtime_refs": ["DER-MIX-D19-X-D4"], "comparison": "independently-derived-nonzero-unit", "inventory_id": "TQ8-MIX-L0537"},
+    {"line": 538, "page": 19, "source_degree": [39, 3], "target_degree": [38, 22], "printed_period_stem": 64, "formal_lines": [], "runtime_refs": [], "comparison": "additional-historical-row", "inventory_id": "TQ8-MIX-L0538"},
+    {"line": 541, "page": 21, "source_degree": [34, 2], "target_degree": [33, 23], "printed_period_stem": 64, "formal_lines": [], "runtime_refs": [], "comparison": "additional-historical-row", "inventory_id": "TQ8-MIX-L0541"}
+  ],
+  "mixed_d9_numerator_audit": {
+    "id": "MIX-PD2-PD6-FIXED-NUMERATOR",
+    "status": "independently-verified-scalar-only",
+    "runtime_admission": false,
+    "scope": "The numerator of the conditional P/Q d9 equations only; neither a choice of c or b nor admission of a nonzero mixed or later differential.",
+    "source_refs": ["formal_notes.tex:520-526", "DKLLW24 main.tex:913-915,943,1183-1187", "FN-2I-016 independent finite-target proof and pure psi-fixed normalization"],
+    "premise": "For m=2 and m=6 separately, the independently verified pure equation is d9(h2 D^m u_2sigma_i)=h1^2 k^2 D^(m+1) u_2sigma_i, with coefficient 1.",
+    "blocks": [
+      {"D_power": 2, "parameter_id": "mixed_d9_PD2", "numerator_value": 3, "numerator_tex": "\\zeta^2", "source_degree": [18, 2], "target_degree": [17, 11]},
+      {"D_power": 6, "parameter_id": "mixed_d9_PD6", "numerator_value": 3, "numerator_tex": "\\zeta^2", "source_degree": [50, 2], "target_degree": [49, 11]}
+    ],
+    "field_encoding": {"field": "F4", "value_3": "zeta^2", "not_an_integer_coefficient": true},
+    "omega_ratio": "omega fixes h1,h2,k and sends D to zeta^2 D. Source and target acquire zeta^(2m)*tau and zeta^(2m+2)*tau respectively, with the same transported Thom unit tau. Their ratio is zeta^2 in each block.",
+    "exact_euler_products": {
+      "P": "a_sigma_i*h2*u_2sigma_j=(yh2+xh1v1)u_mix, using xh2=xv1h1",
+      "T": "a_sigma_i*h1^2*u_2sigma_j=(x+y)h1^2u_mix",
+      "finite_basis_check": "P is the j-annihilated finite direction, so an additional Q or positive-j Q summand would violate its annihilator. T is a single finite F4 line with no higher two-layer. The common Thom unit cancels, with no further product unit."
+    },
+    "conditional_equations": {
+      "P": "c=1 implies d9(P D^m)=zeta^2 T k^2 D^(m+1), m=2,6",
+      "Q": "With the additional nonzero-b FN-MIX-005 premise, c=1 implies d9(Q D^m)=(zeta^2/b) T k^2 D^(m+1), m=2,6",
+      "other_c_branches": "For c=zeta or zeta^2 the proposed finite target is already a d5 boundary; the Euler-image equation is zero and supplies no nonzero P/Q d9."
+    },
+    "remaining_obligations": ["Keep the c=1 target-survival condition explicit.", "Do not assign b or promote its nonzero premise from this scalar calculation.", "Apply coefficient Frobenius exactly once in reflected atlas images."],
+    "period_scope": "The two numerator values are proved separately. Each block may use permanent D8 and forward g; equality of the values does not make D4 a permanent unit.",
+    "withdrawn_premises_used": []
+  },
+  "mixed_b_nonzero_audit": {
+    "id": "DER-MIX-D5-B-NONZERO",
+    "status": "independently-verified-nonzero-only",
+    "runtime_admission": false,
+    "domain": [1, 2, 3],
+    "value": null,
+    "source_refs": ["formal_notes.tex:881-901,934-970", "DKLLW24 Table 8 d9(h1D2)", "DER-MIX-EULER-H2-cycle"],
+    "full_target_choice": "E5(-2,6) has constants kP and kQ; the positive-j Q ideal is the primitive d3(Uh1^3D^-1) image. Write d5(B)=k(alpha P+beta Q) over the full F4 space. Since P=B h2, Qh2=0 and independently d5(P)=0, the nonzero finite product x^3kDu forces alpha=0.",
+    "nonzero_proof": "If b=0, B is a 9-cycle. W=Rk2D3 at(15,11) has no earlier incoming d3/d5/d7 and is a product of 9-cycles. The independently certified Euler image V=Bh1D2 has zero d9, but integer Table 8 and Leibniz give d9(V)=W nonzero, a contradiction.",
+    "incoming_sources": [{"page": 3, "degree": [16, 8], "reason": "Entire source is a primitive d3 image; d3 squared is zero."}, {"page": 5, "degree": [16, 6], "reason": "Empty E2 cell."}, {"page": 7, "degree": [16, 4], "reason": "Both finite S40 two-layers are absent after primitive d3, including all j multiples."}],
+    "verified_zero_claim": "FN-MIX-005-Q-zero",
+    "zero_claim_scope": "d5(QD^m)=0 for every integer m, positive-j multiples and forward g. This does not delete filtration-two j tails or assign b.",
+    "remaining_obligation": "Determine the exact relative b for the coupled P+bQ map. The historical b=1 formula is not adopted.",
+    "withdrawn_premises_used": []
+  },
+  "historical_symbol_definitions": {
+    "u": "u_(sigma_i+2sigma_j); omitted from normalized monomial degree records only",
+    "A": "x^2+y^2",
+    "B": "x+y",
+    "C": "h1+xv1",
+    "Q": "h1^2+xh1v1=C*h1",
+    "degree_convention": "(stem,filtration) in the normalized mixed workspace; d_r has degree (-1,r)."
+  },
+  "historical_mixed_rows": [
+    {
+      "id": "TQ8-MIX-L0528", "sector": "sigma_i+2sigma_j", "source_line": 528,
+      "status": "historical-review", "runtime_admission": false, "page": 11,
+      "source_tex": "(x^2+y^2)h_1D^2u_{\\sigma_i+2\\sigma_j}",
+      "target_tex": "(h_1+xv_1)h_1k^3D^3u_{\\sigma_i+2\\sigma_j}",
+      "source_monomial": {"A": 1, "h1": 1, "D": 2},
+      "target_monomial": {"C": 1, "h1": 1, "k": 3, "D": 3},
+      "source_degree": [15, 3], "target_degree": [14, 14], "printed_period_stem": 32,
+      "printed_coefficient": "1", "coefficient_status": "historical-unverified",
+      "formal_statement_lines": [], "runtime_fact_ids": [],
+      "conditional_target_death": {
+        "status": "conditional-derived-obstruction",
+        "conditions": {"mixed_d5_A": 1, "mixed_d5_B": "nonzero"},
+        "page": 9,
+        "zero_by_page": 10,
+        "source_refs": ["DER-MIX-D9-Q-D2", "DER-MIX-D9-Q-D6", "formal_notes.tex:520-526,881-932,953-970", "DKLLW24 Tables 3 and 6"],
+        "transport": {"g_exponent": 3, "D_exponent": -8, "spectral_sequence": "hfpss", "uses_inverse_g": false},
+        "formula": "d9(Q k^3 D^(m+1) u)=(zeta^2/b)T k^5 D^(m+2) u, m=2,6; T=(x+y)h1^2",
+        "numerator_verification": {
+          "audit_id": "MIX-PD2-PD6-FIXED-NUMERATOR",
+          "status": "independently-verified-scalar-only",
+          "value": 3,
+          "tex": "\\zeta^2",
+          "source_fact_id": "FN-2I-016",
+          "D_powers": [2, 6],
+          "proof": "The verified unit-1 pure rows acquire the omega ratio zeta^(2m+2)/zeta^(2m)=zeta^2. The common Thom unit cancels, and exact Euler products give P and T with no extra unit. The Q equation retains the unresolved denominator b and the c=1 target-survival condition.",
+          "admission_change": "none; the historical d11 row and its coefficient remain review-only"
+        },
+        "blocks": [
+          {"D_power": 2, "proposed_d11_target_degree": [14, 14], "d9_target_degree": [13, 23]},
+          {"D_power": 6, "proposed_d11_target_degree": [46, 14], "d9_target_degree": [45, 23]}
+        ],
+        "reason": "Q k^3D^(m+1)=g^3D^-8(QD^m). On c=1 the existing conditional Q-d9 family has nonzero finite target, including these forward-g translates; b is not assigned. Only positive g powers and the permanent D8 inverse are used.",
+        "other_branches": "For c!=1 the displayed T output is already a d5 boundary; that removes this obstruction but does not prove the proposed d11 or its coefficient. Retain review, not automatic rejection."
+      },
+      "review_obligations": ["Verify the mixed finite/coupled quotient before E11 in each coefficient branch; the c=1 target dies on d9.", "Prove the R=x^2h1 source to Q target independently: Phi/Euler transport of the verified pure A d11 gives an x^3 source instead.", "Prove the target direction and scalar; the printed 32-repeat is not a D4 unit."]
+    },
+    {
+      "id": "TQ8-MIX-L0533", "sector": "sigma_i+2sigma_j", "source_line": 533,
+      "status": "historical-review", "runtime_admission": false, "page": 17,
+      "source_tex": "(x+y)h_1D^3u_{\\sigma_i+2\\sigma_j}",
+      "target_tex": "(x^2+y^2)h_1k^4D^5u_{\\sigma_i+2\\sigma_j}",
+      "source_monomial": {"B": 1, "h1": 1, "D": 3},
+      "target_monomial": {"A": 1, "h1": 1, "k": 4, "D": 5},
+      "source_degree": [24, 2], "target_degree": [23, 19], "printed_period_stem": 64,
+      "printed_coefficient": "1", "coefficient_status": "historical-unverified",
+      "formal_statement_lines": [], "runtime_fact_ids": ["DER-MIX-D17-V-D3"],
+      "independent_result": {
+        "status": "verified-nonzero-unit", "fact_id": "DER-MIX-D17-V-D3",
+        "differential_id": "formal_diff_mixed_d17_v_D3_forced",
+        "coefficient": "lambda_17 in F4*; no value assigned",
+        "proof": "The complete finite incoming/outgoing inventory of g^6D^-16 times the source leaves only d17; the RO strong vanishing line forces it. The c=1 incoming-d15 branch is independently excluded by the FN-2I-016 omega/Euler d9; no c/b assignment, Jan29 premise or inverse-g cancellation is used.",
+        "scope": "The printed coefficient-1 equation remains historical-review. The new runtime row has its own verified proof and an unknown nonzero unit; the summary JSON is not a runtime loader."
+      },
+      "review_obligations": ["Determine the exact unit lambda_17; do not silently adopt printed coefficient 1."]
+    },
+    {
+      "id": "TQ8-MIX-L0537", "sector": "sigma_i+2sigma_j", "source_line": 537,
+      "status": "historical-review", "runtime_admission": false, "page": 19,
+      "source_tex": "(x+y)h_2^2D^3u_{\\sigma_i+2\\sigma_j}",
+      "target_tex": "(x+y)h_1k^5D^6u_{\\sigma_i+2\\sigma_j}",
+      "source_monomial": {"B": 1, "h2": 2, "D": 3},
+      "target_monomial": {"B": 1, "h1": 1, "k": 5, "D": 6},
+      "source_degree": [29, 3], "target_degree": [28, 22], "printed_period_stem": 64,
+      "printed_coefficient": "1", "coefficient_status": "historical-unverified",
+      "formal_statement_lines": [], "runtime_fact_ids": ["DER-MIX-D19-X-D4"],
+      "independent_result": {
+        "status": "verified-nonzero-unit", "fact_id": "DER-MIX-D19-X-D4",
+        "differential_id": "formal_diff_mixed_d19_x_D4_forced",
+        "coefficient": "lambda_19 in F4*; no value assigned",
+        "proof": "The independent CD5 cycle maps to VD7 under a_sigma_j*Phi^-1*omega^2 in TateSS. Target comparison excludes every HFPSS outgoing map. Complete finite incoming and source-survival inventories then force d19(gXD4) onto gY=(48,26); Leibniz detects the low map. No historical graph matching, D4 period or coefficient assignment is used.",
+        "scope": "The historical coefficient-1 equation remains review-only. The independently verified finite rank-one map is in code; this JSON is not a runtime loader."
+      },
+      "review_obligations": ["Determine the exact unit lambda_19; do not silently adopt printed coefficient 1."],
+      "partial_audit": {
+        "status": "independent-nonzero-proof-unit-unresolved",
+        "runtime_admission": false,
+        "scope": "The independent CD5/Phi cycle and complete finite inventories establish nonzero d19 and its endpoints. Only the exact nonzero unit remains unresolved; the old proof is not admitted.",
+        "source_refs": ["table_Q8.tex:537", "Note/record/note.tex:800-856", "formal_notes.tex:440,881-901,903-932,934-970", "DKLLW24 main.tex:943,949,1183-1187", "independently verified mixed Phi D4 d9 and FN-2I-012 D7 sibling"],
+        "symbols": {"U": "v1^2u_mix", "B": "(x+y)u_mix", "C": "(h1+xv1)u_mix", "P": "(yh2+xh1v1)u_mix", "Q": "(h1^2+xh1v1)u_mix", "R": "(x^2+y^2)h1u_mix"},
+        "low_source_survival": {
+          "status": "independently-verified-partial-result",
+          "source_degree": [29, 3],
+          "through_page": 19,
+          "e2_pattern": "S53",
+          "identity": "B h2^2 D^3=x^3 D^4 u_mix, since xh2^2=0 and yh2^2=D x^3 in the finite E2 direction.",
+          "d3_zero": "x^3u_mix=a_sigma_i*a_sigma_j^2 is an Euler-product cycle, and D is a 3-cycle.",
+          "earlier_incoming": "The d2 and d3 sources at (30,1) and (30,0) are empty E2 cells; lengths greater than 3 require negative source filtration.",
+          "outgoing_exclusions": [
+            {"pages": [5, 13], "target_degrees": [[28, 8], [28, 16]], "reason": "Both entire U slots are zero on E4: the odd U layer supports primitive d3, and the two-layer is the image of d3(C)=2*zeta*Uk."},
+            {"pages": [7, 15], "target_degrees": [[28, 10], [28, 18]], "reason": "Empty E2 cells."},
+            {"pages": [9, 17], "target_degrees": [[28, 12], [28, 20]], "reason": "Each entire S00 slot, including its local constant, is a primitive d3 image."},
+            {"pages": [11], "target_degrees": [[28, 14]], "reason": "The sole finite target Bh1k^3D^5 is itself a nonzero d9 source: multiply the independently verified Phi D4 row by forward g^3D^-8. It is absent on E11."}
+          ],
+          "even_pages": "Empty by E2 parity.",
+          "coefficient_scope": "Independent of mixed c and b at this low-filtration source only.",
+          "forward_g_survival_asserted": true,
+          "forward_g_survival_certificate": "DER-MIX-D19-X-D4: source (49,7) has empty d3/d7 incoming cells and zero d5 from PD6 and the full QD6 family. Earlier outgoing maps are g multiples of the low zero equations."
+        },
+        "target_cycle_caution": {
+          "status": "resolved-by-independent-Phi-cycle",
+          "target_degree": [28, 22],
+          "target": "Bh1k^5D^6",
+          "invalid_shortcut": "h1D^6u_2sigma_j is a cycle, but k^5 is not a permanent multiplier. In fact h1k^5D^6u_2sigma_j=g^5D^-16(h1D^7u_2sigma_j), and the D7 class is an independently verified d7 source.",
+          "what_euler_proves": "a_sigma_i annihilates that d7 output because it has a factor 2. This alone certifies only zero d7.",
+          "independent_resolution": "DER-MIX-PHI-CD5-VD7-cycle instead proves all outgoing zero on VD7. Multiply by g5D^-16 to obtain this target's zero equations; its high g image is nonzero through E19 by the independent incoming inventory."
+        },
+        "forward_g_incoming_inventory": {
+          "target_degree": [48, 26],
+          "target": "g*(Bh1k^5D^6)=Bh1k^6D^9",
+          "scope": "All possible odd incoming lengths 3 through 23. Excluding a source as an incoming map does not assert that the target survives its own outgoing maps.",
+          "rows": [
+            {"page": 3, "source_degree": [49, 23], "e2_pattern": "S53", "source": "x^3k^5D^9u_mix", "disposition": "zero-d3", "reason": "Euler-product class times 3-cycles D and k."},
+            {"page": 5, "source_degree": [49, 21], "e2_pattern": "S51", "source": "Uh1k^5D^8", "disposition": "absent-after-d3", "reason": "Entire primitive d3 source module."},
+            {"page": 7, "source_degree": [49, 19], "e2_pattern": "S13", "source": "Bh1^2k^4D^8", "disposition": "d5-boundary", "reason": "d5(Ak^3D^8)=c*Bh1^2k^4D^8, with the earlier proved c nonzero; include the k Leibniz term."},
+            {"page": 9, "source_degree": [49, 17], "e2_pattern": "S11", "source": "Ck^4D^8", "disposition": "absent-after-d3", "reason": "Constant direction supports primitive d3; every positive-j direction is a primitive d3 image."},
+            {"page": 11, "source_degree": [49, 15], "e2_pattern": "S53", "source": "x^3k^3D^8u_mix", "disposition": "d5-boundary", "reason": "Forward g^2 times the independently verified FN-MIX-004 equation d5(PD)=x^3kD^2u_mix."},
+            {"page": 13, "source_degree": [49, 13], "e2_pattern": "S51", "source": "Uh1k^3D^7", "disposition": "absent-after-d3", "reason": "Entire primitive d3 source module."},
+            {"page": 15, "source_degree": [49, 11], "e2_pattern": "S13", "source": "Bh1^2k^2D^7", "disposition": "boundary-on-every-nonzero-c-branch", "reason": "For c!=1 it is a d5 image with coefficient c+1. For c=1 it is the nonzero d9 image of P D^6 with independently fixed numerator zeta^2. No b choice is used."},
+            {"page": 17, "source_degree": [49, 9], "e2_pattern": "S11", "source": "Ck^2D^7", "disposition": "absent-after-d3", "reason": "Constant direction supports primitive d3; every positive-j direction is a primitive d3 image."},
+            {"page": 19, "source_degree": [49, 7], "e2_pattern": "S53", "source": "x^3kD^7u_mix", "disposition": "independently-verified-nonzero-source", "reason": "The d3/d7 incoming cells are empty; PD6 and the full QD6 family have zero d5. Earlier outgoing maps are g multiples of the low zero equations. DER-MIX-PHI-CD5-VD7-cycle excludes the target's outgoing maps, so the complete inventory and strong line force this nonzero d19."},
+            {"page": 21, "source_degree": [49, 5], "e2_pattern": "S51", "source": "Uh1kD^6", "disposition": "absent-after-d3", "reason": "Entire primitive d3 source module."},
+            {"page": 23, "source_degree": [49, 3], "e2_pattern": "S13", "source": "Bh1^2D^6", "disposition": "zero-outgoing", "reason": "Euler a_sigma_i times h1 times the independently proved pure h1D6u_2sigma_j cycle."}
+          ],
+          "even_pages": "Empty by E2 parity.",
+          "nonzero_d19_forced": true,
+          "independent_certificate_id": "DER-MIX-D19-X-D4"
+        },
+        "unresolved_gaps": [
+          {"id": "exact-nonzero-d19-unit", "page": 19, "source_degree": [29, 3], "target_degree": [28, 22], "parameter_id": "mixed_d19_XD4", "reason": "The independent finite proof establishes lambda_19 in F4*, not the printed coefficient 1."}
+        ],
+        "resolved_obligations": [
+          {"id": "outgoing-d17-of-translated-target", "page": 17, "source_degree": [48, 26], "target_degree": [47, 43], "target_pattern": "S73", "status": "excluded-by-zero-outgoing", "certificate_ids": ["DER-MIX-PHI-CD5-VD7-cycle"], "reason": "The independent all-outgoing CD5 cycle transfers by permanent Phi/Euler in TateSS; injectivity at the HFPSS differential target proves zero d17. This does not copy VD3 or assert that incoming boundaries cannot occur."},
+          {"id": "outgoing-d9-of-translated-target", "page": 9, "source_degree": [48, 26], "target_degree": [47, 35], "status": "excluded-by-zero-outgoing", "certificate_ids": ["DER-MIX-PHI-BH-D7-D9-zero"], "reason": "The verified finite zero d9 on VD7 translates by g^6D^-16 to this source. It asserts only zero outgoing d9, not permanence or survival past d17."},
+          {"id": "earlier-d5-into-translated-source", "page": 5, "source_degree": [50, 2], "source": "Q D^6", "target_degree": [49, 7], "status": "excluded-by-zero-outgoing", "certificate_ids": ["DER-MIX-D5-B-NONZERO", "FN-MIX-005-Q-zero"], "reason": "The independent nonzero-b proof and finite candidate-target injection establish d5(QD6)=0 without assigning b."}
+        ],
+        "forbidden_inferences": ["No inverse-g injectivity in HFPSS.", "No D4 permanence from the displayed source monomial.", "A sole remaining incoming length does not force a map unless the target has no outgoing differential and the source survives."],
+        "withdrawn_premises_used": []
+      }
+    },
+    {
+      "id": "TQ8-MIX-L0538", "sector": "sigma_i+2sigma_j", "source_line": 538,
+      "status": "historical-review", "runtime_admission": false, "page": 19,
+      "source_tex": "(x^2+y^2)h_1D^5u_{\\sigma_i+2\\sigma_j}",
+      "target_tex": "(h_1^2+xh_1v_1)k^5D^7u_{\\sigma_i+2\\sigma_j}",
+      "source_monomial": {"A": 1, "h1": 1, "D": 5},
+      "target_monomial": {"Q": 1, "k": 5, "D": 7},
+      "source_degree": [39, 3], "target_degree": [38, 22], "printed_period_stem": 64,
+      "printed_coefficient": "1", "coefficient_status": "historical-unverified",
+      "formal_statement_lines": [], "runtime_fact_ids": [],
+      "review_obligations": ["Check the surviving coupled P/Q quotient and earlier images.", "Prove the scalar and the actual source/target survival through E19."]
+    },
+    {
+      "id": "TQ8-MIX-L0541", "sector": "sigma_i+2sigma_j", "source_line": 541,
+      "status": "historical-review", "runtime_admission": false, "page": 21,
+      "source_tex": "(h_1^2+xh_1v_1)D^4u_{\\sigma_i+2\\sigma_j}",
+      "target_tex": "(x+y)h_2^2k^5D^6u_{\\sigma_i+2\\sigma_j}",
+      "source_monomial": {"Q": 1, "D": 4},
+      "target_monomial": {"B": 1, "h2": 2, "k": 5, "D": 6},
+      "source_degree": [34, 2], "target_degree": [33, 23], "printed_period_stem": 64,
+      "printed_coefficient": "1", "coefficient_status": "historical-unverified",
+      "formal_statement_lines": [], "runtime_fact_ids": [],
+      "review_obligations": ["Distinguish Q's constant coefficient from its positive-j ideal.", "Compute the full earlier quotient before asserting a nonzero d21."],
+      "partial_audit": {
+        "status": "review-evidence-with-partial-results",
+        "runtime_admission": false,
+        "scope": "Only the Euler-product identity and zero outgoing differentials of the proposed target are established; not nonzero E21 survival, a unique incoming length, or the printed scalar.",
+        "source_refs": ["table_Q8.tex:541", "Note/record/note.tex:834-838", "formal_notes.tex:440,953-970", "DKLLW24 main.tex:943,949,1187"],
+        "target_outgoing": {
+          "status": "independently-verified-outgoing-only",
+          "target_degree": [33, 23],
+          "target_pattern": "S53",
+          "identities": ["a_sigma_j=(zeta*x+zeta^2*y)u_sigma_j", "a_sigma_i*a_sigma_j^2=(zeta^2+zeta)*x^3u_mix=x^3u_mix", "(x+y)h2^2k^5D^6u_mix=x^3k^5D^7u_mix=g^5D^-8(a_sigma_i*a_sigma_j^2)"],
+          "finite_basis_check": "The Table 6 relation B*x^2=B*y^2 and the finite S53 cell exclude additional two-layer or j-series corrections to the Euler-product identity.",
+          "transport": {"g_exponent": 5, "D_exponent": -8, "uses_inverse_g": false},
+          "conclusion": "Every outgoing d_r is zero whenever this target represents a class: Euler classes, g and D8 are permanent. It may already be a boundary, so this statement alone does not certify nonzero E21 survival."
+        },
+        "remaining_obligations": ["Exclude all shorter incoming maps in the actual quotient before forcing d21.", "The candidate d5 from Q k^4D^6 at (34,18) to this target at (33,23) requires Q's zero-d5 premise; the analogous P direction has zero d5 independently.", "Keep the Q D4 source, its constant versus positive-j direction, and all mixed c/b premises separate.", "Do not infer incoming uniqueness from the historical graph-matching argument or from Euler permanence alone."],
+        "withdrawn_premises_used": []
+      }
+    }
+  ],
+  "ledger_navigation_findings": [
+    {"fact_id": "FN-MIX-002", "observed_formal_lines": [887, 900], "correct_formal_lines": [903, 916], "status": "resolved-navigation", "resolved_formal_ranges": [[903, 916]], "resolution_scope": "Source-reference correction only; no premise or runtime admission promotion."},
+    {"fact_id": "FN-MIX-003", "observed_formal_lines": [902, 916], "correct_formal_lines": [918, 932], "status": "resolved-navigation", "resolved_formal_ranges": [[918, 932]], "resolution_scope": "Source-reference correction only; no premise or runtime admission promotion."},
+    {"fact_id": "FN-MIX-005", "observed_formal_lines": [937, 954], "correct_formal_lines": [953, 970], "status": "resolved-navigation", "resolved_formal_ranges": [[953, 970]], "resolution_scope": "Source-reference correction only; no premise or runtime admission promotion."},
+    {"fact_id": "FN-MIX-006", "observed_formal_lines": [956, 975], "correct_formal_lines": [972, 991], "status": "resolved-navigation", "resolved_formal_ranges": [[972, 991]], "resolution_scope": "Source-reference correction only; no premise or runtime admission promotion.", "later_independent_verification": {"status": "verified", "runtime_coefficient": "zeta^2", "note": "A separate source/finite-target proof, not the navigation fix, verifies the corrected D2/D6 runtime maps; the printed unit-1 source formula remains recorded."}},
+    {"fact_id": "FN-3I-010", "observed_formal_lines": [799, 845], "correct_formal_lines": [799, 860], "status": "resolved-navigation", "resolved_formal_ranges": [[799, 845], [849, 860]], "resolution_scope": "Source-reference correction only; no premise or runtime admission promotion.", "note": "The grouped d19 corollary is at 851-860 and was omitted from the earlier reference; the repaired ledger now includes it explicitly."}
+  ]
+}

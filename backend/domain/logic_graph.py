@@ -18,15 +18,30 @@ def _proposition_state(project: Project) -> dict[str, dict]:
     depths: dict[str, int | None] = {}
     admitted: dict[str, bool] = {}
 
+    def premises_for(proposition):
+        values = proposition.premise_ids
+        if not isinstance(values, list) or any(not isinstance(item, str) or not item.strip() for item in values):
+            return None
+        data = proposition.conclusion
+        if "required_admitted_premises" in data and (
+            data["required_admitted_premises"] is not True or not values
+        ):
+            return None
+        return values
+
     def depth(ident: str, trail: frozenset[str] = frozenset()) -> int | None:
         if ident in depths:
             return depths[ident]
         if ident in trail:
             return None
         proposition = propositions[ident]
+        premises = premises_for(proposition)
+        if premises is None:
+            depths[ident] = None
+            return None
         premise_depths = [
             depth(premise, trail | {ident})
-            for premise in proposition.premise_ids
+            for premise in premises
             if premise in propositions
         ]
         value = None if any(item is None for item in premise_depths) else 1 + max(premise_depths, default=-1)
@@ -39,21 +54,24 @@ def _proposition_state(project: Project) -> dict[str, dict]:
         if ident in trail:
             return False
         proposition = propositions[ident]
+        premises = premises_for(proposition)
         value = (
             proposition.status in ADMITTED_PROPOSITION_STATUSES
             and proposition.kind not in NON_FACT_PROPOSITION_KINDS
-            and all(premise in propositions for premise in proposition.premise_ids)
-            and all(is_admitted(premise, trail | {ident}) for premise in proposition.premise_ids)
+            and premises is not None
+            and all(premise in propositions for premise in premises)
+            and all(is_admitted(premise, trail | {ident}) for premise in premises)
         )
         admitted[ident] = value
         return value
 
     state: dict[str, dict] = {}
     for ident, proposition in propositions.items():
-        missing = [premise for premise in proposition.premise_ids if premise not in propositions]
+        premises = premises_for(proposition)
+        missing = [premise for premise in premises or [] if premise not in propositions]
         blocked = [
             premise
-            for premise in proposition.premise_ids
+            for premise in premises or []
             if premise in propositions and not is_admitted(premise)
         ]
         explicitly_verified = (
@@ -64,6 +82,8 @@ def _proposition_state(project: Project) -> dict[str, dict]:
             blocked.insert(0, f"status:{proposition.status}")
         elif proposition.kind in NON_FACT_PROPOSITION_KINDS:
             blocked.insert(0, f"kind:{proposition.kind}")
+        if premises is None:
+            blocked.insert(0, "premises:invalid-or-required")
         state[ident] = {
             "admitted": is_admitted(ident),
             "explicitly_verified": explicitly_verified,
@@ -113,7 +133,9 @@ def build_logic_graph(project: Project) -> dict:
     proposition_implications: dict[str, list[str]] = {}
     for workspace in project.workspaces:
         for proposition in workspace.propositions:
-            for premise_id in proposition.premise_ids:
+            for premise_id in proposition.premise_ids if isinstance(proposition.premise_ids, list) else []:
+                if not isinstance(premise_id, str):
+                    continue
                 proposition_implications.setdefault(premise_id, []).append(proposition.id)
     proposition_locations: dict[str, str] = {}
     for workspace in project.workspaces:
@@ -150,7 +172,9 @@ def build_logic_graph(project: Project) -> dict:
     for workspace in project.workspaces:
         for proposition in workspace.propositions:
             prop_id = proposition_locations[proposition.id]
-            for premise in proposition.premise_ids:
+            for premise in proposition.premise_ids if isinstance(proposition.premise_ids, list) else []:
+                if not isinstance(premise, str):
+                    continue
                 premise_id = proposition_locations.get(premise)
                 if premise_id:
                     add_edge(premise_id, prop_id, "uses")

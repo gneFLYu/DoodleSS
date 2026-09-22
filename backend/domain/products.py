@@ -37,7 +37,7 @@ def preview_cross_graded_product(
         raise ValueError("Both product inputs must be unarchived classes in their named sectors.")
     if page < max(left.page, right.page):
         raise ValueError("Both inputs must exist on the requested E_r page.")
-    if not class_is_live_on_page(left_workspace, left.id, page) or not class_is_live_on_page(right_workspace, right.id, page):
+    if not class_is_live_on_page(left_workspace, left.id, page, project=project) or not class_is_live_on_page(right_workspace, right.id, page, project=project):
         raise ValueError("Both product inputs must be live on the same E_r page.")
     if left.coefficient_context_id != right.coefficient_context_id:
         raise ValueError("Cross-graded products require a declared coefficient-context coercion.")
@@ -54,7 +54,7 @@ def preview_cross_graded_product(
         "right_sector_id": right_sector_id,
         "raw_representation_sum": raw_grade.representation,
         "result_sector_id": normalized.sector_id,
-        "result_stem": raw_grade.stem,
+        "result_stem": raw_grade.stem + normalized.stem_shift,
         "result_filtration": raw_grade.filtration,
         "normalization_path": normalized.normalization_path,
         "normalization_status": normalized.status,

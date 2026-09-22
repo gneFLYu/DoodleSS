@@ -132,7 +132,7 @@ class CellApiTest(unittest.TestCase):
         self.assertEqual(named["coordinates"], ["1", "1"])
         self.assertEqual(linear_map["matrix"], [["1"], ["1"]])
         self.assertEqual(linear_map["image_ports"][0]["projective_coordinates"], ["1", "1"])
-        self.assertIn("formal_notes.tex:749-760", linear_map["source_ref"])
+        self.assertIn("formal_notes.tex:755-762", linear_map["source_ref"])
 
         graph = self.client.get("/api/v2/logic-graph").get_json()
         kinds = {item["kind"] for item in graph["nodes"]}

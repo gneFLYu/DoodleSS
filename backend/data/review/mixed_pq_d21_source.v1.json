@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "id": "DER-MIX-PQ-D21-SOURCE-AUDIT",
+  "status": "conditionally-verified-source-audit",
+  "runtime_admission": false,
+  "workspace_id": "ws_sigma_i_2sigma_j",
+  "scope": "Canonical mixed source basis only. This document does not admit differentials, assign settings, modify a saved project, or assert full convergence.",
+  "field_encoding": {"0": 0, "1": 1, "zeta": 2, "zeta^2": 3},
+  "definitions": {
+    "u": "u_(sigma_i+2sigma_j)",
+    "A": "(x^2+y^2)u",
+    "B": "(x+y)u",
+    "C": "(h1+xv1)u",
+    "P": "(yh2+xh1v1)u=B*h2",
+    "Q": "(h1^2+xh1v1)u=C*h1",
+    "T": "B*h1^2",
+    "X": "x^3u=B*x^2=B*y^2=a_sigma_i*a_sigma_j^2",
+    "U": "v1^2u",
+    "g": "kD^3",
+    "j_bar": "The mod-2 formal parameter v1^4D^-1; not a declaration about an unlifted integral coefficient polynomial.",
+    "J": "An actual permanent integer-HFPSS class with 2-BSS name D^-1v1^4 and reduction j_bar, supplied by DKLLW prop:inftybo."
+  },
+  "coefficient_conditions": {
+    "c": {
+      "parameter_id": "mixed_d5_A",
+      "value": 3,
+      "symbol": "zeta^2",
+      "even_value": 2,
+      "even_symbol": "zeta",
+      "source_audit": "backend/data/review/mixed_phi_a_coefficient.v1.json",
+      "source_fact_id": "DER-MIX-PHI-B-D5-A-COEFFICIENT",
+      "odd_equation": "d5(AD)=c*TkD",
+      "even_equation": "d5(AD^2)=(c+1)*TkD^2",
+      "minimal_condition_for_this_audit": "c is nonzero and c+1 is nonzero; both c=zeta and c=zeta^2 satisfy the finite source exclusions. The linked source audit fixes the present convention to zeta^2."
+    },
+    "b": {
+      "parameter_id": "mixed_d5_B",
+      "value": null,
+      "domain": [1, 2, 3],
+      "source_fact_id": "DER-MIX-D5-B-NONZERO",
+      "even_equation": "d5(BD^(2m))=b*kD^(2m)*Q",
+      "odd_equation": "d5(BD^(2m+1))=kD^(2m+1)*(P+bQ)",
+      "restriction": "Only nonzero b is established here. Never replace b by 1 or introduce an independent lambda21."
+    }
+  },
+  "dependencies": {
+    "fact_ids": [
+      "DER-MIX-PHI-B-D5-A-COEFFICIENT",
+      "DER-MIX-D5-B-NONZERO",
+      "FN-MIX-001",
+      "FN-MIX-004",
+      "FN-MIX-004-even-zero",
+      "FN-MIX-005-Q-zero",
+      "FN-2I-019"
+    ],
+    "derived_row_ids": ["formal_diff_two_d21_h2_low_derived"],
+    "primitive_row_families": ["formal_diff_mixed_d3_h1_1_derived", "formal_diff_mixed_d3_h1_2_derived", "formal_diff_mixed_d3_h1_3_derived"],
+    "pure_low_source_dependencies": ["FN-2I-004", "FN-2I-010", "FN-2I-011"],
+    "proof_chain_limit": "Use the repaired independent FN-2I-019 certificate and its low H D4 source audit, not the notes' bare vanishing-line assertion.",
+    "not_used": ["mixed d17", "mixed d19", "table_Q8.tex:541 as a proof", "Jan29 or withdrawn three-sigma arguments", "global cancellation of g", "a permanent D4 or D2 period", "imposed strong vanishing line"],
+    "withdrawn_premises_used": []
+  },
+  "targets": {
+    "Y": {
+      "bidegree": [33, 23], "pattern": "S53", "finite_port": "0:0",
+      "monomial": {"X": 1, "k": 5, "D": 7},
+      "label": "Xk^5D^7", "module": "F4", "two_valuation": 0, "j_order": 0,
+      "permanent_product": "g^5D^-8(a_sigma_i*a_sigma_j^2)",
+      "outgoing": "Zero on every page where it represents a class; this alone does not exclude an earlier incoming map.",
+      "earlier_incoming_excluded_before_page": 21,
+      "nonzero_on_E21_under_conditions": true
+    },
+    "gY": {
+      "bidegree": [53, 27], "pattern": "S53", "finite_port": "0:0",
+      "monomial": {"X": 1, "k": 6, "D": 10},
+      "label": "Xk^6D^10", "module": "F4", "two_valuation": 0, "j_order": 0,
+      "permanent_product": "g^6D^-8(a_sigma_i*a_sigma_j^2)",
+      "outgoing": "Zero on every page where it represents a class.",
+      "earlier_incoming_excluded_before_page": 21,
+      "nonzero_on_E21_under_conditions": true
+    }
+  },
+  "incoming_inventory_scope": {
+    "Y": {"odd_pages": [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23], "complete_through_target_filtration": true},
+    "gY": {"odd_pages": [3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27], "complete_through_target_filtration": true},
+    "even_pages": "All incoming E2 source cells for even r>=2 are empty by total-degree parity.",
+    "later_pages": "For r greater than the target filtration the incoming HFPSS source has negative filtration.",
+    "candidate_convention": "Candidates are full E2 directions, before taking the indicated earlier quotient. S62 and S53 labels below use actual A and X powers, not the normalized motif's shifted D placeholder.",
+    "series_scope": "S22H and the bo patterns include their entire completed ideal. At positive k power, the positive-j S22H ideal is already a primitive d3 image. No additional Witt layer is present in the finite S62, S13 or S53 direction."
+  },
+  "incoming_inventories": {
+    "Y": [
+      {"page": 3, "source_bidegree": [34, 20], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 5, "source_bidegree": [34, 18], "e2_candidates": [{"label": "Pk^4D^6", "pattern": "S22Y", "bidegree": [34, 18]}, {"label": "Qk^4D^6", "pattern": "S22H", "bidegree": [34, 18]}], "disposition": "zero-outgoing", "reason": "These are g^4D^-8 times PD^2 and QD^2. FN-MIX-004-even-zero and FN-MIX-005-Q-zero make both d5 maps zero, including Q's completed ideal."},
+      {"page": 7, "source_bidegree": [34, 16], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 9, "source_bidegree": [34, 14], "e2_candidates": [{"label": "Ak^3D^6", "pattern": "S62", "bidegree": [34, 14]}, {"label": "Uh1^2k^3D^5", "pattern": "S62V", "bidegree": [34, 14]}], "disposition": "absent-before-page", "reason": "Ak^3D^6=g^3D^-8 AD^5 supports d5 with nonzero coefficient c=zeta^2. The entire independent Uh1^2 direction supports the primitive h1^2 d3 product."},
+      {"page": 11, "source_bidegree": [34, 12], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 13, "source_bidegree": [34, 10], "e2_candidates": [{"label": "Pk^2D^5", "pattern": "S22Y", "bidegree": [34, 10]}, {"label": "Qk^2D^5", "pattern": "S22H", "bidegree": [34, 10]}], "disposition": "absent-before-page", "reason": "Pk^2D^5=g^2D^-8 PD^7 supports d5 to Xk^3D^6. The remaining Q constant is b^-1*d5(BkD^5), since BkD^5=gBD^2. Its positive-j ideal is already a primitive d3 image. Thus neither a P/Q combination nor a completed tail remains."},
+      {"page": 15, "source_bidegree": [34, 8], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 17, "source_bidegree": [34, 6], "e2_candidates": [{"label": "AkD^5", "pattern": "S62", "bidegree": [34, 6]}, {"label": "Uh1^2kD^4", "pattern": "S62V", "bidegree": [34, 6]}], "disposition": "absent-before-page", "reason": "AkD^5=gAD^2 supports d5 with nonzero coefficient c+1=zeta. The independent Uh1^2 direction supports primitive d3. This is the earlier c=1 ambiguity; it is excluded only under the stated coefficient condition."},
+      {"page": 19, "source_bidegree": [34, 4], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 21, "source_bidegree": [34, 2], "e2_candidates": [{"label": "PD^4", "pattern": "S22Y", "bidegree": [34, 2]}, {"label": "QD^4", "pattern": "S22H", "bidegree": [34, 2]}], "disposition": "actual-rank-one-map-under-conditions", "reason": "The separate source survival and Euler calculation give the P coefficient 1. The forward-g argument gives the Q coefficient b^-1. The whole source cell is not removed."},
+      {"page": 23, "source_bidegree": [34, 0], "e2_candidates": [], "disposition": "empty-E2-cell"}
+    ],
+    "gY": [
+      {"page": 3, "source_bidegree": [54, 24], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 5, "source_bidegree": [54, 22], "e2_candidates": [{"label": "Pk^5D^9", "pattern": "S22Y", "bidegree": [54, 22]}, {"label": "Qk^5D^9", "pattern": "S22H", "bidegree": [54, 22]}], "disposition": "zero-outgoing", "reason": "These are g^5D^-8 times PD^2 and QD^2; their d5 maps are zero by the independent P-even and full-Q zero certificates."},
+      {"page": 7, "source_bidegree": [54, 20], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 9, "source_bidegree": [54, 18], "e2_candidates": [{"label": "Ak^4D^9", "pattern": "S62", "bidegree": [54, 18]}, {"label": "Uh1^2k^4D^8", "pattern": "S62V", "bidegree": [54, 18]}], "disposition": "absent-before-page", "reason": "Ak^4D^9=g^4D^-8 AD^5 supports the nonzero c d5. The entire independent Uh1^2 direction supports primitive d3."},
+      {"page": 11, "source_bidegree": [54, 16], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 13, "source_bidegree": [54, 14], "e2_candidates": [{"label": "Pk^3D^8", "pattern": "S22Y", "bidegree": [54, 14]}, {"label": "Qk^3D^8", "pattern": "S22H", "bidegree": [54, 14]}], "disposition": "absent-before-page", "reason": "Pk^3D^8=g^3D^-8 PD^7 supports nonzero d5. The Q constant is b^-1*d5(Bk^2D^8), with Bk^2D^8=g^2BD^2. Positive-j Q is already a primitive d3 image."},
+      {"page": 15, "source_bidegree": [54, 12], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 17, "source_bidegree": [54, 10], "e2_candidates": [{"label": "Ak^2D^8", "pattern": "S62", "bidegree": [54, 10]}, {"label": "Uh1^2k^2D^7", "pattern": "S62V", "bidegree": [54, 10]}], "disposition": "absent-before-page", "reason": "Ak^2D^8=g^2AD^2 supports the nonzero c+1 d5. The independent Uh1^2 direction supports primitive d3."},
+      {"page": 19, "source_bidegree": [54, 8], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 21, "source_bidegree": [54, 6], "e2_candidates": [{"label": "PkD^7", "pattern": "S22Y", "bidegree": [54, 6]}, {"label": "QkD^7", "pattern": "S22H", "bidegree": [54, 6]}], "disposition": "one-dimensional-source-quotient", "reason": "The positive-j Q ideal was a primitive d3 image and g(P+bQ)D^4=d5(BD^7). Retain the one-dimensional constant quotient, not two independent sources."},
+      {"page": 23, "source_bidegree": [54, 4], "e2_candidates": [], "disposition": "empty-E2-cell"},
+      {"page": 25, "source_bidegree": [54, 2], "e2_candidates": [{"label": "AD^7", "pattern": "S62", "bidegree": [54, 2]}, {"label": "Uh1^2D^6", "pattern": "S62V", "bidegree": [54, 2]}], "disposition": "absent-before-page", "reason": "Included for complete source-filtration enumeration, not needed for E21 injection: AD^7 supports the nonzero c d5 and Uh1^2D^6 supports primitive d3."},
+      {"page": 27, "source_bidegree": [54, 0], "e2_candidates": [], "disposition": "empty-E2-cell"}
+    ]
+  },
+  "source_survival": {
+    "shared_incoming": "Both low sources have filtration 2. An incoming d2 would originate at (35,0), an empty E2 cell; for r>=3 the incoming source has negative filtration. Even outgoing lengths have empty E2 targets.",
+    "P": {
+      "bidegree": [34, 2], "pattern": "S22Y", "source_component": "finite constant", "survives_to_E21": true,
+      "pure_preimage": {"workspace_id": "ws_2sigma_i", "fact_id": "FN-2I-019", "row_id": "formal_diff_two_d21_h2_low_derived", "label": "h2D^4u_(2sigma_i)", "bidegree": [35, 1], "map": "a_sigma_i*omega"},
+      "outgoing_inventory": [
+        {"page": 3, "target_bidegree": [33, 5], "disposition": "zero", "reason": "Naturality from the independently verified zero d3 of the pure H D4 preimage."},
+        {"page": 5, "target_bidegree": [33, 7], "disposition": "zero", "reason": "FN-MIX-004-even-zero; also the pure H D4 preimage has zero d5."},
+        {"page": 7, "target_bidegree": [33, 9], "disposition": "zero", "reason": "The pure preimage's target (34,8) is empty. The mixed target need not be empty for naturality to give zero."},
+        {"page": 9, "target_bidegree": [33, 11], "disposition": "zero", "reason": "Pure target (34,10): its constant supports FN-2I-011 d9, so d9 squared excludes the map; its positive-j ideal is an earlier primitive d3 image. Independently, the mixed T target is already the nonzero c+1 d5 image."},
+        {"page": 11, "target_bidegree": [33, 13], "disposition": "zero", "reason": "The pure preimage's target (34,12) is empty."},
+        {"page": 13, "target_bidegree": [33, 15], "disposition": "zero", "reason": "The entire pure target (34,14) is a d5 boundary. Independently, the mixed Xk^3D^6 target is d5(Pk^2D^5)."},
+        {"page": 15, "target_bidegree": [33, 17], "disposition": "zero", "reason": "The pure preimage's target (34,16) is empty."},
+        {"page": 17, "target_bidegree": [33, 19], "disposition": "zero", "reason": "The pure target (34,18) is FN-2I-010's earlier d9 image. Independently, the mixed T target is the nonzero c d5 image."},
+        {"page": 19, "target_bidegree": [33, 21], "disposition": "zero", "reason": "The pure preimage's target (34,20) is empty."}
+      ]
+    },
+    "Q": {
+      "bidegree": [34, 2], "pattern": "S22H", "source_component": "constant and completed positive-j ideal", "survives_to_E21": true,
+      "outgoing_inventory": [
+        {"page": 3, "target_bidegree": [33, 5], "target_label": "Uh1kD^4", "target_pattern": "S51", "disposition": "zero", "reason": "Q=C*h1 and d3(C)=2*zeta*Uk; 2h1=0 gives d3(QD^4)=0. D is a 3-cycle."},
+        {"page": 5, "target_bidegree": [33, 7], "target_label": "XkD^5", "target_pattern": "S53", "disposition": "zero", "reason": "FN-MIX-005-Q-zero independently covers all D translates and the completed ideal; Q*h2=0."},
+        {"page": 7, "target_bidegree": [33, 9], "target_label": "Ck^2D^5", "target_pattern": "S11", "disposition": "target-absent", "reason": "The constant supports primitive d3(C)=2*zeta*Uk. The entire positive-j ideal is the image d3(Uh1^2kD^4)=j_bar*Ck^2D^5."},
+        {"page": 9, "target_bidegree": [33, 11], "target_label": "Tk^2D^5", "target_pattern": "S13", "disposition": "target-boundary", "reason": "d5(AkD^5)=(c+1)Tk^2D^5=zeta*Tk^2D^5; AkD^5=gAD^2."},
+        {"page": 11, "target_bidegree": [33, 13], "target_label": "Uh1k^3D^5", "target_pattern": "S51", "disposition": "target-absent", "reason": "The entire direction supports the primitive h1 d3 product."},
+        {"page": 13, "target_bidegree": [33, 15], "target_label": "Xk^3D^6", "target_pattern": "S53", "disposition": "target-boundary", "reason": "This finite line is d5(Pk^2D^5), using the odd P block g^2D^-8 PD^7."},
+        {"page": 15, "target_bidegree": [33, 17], "target_label": "Ck^4D^6", "target_pattern": "S11", "disposition": "target-absent", "reason": "The constant supports primitive d3. The entire positive-j ideal is the image d3(Uh1^2k^3D^5)=j_bar*Ck^4D^6."},
+        {"page": 17, "target_bidegree": [33, 19], "target_label": "Tk^4D^6", "target_pattern": "S13", "disposition": "target-boundary", "reason": "d5(Ak^3D^6)=c*Tk^4D^6=zeta^2*Tk^4D^6; Ak^3D^6=g^3D^-8 AD^5."},
+        {"page": 19, "target_bidegree": [33, 21], "target_label": "Uh1k^5D^6", "target_pattern": "S51", "disposition": "target-absent", "reason": "The entire direction supports the primitive h1 d3 product."}
+      ],
+      "noncircularity": "No step assumes either mixed d21 row. Earlier target exclusions use primitive d3, the independently certified d5 relations, and the stated c condition."
+    }
+  },
+  "euler_P_d21": {
+    "proposed_fact_id": "DER-MIX-D21-P-D4-EULER",
+    "runtime_admission": false,
+    "page": 21, "source_bidegree": [34, 2], "target_bidegree": [33, 23],
+    "source_pattern": "S22Y", "target_pattern": "S53",
+    "equation": "d21(PD^4)=Y", "coefficient": 1,
+    "pure_equation": "d21(h2D^4u_(2sigma_i))=(x^2+y^2)k^5D^7u_(2sigma_i)",
+    "omega": {"D": "zeta^2 D", "x": "zeta x", "y": "zeta^2 y", "h2": "h2", "k": "k"},
+    "source_image": "a_sigma_i*omega(h2D^4u_(2sigma_i))=zeta^2*PD^4",
+    "target_image": "a_sigma_i*omega((x^2+y^2)k^5D^7u_(2sigma_i))=zeta^2*(zeta^2+zeta)*Y=zeta^2*Y",
+    "finite_products": ["a_sigma_i*h2u_(2sigma_j)=P", "B*x^2=B*y^2=X", "zeta^2+zeta=1"],
+    "derivation": "omega contributes zeta^2 to D4 and also zeta^2 to D7; omega(A)=zeta^2*x^2+zeta*y^2. Exact Euler multiplication reduces the latter numerator to X. The same nonzero zeta^2 on both sides cancels, fixing the canonical source coefficient to 1. The target's separate earlier incoming inventory proves the image is nonzero on E21."
+  },
+  "linked_Q_d21": {
+    "proposed_fact_id": "DER-MIX-D21-Q-D4-B-INVERSE",
+    "runtime_admission": false,
+    "page": 21, "source_bidegree": [34, 2], "target_bidegree": [33, 23],
+    "source_pattern": "S22H", "target_pattern": "S53", "source_component": "constant",
+    "equation": "d21(QD^4)=b^-1*Y",
+    "coefficient_parameter_id": "mixed_d5_B", "coefficient_operation": "inverse", "coefficient_value": null,
+    "g_injection": {
+      "source_bidegree": [33, 23], "target_bidegree": [53, 27], "page": 21,
+      "scope": "Only these finite one-dimensional lines, after their separately enumerated earlier incoming sources are excluded.",
+      "reason": "The E2 product sends Y to gY with nonzero coefficient, both classes have zero outgoing and both remain nonzero on E21. Therefore this particular map of F4 lines is injective. No global cancellation or inverse-g HFPSS transport is asserted."
+    },
+    "earlier_relation": {"page": 5, "source": "BD^7", "source_bidegree": [55, 1], "target_bidegree": [54, 6], "equation": "d5(BD^7)=kD^7(P+bQ)=g(P+bQ)D^4"},
+    "derivation": [
+      "P and Q separately survive to E21 by the inventories above, so the earlier relation g(P+bQ)D4=0 can be used on that page.",
+      "Applying d21 gives 0=gY+b*g*d21(QD4). The E21 target at (33,23) is the single finite Y line.",
+      "Injectivity of g on that particular target line forces the coefficient of d21(QD4) to equal b^-1. Its nonzero value is linked to b, not a new lambda21."
+    ],
+    "constant_matrix": {"source_basis": ["PD^4", "QD^4"], "target_basis": ["Y"], "row": ["1", "b^-1"], "rank": 1, "kernel_generator": "(P+bQ)D^4"},
+    "remaining_scalar_unknown": "The exact nonzero b. The proof fixes the Q coefficient as its inverse without determining b itself."
+  },
+  "completed_ideal": {
+    "status": "conditionally-verified-using-actual-permanent-Witt-lift",
+    "runtime_admission": false,
+    "source_module_on_E21": "F4{PD^4} plus F4[[j_bar]]{QD^4}",
+    "Witt_lift_certificate": {
+      "source": "arXiv-2209.01830v3/main.tex:1391-1400",
+      "proposition_label": "prop:inftybo",
+      "statement": "The actual integer HFPSS classes with 2-BSS names D^m v1^(4l), m any integer and l>=1, survive to E_infinity.",
+      "specialization": {"m": -1, "l": 1, "n_in_Tate_formula": -3},
+      "Tate_equation": "d3(D^2g^-1v1^2h1)=D^-1v1^4",
+      "Tate_source_bidegree": [1, -3], "Tate_target_bidegree": [0, 0],
+      "comparison_source": "arXiv-2209.01830v3/main.tex:488-510 (lem:tateisorange and met:Tatemethod)",
+      "proof": "The negative-filtration Tate d3 and the comparison method give zero outgoing for the corresponding actual HFPSS lift J. Its filtration zero excludes incoming, giving a permanent class. This is a stated integer-HFPSS proposition, not a conclusion from the chart's [[j]] notation.",
+      "raw_polynomial_permanence_asserted": false,
+      "integral_warning": "The original coefficient v1 has nontrivial integral Q8 action (main.tex:633-642). Line 674 identifies v1^4 with the norm only modulo 2. Do not identify an arbitrary literal coefficient polynomial v1^4/D with the permanent chosen lift J.",
+      "lift_independence_on_scope": "J reduces to j_bar. Two integral invariant lifts of this same reduction differ by 2 times an invariant. Since QD4 and Y are 2-torsion, this difference acts as zero on both."
+    },
+    "target_annihilation": {"equation": "JY=0", "source_refs": ["arXiv-2209.01830v3/main.tex:1179,1187"], "proof": "Table 6 gives B*v1^4=0 and X=B*x^2=B*y^2. Thus j_bar*X=0. The target is the finite order-two S53 direction with no higher Witt layer, so the actual permanent lift J also annihilates Y."},
+    "tail_equation": "d21(J^n QD^4)=J^n*d21(QD^4)=b^-1*J^nY=0 for every n>=1",
+    "completed_map": "d21(a*PD^4+f(j_bar)*QD^4)=(a+b^-1*f(0))*Y",
+    "kernel": "F4{(P+bQ)D^4} plus j_bar*F4[[j_bar]]{QD^4}",
+    "continuity_scope": "Use the completed module structure from main.tex:655-679 and the continuous scalar action; this statement does not discretize or remove infinitely many j terms.",
+    "not_an_HFPSS_d3_boundary_at_filtration_two": true,
+    "forward_g_distinction": "The low positive-j Q ideal remains. Its forward-g image has positive-filtration primitive d3 preimages and is already a boundary there."
+  },
+  "historical_comparison": {
+    "audit_row_id": "TQ8-MIX-L0541",
+    "table_source": "REU Projects/table_Q8.tex:541",
+    "historical_proof_source": "REU Projects/Note/record/note.tex:834-838",
+    "printed_source": "QD^4", "printed_target": "B*h2^2*k^5D^6=Xk^5D^7", "printed_coefficient": "1", "printed_period_stem": 64,
+    "actual_Euler_source": "PD^4", "actual_Euler_coefficient": "1", "linked_Q_coefficient": "b^-1",
+    "disposition": "Preserve the original Q row and its printed coefficient 1 as historical provenance. This proof validates a nonzero Q map with coefficient b^-1 in the canonical basis, not the printed scalar unless b=1 is independently established or the basis is explicitly rescaled to bQ. The historical argument did not separate the P and Q directions."
+  },
+  "period_scope": {
+    "permanent_horizontal": "D^8", "stem_period": 64,
+    "forward_diagonal": "g=kD^3", "forward_diagonal_bidegree": [20, 4],
+    "no_D4_or_D2_permanent_unit": true,
+    "no_global_inverse_g_in_HFPSS": true,
+    "scope_of_nonzero_translates": "Each further forward-g image still requires its actual source and target quotient/liveness checks; the verified Y-to-gY injection is not a universal period-cancellation theorem."
+  },
+  "source_refs": [
+    "backend/data/review/mixed_phi_a_coefficient.v1.json (DER-MIX-PHI-B-D5-A-COEFFICIENT)",
+    "backend/domain/formal_notes_chart.py:144-147,671-695,989-1001 (FN-2I-019 and formal_diff_two_d21_h2_low_derived)",
+    "backend/domain/formal_notes_chart.py:1359-1433 (mixed c/b parameters, DER-MIX-D5-B-NONZERO and the affine c+1 relation)",
+    "backend/domain/formal_notes_chart.py:1693-1714,1738-1739,3266-3282 (primitive completed ideals and independent P/Q zero d5 certificates)",
+    "backend/data/review/table_q8_source_audit.v1.json:367-392 (TQ8-MIX-L0541 historical-only partial audit)",
+    "REU Projects/Note/formal_notes.tex:558-563,934-970",
+    "REU Projects/Note/record/note.tex:834-838",
+    "REU Projects/table_Q8.tex:407,511-515,541",
+    "arXiv-2209.01830v3/main.tex:488-510,633-642,655-679,943-949,973,1023-1024,1179-1187,1336-1342,1373-1400"
+  ],
+  "integration_requirements": {
+    "not_yet_integrated": true,
+    "runtime_admission": false,
+    "proof_bound_parameter_resolution": true,
+    "withdrawal_restores_unresolved_status": true,
+    "preserve_conflicting_user_assignments": true,
+    "do_not_assign_settings_automatically": true,
+    "canonical_source_basis": ["P", "Q"],
+    "mixed_atlas_images": 6,
+    "Q_coefficient_transport": {"parameter_id": "mixed_d5_B", "first_operation": "inverse", "then_operation": "existing frobenius_power", "psi_image": "(b^-1)^2=b^-2", "independent_lambda21_forbidden": true, "printed_table_coefficient_is_not_a_fixed_parameter": true},
+    "canvas_basis_normalization": "These formulas are in the canonical source basis. Additional source/target basis_ratio units must still use the existing atlas normalization; never conflate those units with the parameter b or apply Frobenius twice.",
+    "required_source_quotient": "Retain the constant kernel P+bQ and the entire low positive-j Q ideal after the rank-one d21 map.",
+    "required_tests": [
+      "Independently enumerate actual E2 source pattern sets for Y and gY at every listed odd r; verify even-r source cells are empty.",
+      "Check every source and target bidegree, including the normalized S62/S53 motif D offset.",
+      "Check the earlier c=1 d17 alternative remains unresolved if the c source certificate is withdrawn; do not reuse the c!=1 proof unconditionally.",
+      "For each b in F4*, verify the canonical constant matrix [1,b^-1] has rank one and kernel P+bQ.",
+      "Verify omega/Euler source and target both carry zeta^2, giving P coefficient exactly 1.",
+      "Verify Q and P are independently live on E21, the target Y is nonzero on E21, and only the rank-one image is removed on E22.",
+      "Verify the full low positive-j Q ideal survives d21 using the actual permanent J lift, while its high forward-g primitive d3 images are not recreated.",
+      "Verify all six mixed atlas transports preserve the linked inverse-b coefficient, apply Frobenius once, normalize canvas bases, and preserve the one-dimensional kernel.",
+      "Confirm merely loading this source JSON creates no production differential, no parameter assignment, and no saved-state mutation."
+    ]
+  }
+}

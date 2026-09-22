@@ -37,6 +37,10 @@ class DKLLWChartSemanticTest(unittest.TestCase):
             class_semantic_from_glyph("square").algebra_type,
             r"\mathbb W(k)",
         )
+        self.assertEqual(
+            class_semantic_from_glyph("witt-j-series").algebra_type,
+            r"\mathbb W(k)[\![j]\!]",
+        )
         annotation = annotate_class_glyph(killed, "circle")
         self.assertEqual(annotation["inference_inputs"], ["explicit-glyph"])
         self.assertIn("class.state", annotation["ignored_inputs"])

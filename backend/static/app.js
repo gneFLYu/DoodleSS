@@ -10,6 +10,8 @@ const state = {
   activeAtlasSectorId: null,
   pageByWorkspace: new Map(),
   selectedClassId: null,
+  selectedOccurrence: null,
+  selectedQuotientInstance: null,
   classFilter: "",
   selectedCellId: null,
   lastVectorResult: null,
@@ -33,6 +35,9 @@ const $ = (selector) => document.querySelector(selector);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const PAGE_MODE = document.body.dataset.page || "researching";
 let chartRenderFrame = 0;
+let pageRenderFrame = 0;
+let pageRenderRequest = null;
+let chartPagePresentation = null;
 
 const CURRENT_CATALOG_BY_SECTOR = {
   "q8-ro-a2-b0": "2sigma-dec30",
@@ -102,7 +107,10 @@ function renderWorkspaceNavigation(ws) {
   selector.disabled = false;
   const ordinary = ordinaryWorkspaces();
   const currentIsOrdinary = ordinary.some((item) => item.id === ws.id);
-  selector.innerHTML = `${currentIsOrdinary ? "" : `<option value="${ws.id}">[${isReferenceSupportWorkspace(ws) ? "reference" : "atlas"}] ${escapeHtml(ws.name)}</option>`}${ordinary.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("")}`;
+  const option = item => `<option value="${item.id}">${escapeHtml(workspaceDisplayName(item))}</option>`;
+  const computed = ordinary.filter(item => !item.settings?.atlas_transport);
+  const transported = ordinary.filter(item => item.settings?.atlas_transport);
+  selector.innerHTML = `${currentIsOrdinary ? "" : option(ws)}<optgroup label="Computed representatives">${computed.map(option).join("")}</optgroup>${transported.length ? `<optgroup label="Isomorphic atlas pages">${transported.map(option).join("")}</optgroup>` : ""}`;
   selector.value = ws.id;
 
   const support = state.project.workspaces.filter(isReferenceSupportWorkspace);
@@ -120,6 +128,9 @@ function liveClassesAt(ws, page = ws.page) {
   const fates = new Map((ws.fates || []).map((item) => [item.class_id, item]));
   return ws.classes.filter((item) => {
     if (item.archived || item.page > page) return false;
+    // A coefficient port can die while its cell retains a kernel or j-tail.
+    // The occurrence algebra below resolves those subquotients separately.
+    if ((item.style?.e2_pattern || item.style?.e2_components) && window.HFPSSPageAlgebra) return true;
     const death = fates.get(item.id)?.first_hfpss_death;
     return !death || Number(death.page) >= page;
   });
@@ -152,22 +163,57 @@ function glyphShapeFor(ws, item) {
   if (["fat-dot", "blue-dot"].includes(normalized)) return "fat-dot";
   if (["circle", "red-dot"].includes(normalized)) return "circle";
   if (normalized === "square") return "square";
+  if (normalized === "j-series") return "j-series";
+  if (normalized === "j-positive-series") return "j-positive-series";
+  if (normalized === "witt-j-series") return "witt-j-series";
   if (normalized === "dot") return "dot";
   return "unknown";
 }
 
 function differentialVisualState(differential) {
-  return ["derived", "reviewed", "established", "proven"].includes(differential.status) ? "accepted" : "under-review";
+  return ["derived", "reviewed", "established", "proven", "admitted", "admitted-pattern", "verified-pattern", "verified", "source-verified"].includes(differential.status) ? "accepted" : "under-review";
 }
 
 function relationVisualState(proposition) {
-  return ["derived", "reviewed", "established", "proven"].includes(proposition.status) ? "accepted" : "under-review";
+  return ["derived", "reviewed", "established", "proven", "verified", "source-verified"].includes(proposition.status) ? "accepted" : "under-review";
 }
 
 function escapeHtml(value) {
   const node = document.createElement("span");
   node.textContent = value ?? "";
   return node.innerHTML;
+}
+
+function mathMarkup(value) {
+  const source = String(value ?? "");
+  if (window.katex?.renderToString) {
+    try { return window.katex.renderToString(source, {throwOnError: false, trust: false, displayMode: false}); }
+    catch (_) { /* Keep source labels readable when a renderer is unavailable. */ }
+  }
+  return escapeHtml(source);
+}
+
+function mathTextMarkup(value) {
+  const source = String(value ?? "");
+  const pieces = source.split(/(\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]|\$[^$]+\$)/g);
+  return pieces.map(piece => {
+    if (piece.startsWith("\\(") || piece.startsWith("\\[")) return mathMarkup(piece.slice(2, -2));
+    if (piece.startsWith("$") && piece.endsWith("$")) return mathMarkup(piece.slice(1, -1));
+    // Entire formula statements are common in the proposition ledger.
+    if (/^(?:d_\{?\d|\\(?:omega|psi|zeta)|[a-zA-Z]_\{)/.test(piece) && !/\b(?:is|the|with|from)\b/.test(piece)) return mathMarkup(piece);
+    return escapeHtml(piece);
+  }).join("");
+}
+
+function compactSectorLabel(value) {
+  const sector = typeof value === "string" ? atlasSector(value) : value;
+  if (!sector) return String(value || "*").replace(/^q8-ro-a(\d+)-b(\d+)$/, (_, a, b) => compactSectorLabel({a: Number(a), b: Number(b)}));
+  return `*${Number(sector.a) ? `-${Number(sector.a) === 1 ? "" : sector.a}i` : ""}${Number(sector.b) ? `-${Number(sector.b) === 1 ? "" : sector.b}j` : ""}`;
+}
+
+function workspaceDisplayName(ws) {
+  const sector = (state.project?.grading_sectors || []).find(item => item.workspace_id === ws.id);
+  return sector ? `Q8 HFPSS · ${compactSectorLabel(sector)}` : ws.name;
 }
 
 function toast(message) {
@@ -209,7 +255,25 @@ async function loadProject() {
     workspace().page = clamp(Number(remembered ?? workspace().page) || 2, 2, pageLimit(workspace()));
     state.pageByWorkspace.set(state.workspaceId, workspace().page);
   }
+  refreshSelectedOccurrence();
   render();
+}
+
+function refreshSelectedOccurrence() {
+  const selected = state.selectedOccurrence;
+  if (!selected) return;
+  const ws = workspace();
+  if (!ws || selected.workspaceId !== ws.id || selected.page !== ws.page
+      || selected.classId !== state.selectedClassId) {
+    state.selectedOccurrence = null;
+    return;
+  }
+  const {stem, filtration} = selected.grade;
+  const record = periodicClassInstances(ws, {
+    stemMin: stem, stemMax: stem, filtrationMin: filtration, filtrationMax: filtration,
+  }).find(item => item.item.id === selected.classId);
+  state.selectedOccurrence = record ? {...selected, instanceKey: record.instanceKey,
+    grade: {...record.grade}, label: periodicDisplayLabel(record)} : null;
 }
 
 async function loadLegacyCatalogManifest() {
@@ -266,63 +330,6 @@ async function openLegacyCatalogEntry(entryId) {
   }
 }
 
-function openS11TransportView() {
-  const sourceProject = state.savedProject || state.project;
-  const source = sourceProject.workspaces.find((item) => item.id === "ws_sigma_i");
-  if (!source) return;
-  const prefix = "transport:s11:";
-  const classIds = new Map(source.classes.map((item) => [item.id, `${prefix}${item.id}`]));
-  const classes = source.classes.map((item) => ({
-    ...item,
-    id: classIds.get(item.id),
-    label: `\\Sigma^{16}\\omega^2\\left(${item.label}\\right)`,
-    expression: `Sigma^16 omega^2(${item.expression || item.label})`,
-    grade: { ...item.grade, stem: Number(item.grade.stem) + 16 },
-    notes: `${item.notes || ""} Display-only S1,1 transport through the sigma_k page; omega^2 coefficients are retained symbolically.`,
-    sector_id: "q8-ro-a1-b1",
-  }));
-  const fates = (source.fates || []).filter((item) => classIds.has(item.class_id)).map((item) => ({
-    ...item,
-    class_id: classIds.get(item.class_id),
-  }));
-  const settings = structuredClone(source.settings);
-  settings.read_only_catalog = true;
-  settings.catalog_entry = {
-    id: "transport-s11-sigma-k",
-    status: "source-transport",
-    authority: "norm period + 20+H period + C3",
-    filename: "virtual S1,1 chart (no duplicated stored dots)",
-    evidence_ref: "(1+sigma_i+sigma_j+sigma_k+H)-(20+H); sigma_k=omega^2(sigma_i)",
-    statistics: { generators: classes.length, connections: 0, differentials: 0, periodicity_rules: 2 },
-  };
-  const transported = {
-    ...source,
-    id: "transport:q8-ro-a1-b1",
-    name: "Q8 HFPSS — S1,1 via the sigma_k page",
-    grading_label: "* - sigma_i - sigma_j",
-    classes,
-    differentials: [],
-    differential_events: [],
-    fates,
-    propositions: [],
-    cells: [],
-    differential_maps: [],
-    summary: "Display-only stem-16 transport of the sigma_k page. sigma_k lies in the C3 orbit of sigma_i; omega^2 is kept on labels so no F4 unit is silently erased.",
-    settings,
-  };
-  if (!state.catalogMode) state.savedProject = state.project;
-  state.catalogMode = true;
-  state.project = catalogProject(sourceProject, transported);
-  state.workspaceId = transported.id;
-  state.selectedClassId = null;
-  state.classFilter = "";
-  state.tool = "inspect";
-  state.connectionStart = null;
-  state.view = { zoom: 1, panX: 0, panY: 0 };
-  render();
-  fitViewToData();
-  toast("Opened the stem-16 S1,1 transport through the sigma_k page.");
-}
 
 async function closeLegacyCatalog() {
   state.activeAtlasSectorId = null;
@@ -375,10 +382,40 @@ function renderLegacyCatalogState(ws) {
   document.querySelectorAll('[data-tool]:not([data-tool="inspect"])').forEach((button) => { button.disabled = Boolean(active); });
 }
 
+function pageStatusText(ws, algebra = null) {
+  const conflicts = algebra?.conflicts || [];
+  if (conflicts.length) {
+    const count = new Set(conflicts.map(item => JSON.stringify([item.page, item.block || item.id, item.reason]))).size;
+    return `E${ws.page}: partial / unknown quotient — ${count} unresolved map conditions. ${conflicts[0].reason || "Incomplete differential data"}. Potential representatives are provisional; a complete quotient is not claimed.`;
+  }
+  const documentedLimit = Number(ws.settings.known_page_max || 0);
+  const claims = new Map((ws.propositions || []).map(claim => [claim.id, claim]));
+  const verifiedPages = (ws.differentials || []).filter(diff => {
+    const claim = claims.get(diff.proposition_id), conclusion = claim?.conclusion;
+    return diff.status === "verified" && claim?.status === "verified"
+      && conclusion?.admission_status === "verified"
+      && conclusion.verification_certificate?.status === "verified"
+      && Number.isInteger(diff.page) && diff.page >= 2
+      && (!algebra?.canApply || algebra.canApply(diff));
+  }).map(diff => diff.page);
+  const latestVerified = Math.max(0, ...verifiedPages);
+  const convergence = ws.settings.convergence || {};
+  return convergence.status === "published-complete" && ws.page >= Number(convergence.stable_from_page || 0)
+    ? `DKLLW Tables 8–9 conclude E${convergence.stable_from_page} = E∞ with filtration ≥ ${ws.settings.vanishing_line} empty. This chart applies the table maps and their documented products; no filtration clipping is used.`
+    : convergence.status === "published-complete"
+      ? `DKLLW table equations and documented product families; showing E${ws.page}. The current d${ws.page} is drawn before taking its quotient.`
+      : documentedLimit && latestVerified + 1 > documentedLimit && ws.page >= documentedLimit
+        ? `Showing E${ws.page}; verified differential families are recorded through d${latestVerified}. This is not a complete-page or convergence claim.`
+      : documentedLimit && ws.page >= documentedLimit
+        ? `E${documentedLimit} is the latest documented page; later pages are available for workspace additions.`
+        : `Showing E${ws.page}; d${ws.page} is drawn only on this page.`;
+}
+
 function render() {
   const ws = workspace();
   if (!ws) return;
   ws.page = clamp(Number(ws.page) || 2, 2, pageLimit(ws));
+  beginChartPageRender(ws);
   const visibleClasses = liveClassesAt(ws);
   renderWorkspaceNavigation(ws);
   renderPageSelector();
@@ -386,21 +423,17 @@ function render() {
   renderLegacyCatalogState(ws);
   $("#chart").dataset.tool = state.tool;
 
-  $("#workspace-title").textContent = ws.name;
+  $("#workspace-title").textContent = workspaceDisplayName(ws);
   $("#workspace-meta").textContent = `${ws.group} · ${ws.theory} · characteristic ${ws.characteristic} · ${ws.grading_label}`;
   $("#workspace-summary").textContent = ws.summary || "No research summary has been recorded for this workspace.";
   $("#page-label").textContent = `E${ws.page}`;
-  $("#chart-caption").textContent = `${ws.grading_label} · E${ws.page}`;
-  const documentedLimit = Number(ws.settings.known_page_max || 0);
-  $("#page-status").textContent = documentedLimit && ws.page >= documentedLimit
-    ? `E${documentedLimit} is the latest documented page; later pages are available for workspace additions.`
-    : `Showing E${ws.page}; d${ws.page} is drawn only on this page.`;
-  $("#vanishing-line").value = ws.settings.vanishing_line || 0;
+  if ($("#vanishing-line")) $("#vanishing-line").value = ws.settings.vanishing_line || 0;
   renderClassList(ws, visibleClasses);
   $("#tool-hint").textContent = toolHint();
   document.querySelectorAll("[data-tool]").forEach((button) => button.classList.toggle("active", button.dataset.tool === state.tool));
   renderComparisons();
   renderGradingAtlas();
+  renderAtlasPath(ws);
   renderFateInspector();
   renderCellInspector();
   renderPagePeriodTool();
@@ -411,6 +444,7 @@ function render() {
   renderLegacyCatalogState(ws);
   constrainView();
   renderChart();
+  window.renderPublishedTableLedger?.(ws);
   syncLayoutHeight();
 }
 
@@ -425,7 +459,7 @@ function renderClassList(ws = workspace(), visibleClasses = liveClassesAt(ws)) {
   $("#class-count").textContent = matching.length === visibleClasses.length
     ? `${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`
     : `${matching.length}/${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`;
-  $("#class-list").innerHTML = listed.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i>${escapeHtml(item.label)}</span><span class="coords">${item.grade.stem}, ${item.grade.filtration}</span></button>`).join("") || '<p class="empty">No matching surviving classes on this page.</p>';
+  $("#class-list").innerHTML = listed.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i><span class="class-formula">${mathMarkup(item.label)}</span></span><span class="coords">${item.grade.stem}, ${item.grade.filtration}</span></button>`).join("") || '<p class="empty">No matching surviving classes on this page.</p>';
   $("#class-list").querySelectorAll("[data-class]").forEach((button) => button.addEventListener("click", () => onClassClick(button.dataset.class)));
 }
 
@@ -461,18 +495,30 @@ function atlasSector(sectorId) {
   return (state.project.grading_sectors || []).find((item) => item.id === sectorId);
 }
 
+function renderAtlasPath(ws) {
+  const root = $("#c3-summary");
+  if (!root) return;
+  const plan = ws.settings?.atlas_transport;
+  if (!plan) { root.textContent = ws.settings?.atlas_representative ? "Independent computation · ω: i → j → k → i; ψ: j ↔ k, ζ ↔ ζ²." : ""; return; }
+  const source = (state.project.grading_sectors || []).find(s => s.workspace_id === plan.source_workspace_id);
+  const action = `${plan.omega_power ? (plan.omega_power === 1 ? "ω" : "ω²") : ""}${plan.reflected ? "ψ" : ""}` || "identity";
+  const shift = Number(plan.stem_shift) || 0;
+  root.textContent = `${compactSectorLabel(source)} → ${compactSectorLabel(plan.sector_id)} via ${action}${shift ? `, Picard stem ${shift > 0 ? "+" : ""}${shift}` : ""}. Actions compose right to left. ψ: j ↔ k, ζ ↔ ζ².`;
+  root.title = (plan.normalization?.obligations || []).join(" ");
+}
+
 function renderGradingAtlas() {
   const root = $("#grading-atlas");
   const sectors = state.project.grading_sectors || [];
   root.innerHTML = sectors.map((sector) => {
-    const active = sector.id === state.activeAtlasSectorId || (!state.activeAtlasSectorId && sector.workspace_id === state.workspaceId) ? "active" : "";
+    const active = sector.workspace_id === state.workspaceId ? "active" : "";
     const count = sector.class_ids?.length || 0;
     const catalog = state.catalogEntries.find((entry) => entry.id === CURRENT_CATALOG_BY_SECTOR[sector.id]);
-    const sourceCount = Number(catalog?.statistics?.generators || 0);
-    const transport = sector.id === "q8-ro-a1-b1" ? "sigma_k + stem 16" : "";
-    const detail = sourceCount ? `${sourceCount} source dots` : (transport || (count ? `${count} anchors` : "not computed"));
-    const sourceClass = sourceCount ? "source-chart" : "";
-    return `<button type="button" class="atlas-cell ${active} ${escapeHtml(sector.status)} ${sourceClass}" data-sector="${sector.id}" title="${escapeHtml(sector.display_label)} · ${escapeHtml(catalog ? `${catalog.status} source chart` : transport || sector.status)}"><strong>S<sub>${sector.a},${sector.b}</sub></strong><span>${escapeHtml(detail)}</span></button>`;
+    const transportInfo = state.project.workspaces.find(w => w.id === sector.workspace_id)?.settings.atlas_transport;
+    const transport = transportInfo ? `${transportInfo.action} · ${Number(transportInfo.stem_shift) >= 0 ? "+" : ""}${transportInfo.stem_shift}` : "";
+    const detail = transport || (count ? `${count} anchors` : "not computed");
+    const archiveHint = catalog ? ` · ${catalog.status} legacy source chart remains in the archive selector` : "";
+    return `<button type="button" class="atlas-cell ${active} ${escapeHtml(sector.status)}" data-sector="${sector.id}" title="${escapeHtml(sector.display_label)} · ${escapeHtml(transport || sector.status)}${escapeHtml(archiveHint)}"><strong>S<sub>${sector.a},${sector.b}</sub></strong><span>${escapeHtml(detail)}</span></button>`;
   }).join("");
   root.querySelectorAll("[data-sector]").forEach((button) => button.addEventListener("click", () => selectAtlasSector(button.dataset.sector)));
 }
@@ -481,13 +527,7 @@ async function selectAtlasSector(sectorId) {
   const sector = atlasSector(sectorId);
   if (!sector) return;
   state.activeAtlasSectorId = sectorId;
-  const catalogEntryId = CURRENT_CATALOG_BY_SECTOR[sectorId];
-  if (sectorId === "q8-ro-a1-b1") {
-    openS11TransportView();
-  } else if (catalogEntryId && state.catalogEntries.some((entry) => entry.id === catalogEntryId)) {
-    $("#legacy-catalog-select").value = catalogEntryId;
-    await openLegacyCatalogEntry(catalogEntryId);
-  } else {
+  {
     if (state.catalogMode) {
       state.project = state.savedProject;
       state.savedProject = null;
@@ -501,11 +541,12 @@ async function selectAtlasSector(sectorId) {
   }
   try {
     const preview = await api(`/api/v2/c3-actions/omega/orbit/${sectorId}`);
-    const targets = preview.orbit.map((item) => item.result_sector_id || item.display_label).join(" → ");
+    const targets = preview.orbit.map((item) => item.result_sector_id ? compactSectorLabel(item.result_sector_id) : item.display_label).join(" → ");
     const period = preview.periodic_transport
-      ? ` S1,1 is the stem-${preview.periodic_transport.stem_shift} transport of the sigma_k page via ${preview.periodic_transport.relation}.`
+      ? ` Picard transport: stem ${preview.periodic_transport.stem_shift}, ${preview.periodic_transport.relation}.`
       : "";
-    $("#c3-summary").textContent = `ω orbit: ${targets}. ψ: ${preview.galois.representation_action}; ${preview.galois.coefficient_automorphism}.${period}`;
+    renderAtlasPath(workspace());
+    $("#c3-summary").title = `ω orbit: ${targets}.${period} ${$("#c3-summary").title}`;
   } catch (error) {
     $("#c3-summary").textContent = error.message;
   }
@@ -558,10 +599,14 @@ function renderFateInspector() {
   const candidateMarkup = candidateData
     ? renderCandidateResults(candidateData)
     : '<p class="empty">No compatibility query has been run for this class on this page.</p>';
+  const selected = state.selectedOccurrence;
+  const occurrence = selected?.workspaceId === ws.id && selected.page === ws.page && selected.classId === node.id ? selected : null;
   $("#fate-status").textContent = fate.conclusion.replaceAll("_", " ");
   $("#fate-inspector").innerHTML = `
-    <strong>${escapeHtml(node.label)}</strong>
-    <dl class="class-inspector-details"><dt>Grade</dt><dd>${escapeHtml(gradeText(node.grade))}</dd><dt>Representation</dt><dd>${escapeHtml(representation)}</dd><dt>Display state</dt><dd>${escapeHtml(visualStateFor(ws, node))}</dd><dt>Convention</dt><dd>${escapeHtml(node.convention_id || "unspecified")}</dd><dt>Coefficient context</dt><dd>${escapeHtml(node.coefficient_context_id || "unspecified")}</dd></dl>
+    <strong>${mathMarkup(occurrence?.label || node.label)}</strong>
+    ${occurrence ? `<p class="selected-bidegree">Selected occurrence: (${occurrence.grade.stem}, ${occurrence.grade.filtration}) · E${ws.page}</p>` : ""}
+    ${node.style?.atlas_display_basis ? `<dl class="class-inspector-details"><dt>Family anchor: unscaled basis</dt><dd>${mathMarkup(node.style.atlas_display_basis.expression)}</dd><dt>Family anchor: transported element</dt><dd>${mathMarkup(node.style.atlas_display_basis.expanded_expression)}</dd><dt>Thom basis</dt><dd>${escapeHtml(node.style.atlas_display_basis.thom_provenance?.external_thom_normalization || node.style.atlas_display_basis.thom_basis)}</dd></dl>` : ""}
+    <dl class="class-inspector-details"><dt>Grade</dt><dd>${escapeHtml(gradeText(occurrence?.grade || node.grade))}</dd><dt>Representation</dt><dd>${escapeHtml(representation)}</dd><dt>Display state</dt><dd>${escapeHtml(visualStateFor(ws, node))}</dd><dt>Convention</dt><dd>${escapeHtml(node.convention_id || "unspecified")}</dd><dt>Coefficient context</dt><dd>${escapeHtml(node.coefficient_context_id || "unspecified")}</dd></dl>
     <div class="fate-track hfpss"><span>HFPSS</span><ul>${eventMarkup([...(fate.hfpss_outgoing_events || []), ...(fate.hfpss_incoming_events || [])], "HFPSS")}</ul></div>
     <div class="fate-track tate"><span>TateSS</span><ul>${eventMarkup([...(fate.tate_outgoing_events || []), ...(fate.tate_incoming_events || [])], "TateSS")}</ul></div>
     <div class="fate-track claims"><span>Chart claims</span><ul>${differentialMarkup}</ul></div>
@@ -632,6 +677,7 @@ function drawingPreviewSummaryMarkup(data) {
 
 function renderDrawingPeriodicityTool() {
   const rulesRoot = $("#drawing-periodicity-rules-list");
+  if (!rulesRoot) return;
   const rules = drawingPeriodicityRules();
   rulesRoot.innerHTML = rules.length ? rules.map((rule) => `
     <div class="drawing-periodicity-rule">
@@ -804,9 +850,9 @@ function renderCellInspector() {
   }
   $("#cell-status").textContent = `rank ${cell.basis.length}`;
   const maps = activeDifferentialMaps(ws).filter((item) => item.source_cell_id === cell.id || item.target_cell_id === cell.id);
-  const basis = cell.basis.map((item, index) => `<li><strong>e${index + 1}</strong> ${escapeHtml(item.label)}</li>`).join("");
-  const display = (cell.display_basis || []).map((item) => `<li><strong>${escapeHtml(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">computational basis is displayed</li>';
-  const named = (cell.named_vectors || []).map((item) => `<li><strong>${escapeHtml(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">no pinned combination ports</li>';
+  const basis = cell.basis.map((item, index) => `<li><strong>e${index + 1}</strong> ${mathMarkup(item.label)}</li>`).join("");
+  const display = (cell.display_basis || []).map((item) => `<li><strong>${mathMarkup(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">computational basis is displayed</li>';
+  const named = (cell.named_vectors || []).map((item) => `<li><strong>${mathMarkup(item.label)}</strong> ${escapeHtml(vectorText(item.coordinates))}</li>`).join("") || '<li class="empty">no pinned combination ports</li>';
   const mapMarkup = maps.map((item) => {
     const direction = item.source_cell_id === cell.id ? "out" : "in";
     return `<li><button type="button" class="text-button" data-edit-map="${escapeHtml(item.id)}">${direction} d${item.page}</button><span>${escapeHtml(item.status)} · ${escapeHtml(item.coverage)} · ${escapeHtml(matrixText(item.matrix))}</span></li>`;
@@ -1160,7 +1206,7 @@ function renderCandidateResults(data) {
   const direct = data.candidates || [];
   const transported = data.comparison_candidates || [];
   const candidateList = (items, label) => items.length
-    ? `<div class="candidate-result-group"><strong>${label}</strong><ul>${items.map((item) => `<li><strong>${escapeHtml(item.statement)}</strong><span>review-only · not saved</span></li>`).join("")}</ul></div>`
+    ? `<div class="candidate-result-group"><strong>${label}</strong><ul>${items.map((item) => `<li><strong>${mathTextMarkup(item.statement)}</strong><span>review-only · not saved</span></li>`).join("")}</ul></div>`
     : "";
   if (!direct.length && !transported.length) {
     return '<p class="empty">No live, representation-preserving target with the displayed d<sub>r</sub> bidegree.</p>';
@@ -1207,6 +1253,7 @@ function showComparisonNote() {
 
 function renderProofTree() {
   const ws = workspace();
+  window.renderPublishedTableLedger?.(ws);
   const all = $("#proof-scope").value === "project" ? allPropositions() : ws.propositions.map((item) => ({ ...item, workspaceName: ws.name }));
   const graphPropositions = new Map((state.logicGraph?.nodes || []).filter((item) => item.kind === "proposition").map((item) => [item.record_id, item]));
   const admissionFilter = $("#proof-admission").value;
@@ -1219,7 +1266,8 @@ function renderProofTree() {
   $("#proof-tree").innerHTML = propositions.map((item) => {
     const graphItem = graphPropositions.get(item.id) || {};
     const admission = graphItem.admitted ? `admitted · depth ${graphItem.dependency_depth ?? 0}` : `review queue${graphItem.blocked_by?.length ? ` · blocked by ${graphItem.blocked_by.join(", ")}` : ""}`;
-    return `<article class="proof-node ${escapeHtml(item.status)}"><strong>${escapeHtml(item.statement)}</strong><small>${escapeHtml(item.workspaceName)} · ${escapeHtml(item.rule)} · ${escapeHtml(item.status)} · ${escapeHtml(admission)} · ${(item.confidence * 100).toFixed(0)}%</small>${item.source_ref ? `<div class="source-ref">${escapeHtml(item.source_ref)}</div>` : ""}${item.premise_ids?.length ? `<div class="parents">depends on: ${item.premise_ids.map((id) => escapeHtml(lookup.get(id) || id)).join("; ")}</div>` : ""}</article>`;
+    const sourceAudit = window.HFPSSTableLedger?.claimAuditMarkup(item) || "";
+    return `<article class="proof-node ${escapeHtml(item.status)}"><strong>${mathTextMarkup(item.statement)}</strong><small>${escapeHtml(item.workspaceName)} · ${escapeHtml(item.rule)} · ${escapeHtml(item.status)} · ${escapeHtml(admission)} · ${(item.confidence * 100).toFixed(0)}%</small>${item.source_ref ? `<div class="source-ref">${escapeHtml(item.source_ref)}</div>` : ""}${sourceAudit}${item.premise_ids?.length ? `<div class="parents">depends on: ${item.premise_ids.map((id) => mathTextMarkup(lookup.get(id) || id)).join("; ")}</div>` : ""}</article>`;
   }).join("") || '<p class="empty">No propositions match this fact-admission filter.</p>';
   renderLogicGraph();
 }
@@ -1351,7 +1399,7 @@ async function loadReviewPage() {
   if (!project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   const selector = $("#review-workspace-select");
   selector.innerHTML = project.workspaces.map((item) => (
-    `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)} · ${escapeHtml(item.grading_label)}</option>`
+    `<option value="${escapeHtml(item.id)}">${escapeHtml(workspaceDisplayName(item))}</option>`
   )).join("");
   selector.value = state.workspaceId;
   const admission = logicGraph.admission || {};
@@ -1381,7 +1429,7 @@ function renderSuggestions() {
     root.innerHTML = '<p class="empty">Run a rule to look for transparent, reviewable candidates.</p>';
     return;
   }
-  root.innerHTML = state.suggestions.map((item, index) => `<article class="suggestion"><strong>${escapeHtml(item.statement)}</strong><span class="suggestion-meta">${escapeHtml(item.rule)} · ${(item.confidence * 100).toFixed(0)}%</span><p>${escapeHtml(item.notes || "Review the premises before accepting.")}</p><button data-accept="${index}" class="primary">Add to proof tree</button></article>`).join("");
+  root.innerHTML = state.suggestions.map((item, index) => `<article class="suggestion"><strong>${mathTextMarkup(item.statement)}</strong><span class="suggestion-meta">${escapeHtml(item.rule)} · ${(item.confidence * 100).toFixed(0)}%</span><p>${mathTextMarkup(item.notes || "Review the premises before accepting.")}</p><button data-accept="${index}" class="primary">Add to proof tree</button></article>`).join("");
   document.querySelectorAll("[data-accept]").forEach((button) => button.addEventListener("click", () => acceptSuggestion(Number(button.dataset.accept))));
 }
 
@@ -1510,6 +1558,23 @@ function inBounds(grade, bounds) {
   return grade.stem >= bounds.stemMin && grade.stem <= bounds.stemMax && grade.filtration >= bounds.filtrationMin && grade.filtration <= bounds.filtrationMax;
 }
 
+function segmentIntersectsBounds(source, target, bounds) {
+  let entry = 0, exit = 1;
+  for (const [coordinate, minimum, maximum] of [["stem", bounds.stemMin, bounds.stemMax], ["filtration", bounds.filtrationMin, bounds.filtrationMax]]) {
+    const delta = target[coordinate] - source[coordinate];
+    if (!delta) {
+      if (source[coordinate] < minimum || source[coordinate] > maximum) return false;
+      continue;
+    }
+    const first = (minimum - source[coordinate]) / delta;
+    const last = (maximum - source[coordinate]) / delta;
+    entry = Math.max(entry, Math.min(first, last));
+    exit = Math.min(exit, Math.max(first, last));
+    if (entry > exit) return false;
+  }
+  return true;
+}
+
 function shiftRange(grade, period, bounds) {
   let low = Number.NEGATIVE_INFINITY;
   let high = Number.POSITIVE_INFINITY;
@@ -1546,6 +1611,7 @@ function pageWithinPeriodFamily(page, family) {
 }
 
 function workspaceRenderPeriods(ws) {
+  const enumeratedHorizontal = Number(ws.settings.rendering?.enumerated_horizontal_period || 0);
   const periods = (ws.settings.rendering?.period_lattice || []).map((item) => ({
     stem: Number(item.stem) || 0,
     filtration: Number(item.filtration) || 0,
@@ -1569,7 +1635,12 @@ function workspaceRenderPeriods(ws) {
     if (!period.stem && !period.filtration) continue;
     distinct.set(`${period.stem}:${period.filtration}:${period.domain}`, period);
   }
-  return [...distinct.values()];
+  return [...distinct.values()].filter((period) => (
+    !enumeratedHorizontal
+    || period.filtration !== 0
+    || period.domain !== "integer"
+    || Math.abs(period.stem) >= enumeratedHorizontal
+  ));
 }
 
 function latticeCopies(grade, periods, bounds) {
@@ -1594,10 +1665,146 @@ function latticeCopies(grade, periods, bounds) {
         stem: base.stem + q * (horizontal?.stem || 0),
         filtration: base.filtration,
       };
-      if (inBounds(shifted, bounds)) copies.push({ grade: shifted, shift: `${s}:${q}`, periodic: s !== 0 || q !== 0 });
+      if (inBounds(shifted, bounds)) copies.push({
+        grade: shifted,
+        shift: `${s}:${q}`,
+        verticalExponent: s,
+        horizontalExponent: q,
+        horizontalStem: horizontal?.stem || 0,
+        periodic: s !== 0 || q !== 0,
+      });
     }
   }
   return copies.length ? copies : (inBounds(grade, bounds) ? [{ grade, shift: "0:0", periodic: false }] : []);
+}
+
+function pageHorizontalDifferentialPeriod(ws, page = ws.page) {
+  const schedule = ws.settings.rendering?.page_horizontal_periods || [];
+  const match = schedule.find((item) => (
+    page >= Number(item.from_page || 2)
+    && (item.to_page == null || page <= Number(item.to_page))
+  ));
+  return match?.stem ? {
+    stem: Number(match.stem), filtration: 0, domain: "integer", label: match.label,
+  } : null;
+}
+
+function latexPower(symbol, exponent) {
+  if (!exponent) return "";
+  if (exponent === 1) return symbol;
+  return `${symbol}^{${exponent}}`;
+}
+
+function shiftDExponent(label, delta) {
+  return shiftPeriodFactor(label, "D", delta);
+}
+
+function shiftKExponent(label, delta) {
+  return shiftPeriodFactor(label, "k", delta);
+}
+
+function shiftPeriodFactor(label, symbol, delta) {
+  if (!delta) return label;
+  const clean = String(label || "").split("=")[0].trim();
+  if (clean === "0") return "0";
+  const factor = latexPower(symbol, delta);
+  if (clean === "1") return factor || "1";
+  const matches = [];
+  let depth = 0, sum = false;
+  for (let index = 0; index < clean.length;) {
+    const char = clean[index];
+    if (char === "\\") {
+      const command = clean.slice(index).match(/^\\[A-Za-z]+/);
+      if (command) { index += command[0].length; continue; }
+      if (clean[index + 1] === "{") depth++;
+      if (clean[index + 1] === "}") depth--;
+      index += 2;
+      continue;
+    }
+    if ("({[".includes(char)) depth++;
+    else if (")}]".includes(char)) depth--;
+    else if (depth === 0 && char === "^") {
+      const exponent = clean.slice(index).match(/^\^(?:\{[^}]*\}|[+-]?\d+|[A-Za-z])/);
+      if (exponent) { index += exponent[0].length; continue; }
+    } else if (depth === 0 && (char === "+" || (char === "-" && index > 0))) sum = true;
+    else if (depth === 0 && char === symbol && clean[index - 1] !== "_") {
+      const match = clean.slice(index + 1).match(/^(?:\^\{(-?\d+)\}|\^(-?\d+))/);
+      const length = 1 + (match?.[0].length || 0);
+      if (!["^", "_"].includes(clean[index + length])) {
+        matches.push({index, length, exponent: Number(match?.[1] ?? match?.[2] ?? 1)});
+        index += length;
+        continue;
+      }
+    }
+    index++;
+  }
+  // Preserve a whole sum (or an unfamiliar grouping) as an exact product.
+  // Replacing only its first D/k would change the represented element.
+  if (sum || depth !== 0) return `${factor}\\left(${clean}\\right)`;
+  if (matches.length) {
+    let result = clean;
+    const power = delta + matches.reduce((total, match) => total + match.exponent, 0);
+    for (let n = matches.length - 1; n >= 0; n--) {
+      const match = matches[n];
+      result = result.slice(0, match.index) + (n === 0 ? latexPower(symbol, power) : "")
+        + result.slice(match.index + match.length);
+    }
+    return result || "1";
+  }
+  if (symbol === "k") {
+    const scalar = clean.match(/^([+-]?\d+)(.*)$/);
+    return scalar ? `${scalar[1]}${factor}${scalar[2]}` : `${factor}${clean}`;
+  }
+  const thomIndex = clean.indexOf("u_{");
+  return thomIndex >= 0
+    ? `${clean.slice(0, thomIndex)}${factor}${clean.slice(thomIndex)}`
+    : `${clean}${factor}`;
+}
+
+function periodicDisplayLabel(record) {
+  const survivingLabel = (label) => {
+    // A single finite quotient port names its actual surviving multiple,
+    // not the E2 module generator chosen first by display-slot deduplication.
+    // Already scaled endpoint aliases include their own two-valuation.
+    const style = record.item.style || {};
+    if (record.readOnlyRepresentative || record.uncertain || !style.e2_pattern
+        || !Array.isArray(record.modulePorts) || record.modulePorts.length !== 1) return label;
+    const port = String(record.modulePorts[0]).match(/^([012]):0$/);
+    const originalTwo = Number(style.two_valuation || 0);
+    const delta = port ? Number(port[1]) - originalTwo : 0;
+    if (!Number.isInteger(originalTwo) || originalTwo < 0 || delta <= 0) return label;
+    const factor = 2 ** delta;
+    const clean = String(label).trim();
+    if (clean === "0") return "0";
+    // Do not apply a coefficient to just the first summand. Exponent signs
+    // are not additive signs, and these labels are presentation only.
+    const withoutPowers = clean.replace(/\^(?:\{[+-]?\d+\}|[+-]?\d+)/g, "").replace(/^[+-]/, "");
+    if (/[+-]/.test(withoutPowers)) return `${factor}\\left(${clean}\\right)`;
+    const unit = clean.match(/^(\{\\zeta(?:\^\{?2\}?)?\}|\\zeta(?:\^\{?2\}?)?)/)?.[0] || "";
+    const scalar = clean.slice(unit.length).match(/^([+-]?)(\d*)(.*)$/);
+    const value = factor * Number(scalar[2] || 1) * (scalar[1] === "-" ? -1 : 1);
+    return `${value}${unit}${scalar[3]}`;
+  };
+  if (!record.periodic) return survivingLabel(record.item.label);
+  const kPower = Number(record.verticalExponent || 0);
+  const horizontalDPower = Number(record.horizontalExponent || 0) * Number(record.horizontalStem || 0) / 8;
+  const dShift = 3 * kPower + horizontalDPower;
+  const basis = record.item.style?.atlas_display_basis;
+  const label = basis?.status === "exact" ? basis.expression : record.item.label;
+  const shifted = shiftKExponent(shiftDExponent(label, dShift), kPower);
+  if (basis?.status !== "exact" || ![1, 2, 3].includes(basis.unit)) return survivingLabel(shifted);
+  const omega = Number(record.item.style.atlas_transport?.omega_power || 0);
+  const exponent = ((2 * omega * dShift) % 3 + 3) % 3;
+  const unit = f4DisplayMultiply(basis.unit, [1, 2, 3][exponent]);
+  return survivingLabel(`${unit === 1 ? "" : `{${f4DisplayLatex(unit)}}`}${shifted}`);
+}
+
+function f4DisplayMultiply(a, b) {
+  return [[0, 0, 0, 0], [0, 1, 2, 3], [0, 2, 3, 1], [0, 3, 1, 2]][a]?.[b] ?? null;
+}
+
+function f4DisplayLatex(unit) {
+  return unit === 2 ? "\\zeta" : unit === 3 ? "\\zeta^{2}" : unit === 0 ? "0" : "";
 }
 
 function periodsForClassOnPage(ws, item) {
@@ -1622,20 +1829,147 @@ function periodsForClassOnPage(ws, item) {
   return periods;
 }
 
+function periodsForDifferential(ws, differential) {
+  const periods = [...workspaceRenderPeriods(ws)].filter(p => p.filtration !== 0 || !differential.period_stem);
+  // Repetition belongs to a row: d7(D^4) has period 64, not 32.
+  if (differential.period_stem || differential.period_filtration) {
+    periods.push({
+      stem: differential.period_stem || 0,
+      filtration: differential.period_filtration || 0,
+      domain: "integer",
+    });
+  }
+  else {
+    const pagePeriod = pageHorizontalDifferentialPeriod(ws, differential.page);
+    if (pagePeriod) periods.push(pagePeriod);
+  }
+  return periods;
+}
+
+function e2OccurrenceKey(item, grade) {
+  const pattern = item?.style?.e2_pattern || (item?.style?.e2_components ? JSON.stringify(item.style.e2_components) : "");
+  if (!pattern) return "";
+  // Coefficient levels in one Witt square share a visual cell, but not a
+  // spectral-sequence fate.  For example d5(D) must not kill the 4D port
+  // which supports a Table 8 d7 on the next page.
+  const coefficientPort = `${Number(item.style.two_valuation || 0)}:${Number(item.style.j_order || 0) > 0 ? 1 : 0}`;
+  return `${pattern}:${coefficientPort}:${grade.stem}:${grade.filtration}`;
+}
+
+function pageAlgebra(ws, bounds) {
+  if (!ws.settings.rendering?.enumerated_e2_pattern || !window.HFPSSPageAlgebra) return null;
+  return window.HFPSSPageAlgebra.compute(ws, bounds, {
+    coefficientWorkspaces: state.project.workspaces,
+    copies: latticeCopies, classPeriods: periodsForClassOnPage,
+    diffPeriods: periodsForDifferential,
+    accepted: (diff) => differentialVisualState(diff) === "accepted",
+    periodSignature: JSON.stringify([
+      (state.project.period_families || []).filter(p => p.workspace_id === ws.id),
+      (state.project.page_period_cycles || []).filter(p => p.workspace_id === ws.id),
+    ]),
+  });
+}
+
+function e2DisplaySlot(item, grade) {
+  const pattern = item?.style?.e2_pattern;
+  return pattern ? `${pattern}:${grade.stem}:${grade.filtration}` : "";
+}
+
+function deadE2OccurrenceKeys(ws, bounds, page = ws.page) {
+  const keys = new Set();
+  const algebra = pageAlgebra(page === ws.page ? ws : {...ws, page}, bounds);
+  if (!algebra) return keys;
+  for (const item of ws.classes) {
+    for (const copy of latticeCopies(item.grade, periodsForClassOnPage(ws, item), bounds)) {
+      if (!algebra.live(item, copy.grade)) keys.add(e2OccurrenceKey(item, copy.grade));
+    }
+  }
+  return keys;
+}
+
 function periodicClassInstances(ws, bounds) {
   const rendered = [];
   const seen = new Set();
-  for (const item of liveClassesAt(ws).filter((node) => !node.cell_id)) {
+  const occupiedSlots = new Set();
+  const algebra = pageAlgebra(ws, bounds);
+  for (const item of liveClassesAt(ws).filter((node) => !node.cell_id || node.style?.e2_pattern || node.style?.e2_components)) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = latticeCopies(item.grade, periods, bounds);
     for (const copy of copies) {
-      const key = `${item.id}:${copy.grade.stem}:${copy.grade.filtration}`;
+      const modulePorts = algebra?.ports(item, copy.grade);
+      if (modulePorts && !modulePorts.size) continue;
+      const displayLabel = periodicDisplayLabel({ item, ...copy });
+      const algebraSlots = algebra?.displaySlots(item, copy.grade) || [];
+      const algebraSlot = algebraSlots.join("|") || e2DisplaySlot(item, copy.grade) || `${displayLabel}:${glyphShapeFor(ws, item)}`;
+      const key = `${algebraSlot}:${copy.grade.stem}:${copy.grade.filtration}`;
       if (seen.has(key) || !inBounds(copy.grade, bounds)) continue;
       seen.add(key);
-      rendered.push({ item, instanceKey: key, ...copy });
+      for (const slot of algebraSlots) occupiedSlots.add(slot);
+      rendered.push({
+        item,
+        algebraSlots,
+        modulePorts: modulePorts ? [...modulePorts] : null,
+        uncertain: algebra?.blockedFromPage != null,
+        instanceKey: key,
+        occurrenceState: visualStateFor(ws, item),
+        ...copy,
+      });
     }
   }
+  // A quotient basis can be a combination absent from the saved drawing.
+  // These viewport-only objects have their own namespace and never replace
+  // (or mutate) the researcher's original generators.
+  const patterns = new Map();
+  for (const item of ws.classes) {
+    const pattern = item.style?.e2_pattern;
+    if (!pattern || item.archived || Number(item.style.two_valuation || 0) || Number(item.style.j_order || 0)) continue;
+    if (!patterns.has(pattern)) patterns.set(pattern, []);
+    patterns.get(pattern).push(item);
+  }
+  for (const representative of algebra?.representatives?.(bounds) || []) {
+    if (occupiedSlots.has(representative.slot) || !inBounds(representative.grade, bounds)) continue;
+    const label = quotientRepresentativeLabel(ws, representative, patterns);
+    const instanceKey = `computed-quotient:${ws.id}:E${ws.page}:${representative.slot}`;
+    const positiveJ = representative.terms.length > 0 && representative.terms.every(term => Number(term.j) > 0);
+    const grade = {...representative.grade, representation: {...(ws.classes.find(item => !item.archived)?.grade.representation || {})}};
+    rendered.push({
+      item: {id: instanceKey, label, expression: label, grade, page: ws.page,
+        style: {computed_quotient: true, glyph: positiveJ ? "j-positive-series" : "dot"}},
+      grade, instanceKey, algebraSlots: [representative.slot], modulePorts: null,
+      readOnlyRepresentative: true, uncertain: Boolean(representative.uncertain),
+      representativeTerms: representative.terms, periodic: false, occurrenceState: "unknown",
+    });
+    occupiedSlots.add(representative.slot);
+  }
   return rendered;
+}
+
+function quotientRepresentativeLabel(ws, representative, patterns) {
+  const grade = representative.grade;
+  const bounds = {stemMin: grade.stem, stemMax: grade.stem, filtrationMin: grade.filtration, filtrationMax: grade.filtration};
+  return representative.terms.filter(term => term.coefficient).map(term => {
+    let basisLabel = `\\operatorname{${String(term.pattern).replace(/[^a-zA-Z0-9_-]/g, "")}}`;
+    for (const item of patterns.get(term.pattern) || []) {
+      const copy = latticeCopies(item.grade, periodsForClassOnPage(ws, item), bounds)[0];
+      if (!copy) continue;
+      basisLabel = periodicDisplayLabel({item, ...copy});
+      break;
+    }
+    const coefficient = Number(term.coefficient) === 2 ? "\\zeta" : Number(term.coefficient) === 3 ? "\\zeta^{2}" : "";
+    const two = Number(term.two) ? String(2 ** Number(term.two)) : "";
+    const j = Number(term.j) ? latexPower("j", Number(term.j)) : "";
+    const factor = `${two}${coefficient}${j}`;
+    return factor ? `${factor}\\left(${basisLabel}\\right)` : basisLabel;
+  }).join("+") || "0";
+}
+
+function inspectQuotientRepresentative(record) {
+  state.selectedClassId = null;
+  state.selectedOccurrence = null;
+  state.selectedQuotientInstance = record.instanceKey;
+  renderFateInspector();
+  const description = record.uncertain ? "Potential representative; outgoing map incomplete" : "Computed quotient representative";
+  toast(`${description}: ${record.item.label}. Read-only viewport result; no saved class was changed.`);
 }
 
 function drawingPreviewCycleKey(cycle, index) {
@@ -1669,22 +2003,49 @@ function packedClassInstances(ws, bounds, metrics, extraInstances = []) {
     key: record.instanceKey,
     cellKey: `${record.grade.stem}:${record.grade.filtration}`,
     label: record.item.label,
-    shape: glyphShapeFor(ws, record.item),
-    size: record.periodic ? 4.2 : 5.5,
+    shape: quotientGlyph(record) || glyphShapeFor(ws, record.item),
+    size: clamp(metrics.cell * 0.105, 0.55, 7),
   }));
   if (ws.settings?.read_only_catalog) {
     return [...instances, ...extraInstances].map((record, index) => ({
       ...record,
       dx: Number(record.item?.style?.legacy_x_offset || 0) * metrics.cell,
       dy: -Number(record.item?.style?.legacy_y_offset || 0) * metrics.cell,
-      size: Math.min(record.size, clamp(metrics.cell * 0.16, 2.2, 5)),
+      size: record.size,
       hitRadius: clamp(metrics.cell * 0.28, 5, 9),
       baseYOffset: 0,
       packIndex: index,
       packCount: 1,
     }));
   }
-  return window.HFPSSCellLayout.packInstances([...instances, ...extraInstances], metrics.cell, { baseYOffset: 0.16 });
+  const envelope = instances.some(record => record.shape === "finite-two-tower") ? 2.4 : 1.35;
+  return window.HFPSSCellLayout.packInstances([...instances, ...extraInstances], metrics.cell, {
+    baseYOffset: 0.16, uniformSize: true, glyphEnvelope: envelope,
+  });
+}
+
+function quotientGlyph(record) {
+  if (!record.modulePorts) return null;
+  const ports = record.modulePorts;
+  const constant = ports.some(p => p.endsWith(":0"));
+  const series = ports.some(p => p.endsWith(":1"));
+  const witt = ports.some(p => Number(p.split(":")[0]) === 3);
+  if (witt) return "witt-j-series";
+  // Positive-filtration Z/4 or Z/8 is a finite 2-tower, not W(F4).
+  if (new Set(ports.map(p => p.split(":")[0])).size > 1) return "finite-two-tower";
+  if (constant && series) return "j-series";
+  if (series) return "j-positive-series";
+  return "dot";
+}
+
+function quotientDescription(record) {
+  if (!record.modulePorts) return "";
+  const components = record.modulePorts.map(port => {
+    const [two, j] = port.split(":").map(Number);
+    const scalar = two === 0 ? "" : two === 3 ? "8W · " : `${2 ** two} · `;
+    return `${scalar}${j ? "positive-j ideal" : "constant component"}`;
+  });
+  return `${record.uncertain ? "Provisional (quotient unresolved)" : "Surviving coefficient components"}: ${components.join("; ")}. The label names the E2 module, not every surviving generator.`;
 }
 
 function packedPoint(record, metrics) {
@@ -1697,6 +2058,26 @@ function classInstanceKey(classId, grade) {
 }
 
 function classGlyphMarkup(record, point, classNames) {
+  if (record.readOnlyRepresentative && record.uncertain) {
+    return `<circle class="class-point ${classNames}" style="--point-color:#d97706;fill:white;stroke:#d97706" cx="${point.x}" cy="${point.y}" r="${record.size * 0.72}"/>`;
+  }
+  if (record.shape === "finite-two-tower") {
+    const levels = [...new Set(record.modulePorts.map(port => Number(port.split(":")[0])))].sort((a,b) => a-b);
+    const step = record.size * 1.6;
+    const ys = levels.map((level, index) => point.y + ((levels.length - 1) / 2 - index) * step);
+    return `<g class="class-point finite-two-tower ${classNames}"><line x1="${point.x}" y1="${ys[0]}" x2="${point.x}" y2="${ys[ys.length - 1]}"/>${ys.map(y => `<circle cx="${point.x}" cy="${y}" r="${record.size * 0.72}"/>`).join("")}</g>`;
+  }
+  if (record.shape === "witt-j-series") {
+    const outer = record.size * 1.18;
+    const inner = record.size * 0.68;
+    return `<g class="class-point witt-j-series ${classNames}"><rect x="${point.x - outer}" y="${point.y - outer}" width="${2 * outer}" height="${2 * outer}" rx="1.2"/><rect class="series-inner" x="${point.x - inner}" y="${point.y - inner}" width="${2 * inner}" height="${2 * inner}" rx="0.8"/></g>`;
+  }
+  if (record.shape === "j-positive-series") {
+    return `<g class="class-point j-positive-series ${classNames}"><circle cx="${point.x}" cy="${point.y}" r="${record.size * 0.92}"/><circle class="series-hole" cx="${point.x}" cy="${point.y}" r="${record.size * 0.4}"/></g>`;
+  }
+  if (record.shape === "j-series") {
+    return `<g class="class-point j-series ${classNames}"><circle cx="${point.x}" cy="${point.y}" r="${record.size * 1.3}"/><circle class="series-core" cx="${point.x}" cy="${point.y}" r="${record.size * 0.42}"/></g>`;
+  }
   if (record.shape === "square") {
     return `<rect class="class-point square ${classNames}" x="${point.x - record.size}" y="${point.y - record.size}" width="${2 * record.size}" height="${2 * record.size}" rx="${Math.min(1.2, record.size * 0.2)}"/>`;
   }
@@ -1713,37 +2094,107 @@ function classGlyphMarkup(record, point, classNames) {
   return `<circle class="class-point dot-glyph ${classNames}" cx="${point.x}" cy="${point.y}" r="${record.size * 0.72}"/>`;
 }
 
-function classLabelMarkup(record, point, metrics, visible) {
-  if (record.periodic || record.item.id !== state.selectedClassId || !inBounds(record.grade, visible)) return "";
-  const base = pointFor(record.grade, metrics);
-  const labelStep = Math.max(13, record.baseYOffset * metrics.cell);
-  const labelCenterY = base.y + (record.packIndex - (record.packCount - 1) / 2) * labelStep;
-  const labelX = base.x + Math.max(9, Math.min(18, metrics.cell * 0.45));
-  return `<foreignObject class="label-host" x="${labelX}" y="${labelCenterY - 9}" width="180" height="18"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${escapeHtml(record.item.label)}"></div></foreignObject>`;
+function seriesTruncation(record) {
+  const style = record.item?.style || {};
+  if (record.shape !== "j-positive-series" || style.series_kind !== "h1-truncated-j-adic") return null;
+  const origin = Number(style.series_origin_stem ?? record.grade.stem);
+  const period = Math.max(1, Number(style.series_object_period_stem || 64));
+  const step = Math.max(1, Number(style.series_stem_step || 4));
+  const loss = Math.max(0, Number(style.series_bottom_loss_per_step || 1));
+  const base = Math.max(0, Number(style.series_base_order || 1));
+  const residue = ((Number(record.grade.stem) - origin) % period + period) % period;
+  const order = base + Math.floor(residue / step) * loss;
+  return {
+    order,
+    text: `j^${order} F4[[j]] · h1-tower bottom rises by one j-grading every ${step} stems`,
+  };
 }
 
-function periodicDifferentials(ws, bounds) {
+function classLabelMarkup(record, point, metrics, visible) {
+  const persistentUnit = Boolean(record.item.style?.multiplicative_unit) && !record.periodic;
+  const selectedQuotient = record.readOnlyRepresentative && record.instanceKey === state.selectedQuotientInstance;
+  const selected = state.selectedOccurrence;
+  const currentSelection = selected?.workspaceId === state.workspaceId && selected.page === workspace().page && selected.classId === state.selectedClassId;
+  const exact = currentSelection && selected.instanceKey === record.instanceKey;
+  const selectedAnchor = !currentSelection && !record.periodic && record.item.id === state.selectedClassId;
+  if ((!exact && !selectedAnchor && !persistentUnit && !selectedQuotient) || !inBounds(record.grade, visible)) return "";
+  const labelGap = Math.max(9, Math.min(18, metrics.cell * 0.45));
+  const labelX = point.x + labelGap;
+  const name = periodicDisplayLabel(record);
+  const degree = exact || selectedAnchor || selectedQuotient ? `<small class="selected-bidegree">(${record.grade.stem}, ${record.grade.filtration})</small>` : "";
+  return `<foreignObject class="label-host${exact ? " selected-occurrence-label" : ""}" data-label-point-x="${point.x}" data-label-point-y="${point.y}" data-label-gap="${labelGap}" x="${labelX}" y="${point.y - 10}" width="280" height="38"><div xmlns="http://www.w3.org/1999/xhtml" class="selected-class-label"><span class="latex-label" data-latex="${escapeHtml(name)}"></span>${degree}</div></foreignObject>`;
+}
+
+function periodicDifferentials(ws, bounds, candidateDiagnostics = null) {
   const byId = new Map(ws.classes.map((item) => [item.id, item]));
   const liveIds = new Set(liveClassesAt(ws).map((item) => item.id));
   const results = [];
-  for (const diff of ws.differentials.filter((item) => item.page === ws.page && !item.linear_map_id)) {
-    const source = byId.get(diff.source_id);
-    const target = byId.get(diff.target_id);
+  const seen = new Set();
+  const algebra = pageAlgebra(ws, bounds);
+  for (const diff of ws.differentials.filter((item) => item.page === ws.page)) {
+    if (algebra?.isZero(diff)) continue;
+    const source = algebra?.endpoints(diff).source || byId.get(diff.source_id);
+    const target = algebra?.endpoints(diff).target || byId.get(diff.target_id);
+    if (diff.linear_map_id && !(source?.style?.e2_pattern || source?.style?.e2_components)) continue;
     if (!source || !target || !liveIds.has(source.id) || !liveIds.has(target.id)) continue;
-    const periods = [...workspaceRenderPeriods(ws)];
-    if (usablePeriodFamily(diff) && (diff.period_stem || diff.period_filtration)) {
-      periods.push({ stem: diff.period_stem || 0, filtration: diff.period_filtration || 0, domain: "integer" });
-    }
+    const periods = periodsForDifferential(ws, diff);
     const stemDelta = target.grade.stem - source.grade.stem;
     const filtrationDelta = target.grade.filtration - source.grade.filtration;
-    for (const copy of latticeCopies(source.grade, periods, bounds)) {
+    // The source of a visible d_r can lie r rows below the viewport (and
+    // one column to its right). Search the swept source box, not just the
+    // visible points; the exact segment test below also handles crossings
+    // for which neither endpoint is visible. Keep the real endpoint grades.
+    const sourceBounds = {
+      stemMin: bounds.stemMin - Math.max(0, stemDelta),
+      stemMax: bounds.stemMax - Math.min(0, stemDelta),
+      filtrationMin: bounds.filtrationMin - Math.max(0, filtrationDelta),
+      filtrationMax: bounds.filtrationMax - Math.min(0, filtrationDelta),
+    };
+    for (const copy of latticeCopies(source.grade, periods, sourceBounds)) {
       const sourceGrade = copy.grade;
       const targetGrade = {
         ...target.grade,
         stem: sourceGrade.stem + stemDelta,
         filtration: sourceGrade.filtration + filtrationDelta,
       };
-      if (inBounds(sourceGrade, bounds) || inBounds(targetGrade, bounds)) results.push({ diff, sourceGrade, targetGrade, periodic: copy.periodic });
+      let candidate = null;
+      if (algebra) {
+        const typedSource = source.style?.e2_pattern || source.style?.e2_components;
+        const typedTarget = target.style?.e2_pattern || target.style?.e2_components;
+        if (typedSource && typedTarget) {
+          if (algebra.candidateState) {
+            candidate = algebra.candidateState(diff, sourceGrade, targetGrade);
+            if (candidate.status !== "possible") {
+              if (candidateDiagnostics && segmentIntersectsBounds(sourceGrade, targetGrade, bounds)) {
+                candidateDiagnostics.push({id: diff.id, status: candidate.status,
+                  sourceGrade, targetGrade, reasons: candidate.reasons});
+              }
+              continue;
+            }
+          } else if (!algebra.maps(source, target, sourceGrade, targetGrade).length) continue;
+        } else {
+          // A manual endpoint must not bypass the other endpoint's quotient.
+          // Self-maps test every remaining 2/j layer, not just the constant.
+          if (typedSource && !algebra.maps(source, source, sourceGrade, sourceGrade).length) continue;
+          if (typedTarget && !algebra.maps(target, target, targetGrade, targetGrade).length) continue;
+        }
+      }
+      // Keep one edge for every source-table row.  Different coefficient
+      // ports or basis classes can occupy the same bidegree, so coordinate-
+      // only deduplication silently erased genuine differential families.
+      const key = `${diff.id}:${sourceGrade.stem}:${sourceGrade.filtration}:${targetGrade.stem}:${targetGrade.filtration}`;
+      if (segmentIntersectsBounds(sourceGrade, targetGrade, bounds) && !seen.has(key)) {
+        seen.add(key);
+        const unitInvariant = Boolean(algebra?.unitInvariant?.(diff));
+        const renderedDiff = algebra && (!algebra.canApply(diff) || (candidate?.conditional && !unitInvariant))
+          ? {...diff, status: "review"} : diff;
+        // Anchor a conditional vector in a genuinely surviving branch,
+        // never in the placeholder P+Q. This does not assign its coefficient.
+        const pair = candidate?.variants?.[0];
+        results.push({ diff: renderedDiff, sourceNode: pair?.source || source,
+          targetNode: pair?.target || target, sourceGrade, targetGrade, periodic: copy.periodic,
+          ...(candidate ? {candidate} : {}), unitInvariant });
+      }
     }
   }
   return results;
@@ -1763,6 +2214,7 @@ function periodicRelations(ws, liveIds, bounds) {
   const classes = new Map(ws.classes.map((item) => [item.id, item]));
   const periods = workspaceRenderPeriods(ws);
   const results = [];
+  const algebra = pageAlgebra(ws, bounds);
   for (const proposition of visibleRelations(ws, liveIds)) {
     const source = classes.get(proposition.conclusion.source_id);
     const target = classes.get(proposition.conclusion.target_id);
@@ -1775,6 +2227,8 @@ function periodicRelations(ws, liveIds, bounds) {
         stem: copy.grade.stem + stemDelta,
         filtration: copy.grade.filtration + filtrationDelta,
       };
+      if (algebra && source.style?.e2_pattern && target.style?.e2_pattern
+          && !algebra.maps(source, target, copy.grade, targetGrade).length) continue;
       if (inBounds(copy.grade, bounds) || inBounds(targetGrade, bounds)) {
         results.push({ proposition, source, target, sourceGrade: copy.grade, targetGrade, periodic: copy.periodic });
       }
@@ -1792,9 +2246,41 @@ function constrainView() {
   state.view.panY = Math.max(state.view.panY, m.minimumAxisY - m.baseAxisY);
 }
 
-function renderMathInChart() {
-  if (!window.katex) return;
-  $("#chart").querySelectorAll(".latex-label[data-latex]").forEach((node) => katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false }));
+function fitClassLabelsToViewport(svg, metrics) {
+  const {width, height} = metrics;
+  if (!(width > 0 && height > 0)) return;
+  const padding = Math.min(4, width / 4, height / 4);
+  for (const host of svg.querySelectorAll(".label-host[data-label-point-x]")) {
+    const label = host.querySelector(".selected-class-label");
+    if (!label) continue;
+    // Measure the actual typeset name and bidegree, not a fixed 280px box.
+    label.style.width = "max-content";
+    label.style.transform = "";
+    // Layout sizes inside foreignObject use viewBox units; a screen-space
+    // getBoundingClientRect() would also include the outer SVG/CSS scale.
+    const naturalWidth = label.offsetWidth, naturalHeight = label.offsetHeight;
+    if (!(naturalWidth > 0 && naturalHeight > 0)) continue;
+    const scale = Math.min(1, (width - 2 * padding) / naturalWidth, (height - 2 * padding) / naturalHeight);
+    const labelWidth = naturalWidth * scale, labelHeight = naturalHeight * scale;
+    const pointX = Number(host.dataset.labelPointX), pointY = Number(host.dataset.labelPointY);
+    const gap = Number(host.dataset.labelGap);
+    const right = pointX + gap, left = pointX - gap - labelWidth;
+    const preferredX = right + labelWidth <= width - padding ? right : left;
+    const x = Math.max(padding, Math.min(width - padding - labelWidth, preferredX));
+    const y = Math.max(padding, Math.min(height - padding - labelHeight, pointY - 10));
+    host.setAttribute("x", x);
+    host.setAttribute("y", y);
+    host.setAttribute("width", labelWidth);
+    host.setAttribute("height", labelHeight);
+    label.style.transformOrigin = "top left";
+    label.style.transform = scale < 1 ? `scale(${scale})` : "";
+  }
+}
+
+function renderMathInChart(metrics = chartMetrics()) {
+  const svg = $("#chart");
+  if (window.katex) svg.querySelectorAll(".latex-label[data-latex]").forEach((node) => katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false }));
+  fitClassLabelsToViewport(svg, metrics);
 }
 
 function replaceSvgMarkup(svg, markup) {
@@ -1803,6 +2289,64 @@ function replaceSvgMarkup(svg, markup) {
   const fragment = document.createDocumentFragment();
   while (scratch.firstChild) fragment.appendChild(scratch.firstChild);
   svg.replaceChildren(fragment);
+}
+
+function beginChartPageRender(ws) {
+  const svg = $("#chart");
+  const baselineNote = $("#document-baseline-note");
+  if (baselineNote) {
+    const documentBaseline = state.project?.research_brief?.document_baseline === true;
+    baselineNote.hidden = !documentBaseline;
+    baselineNote.textContent = documentBaseline
+      ? "文档基线：未确定项暂按文档采用；保留已核实修正，不代表全部独立验证。"
+      : "";
+  }
+  const sector = (state.project.grading_sectors || []).find(item => item.workspace_id === ws.id);
+  chartPagePresentation = {workspaceId: ws.id, page: ws.page,
+    caption: `${sector ? compactSectorLabel(sector) : ws.grading_label} · E${ws.page}`,
+    status: pageStatusText(ws)};
+  svg.dataset.requestedPage = String(ws.page);
+  svg.dataset.requestedWorkspace = ws.id;
+  svg.setAttribute("aria-busy", "true");
+  delete svg.dataset.renderError;
+  const previous = svg.dataset.renderedPage;
+  const retained = previous
+    ? `chart still ${svg.dataset.renderedWorkspace === ws.id ? "" : "previous workspace "}E${previous}`
+    : "chart not yet rendered";
+  const pending = `Rendering E${ws.page}; ${retained}`;
+  $("#chart-caption").textContent = pending;
+  $("#page-status").textContent = pending;
+}
+
+function updateChartPageStatus(ws, text, append = false) {
+  if (chartPagePresentation?.workspaceId === ws.id && chartPagePresentation.page === ws.page) {
+    chartPagePresentation.status = append ? `${chartPagePresentation.status} ${text}` : text;
+    return;
+  }
+  // A same-page pan can update status immediately; a different page must
+  // not describe the old SVG as the new quotient before it is committed.
+  const svg = $("#chart");
+  if (svg.dataset.renderedWorkspace !== ws.id || svg.dataset.renderedPage !== String(ws.page)) {
+    beginChartPageRender(ws);
+    updateChartPageStatus(ws, text, append);
+    return;
+  }
+  const status = $("#page-status");
+  status.textContent = append ? `${status.textContent} ${text}` : text;
+}
+
+function markChartPageCommitted(svg, ws) {
+  svg.dataset.renderedPage = String(ws.page);
+  svg.dataset.renderedWorkspace = ws.id;
+  svg.setAttribute("aria-busy", "false");
+  delete svg.dataset.requestedPage;
+  delete svg.dataset.requestedWorkspace;
+  delete svg.dataset.renderError;
+  if (chartPagePresentation?.workspaceId === ws.id && chartPagePresentation.page === ws.page) {
+    $("#chart-caption").textContent = chartPagePresentation.caption;
+    $("#page-status").textContent = chartPagePresentation.status;
+    chartPagePresentation = null;
+  }
 }
 
 function drawingPeriodicityPreviewSvg(metrics, bounds, packedPreviewInstances, instancePoints, layer = "all") {
@@ -1880,7 +2424,8 @@ function cellPortRecords(ws, cell) {
 
 function cellChartLayout(ws, metrics, bounds) {
   const positions = new Map();
-  for (const cell of explicitCells(ws).filter((item) => item.page <= ws.page && inBounds(item.grade, bounds))) {
+  const enumeratedCells = new Set(ws.classes.filter(n => n.style?.e2_pattern || n.style?.e2_components).map(n => n.cell_id).filter(Boolean));
+  for (const cell of explicitCells(ws).filter((item) => !enumeratedCells.has(item.id) && item.page <= ws.page && inBounds(item.grade, bounds))) {
     const center = pointFor(cell.grade, metrics);
     const ports = cellPortRecords(ws, cell);
     const width = Math.max(48, ports.length * 15 + 12);
@@ -1929,6 +2474,155 @@ function cellGlyphSvg(layout) {
   return markup;
 }
 
+// Coalesce certified aliases only at the SVG boundary. The algebra and
+// periodicDifferentials retain every source-table row and its provenance.
+function differentialRenderGroups(ws, occurrences, algebra) {
+  const claims = new Map(ws.propositions.map(claim => [claim.id, claim]));
+  const canonical = value => Array.isArray(value) ? value.map(canonical)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  const endpoint = node => {
+    const style = node?.style || {};
+    const components = style.e2_components && Object.keys(style.e2_components).length
+      ? style.e2_components : style.e2_pattern ? {[style.e2_pattern]: 1} : null;
+    const two = Number(style.two_valuation || 0), j = Number(style.j_order || 0);
+    if (!components || !Number.isFinite(two) || !Number.isFinite(j)) return null;
+    return {components, two, j, coefficientContext: node.coefficient_context_id || null,
+      convention: node.convention_id || null};
+  };
+  const groups = [], byKey = new Map(), metadata = new Map();
+  for (const item of occurrences) {
+    const claim = claims.get(item.diff.proposition_id), conclusion = claim?.conclusion;
+    const certificate = conclusion?.verification_certificate;
+    const alias = {id: item.diff.id, propositionId: item.diff.proposition_id,
+      label: item.diff.label || `d${item.diff.page}`, statement: claim?.statement,
+      status: item.diff.status, periodNotes: item.diff.period_notes || "single table anchor",
+      proof: certificate?.method, sourceRefs: [...new Set([
+        ...(claim?.source_refs || []), claim?.source_ref, ...(certificate?.source_refs || []),
+        conclusion?.period_source_ref,
+      ].filter(Boolean))]};
+    const source = endpoint(item.sourceNode), target = endpoint(item.targetNode);
+    const coefficient = algebra?.coefficientState(item.diff);
+    const fact = conclusion?.fact_id;
+    const certified = typeof fact === "string" && fact.trim()
+      && item.diff.status === "verified" && claim?.status === "verified"
+      && conclusion.admission_status === "verified" && certificate?.status === "verified"
+      && !item.diff.manual_periodicity_id
+      && algebra?.canApply(item.diff) && coefficient?.resolved && coefficient.value !== undefined
+      && source && target;
+    // Equal geometry alone is never evidence of equal maps. In particular
+    // distinguish vectors, exact Witt/j ports, coefficient state and fact.
+    const key = certified ? JSON.stringify(canonical([fact, item.diff.page,
+      item.diff.status, coefficient, source, target, item.sourceGrade, item.targetGrade])) : null;
+    const existing = key && byKey.get(key);
+    if (existing) {
+      existing.renderAliases.push(alias);
+    } else {
+      const group = {...item, renderAliases: [alias]};
+      groups.push(group);
+      // A resolved scalar's parameter ID is provenance, not its map value.
+      // Component parameters and conditional equations are not scalar aliases.
+      const equation = source && target && coefficient?.resolved
+        && [1, 2, 3].includes(coefficient.value) && coefficient.component === undefined
+        && !coefficient.zeroEulerImage && !item.candidate?.conditional
+        && !item.diff.manual_periodicity_id
+        ? JSON.stringify(canonical([item.diff.page, coefficient.value,
+          source, target, item.sourceGrade, item.targetGrade])) : null;
+      metadata.set(group, {certified, claim, fact, equation});
+      if (key) byKey.set(key, group);
+    }
+  }
+  // A new proof can explicitly name a historical equation as a display alias.
+  // This never changes admission or drops the historical row from the algebra.
+  // Require one unambiguous certified owner and identical exact occurrence maps;
+  // equal targets alone (for example P and Q mapping to T) do not suffice.
+  const owners = new Map();
+  for (const group of groups) {
+    const data = metadata.get(group);
+    if (!data.certified || !data.equation) continue;
+    for (const alias of data.claim.conclusion.render_equation_aliases || []) {
+      if (alias.scope !== "same-equation-only" || alias.status !== "review"
+          || alias.page !== group.diff.page || typeof alias.fact_id !== "string") continue;
+      const key = JSON.stringify([alias.fact_id, data.equation]);
+      if (!owners.has(key)) owners.set(key, new Set());
+      owners.get(key).add(group);
+    }
+  }
+  return groups.filter(group => {
+    const data = metadata.get(group);
+    if (group.diff.status !== "review" || data.claim?.status !== "review"
+        || data.claim.conclusion?.admission_status !== "review" || !data.equation) return true;
+    const matches = owners.get(JSON.stringify([data.fact, data.equation]));
+    if (matches?.size !== 1) return true;
+    const owner = [...matches][0];
+    owner.renderAliases.push(...group.renderAliases.map(alias => ({...alias, historicalEquation: true})));
+    return false;
+  });
+}
+
+function differentialRenderTitle(item) {
+  const provenance = item.renderAliases.map((alias, index) => (index
+    ? alias.historicalEquation ? " | Historical equation alias (proof remains under review): "
+      : " | Same certified map; alternate source: " : "") + [
+    alias.label, alias.statement, alias.status, alias.periodNotes,
+    `Source row: ${alias.id}`, alias.propositionId && `Claim: ${alias.propositionId}`,
+    alias.proof, alias.sourceRefs.length && `Sources: ${alias.sourceRefs.join("; ")}`,
+  ].filter(Boolean).join(" · ")).join("");
+  if (item.unitInvariant) return `${provenance} · Verified nonzero rank-one map; exact F4 unit unassigned. Kernel and image are independent of this isolated scalar.`;
+  if (!item.candidate?.conditional) return provenance;
+  const values = [...new Set(item.candidate.variants.map(v => v.coefficient.value))]
+    .map(value => value === 1 ? "1" : f4DisplayLatex(value)).join(", ");
+  return `${provenance} · Conditional candidate: surviving coefficient values ${values}; no parameter has been assigned.`;
+}
+
+function differentialCandidateSummary(diagnostics) {
+  const count = status => new Set(diagnostics.filter(d => d.status === status).map(d => d.id)).size;
+  const contradicted = count("contradicted"), unknown = count("unknown");
+  const families = count => `${count} candidate ${count === 1 ? "family has" : "families have"}`;
+  return [contradicted ? `${families(contradicted)} occurrences excluded by certified zero-outgoing maps; their sources and historical records are retained.` : "",
+    unknown ? `${families(unknown)} unresolved endpoint/coefficient data here; no coefficient-1 substitution is used.` : ""].filter(Boolean).join(" ");
+}
+
+function differentialDisplayCoefficient(ws, diff, algebra) {
+  const metadata = (ws.propositions || []).find(p => p.id === diff.proposition_id)?.conclusion || {};
+  const parameter = metadata.coefficient_parameter;
+  const display = metadata.atlas_display_coefficient || (Object.keys(diff.display_coefficient || {}).length ? diff.display_coefficient : null);
+  const coefficient = algebra?.coefficientState(diff);
+  // A factor on one summand of P+bQ is not an overall scalar on the arrow.
+  if (parameter?.target_component !== undefined || coefficient?.component !== undefined) return null;
+  if (display && ![1, 2, 3].includes(display.basis_ratio)) return null;
+  if (!coefficient?.resolved && algebra?.unitInvariant?.(diff)) {
+    const symbol = parameter.symbol;
+    const conjugate = parameter.frobenius_power === 1 ? `(${symbol})^2` : symbol;
+    const scalar = f4DisplayLatex(display?.basis_ratio ?? 1);
+    return {value: null, latex: `${scalar}${conjugate}`, nonzeroUnit: true,
+      basis: display ? "unscaled expanded generators" : "recorded generators"};
+  }
+  const value = coefficient?.resolved ? coefficient.value : display?.resolved ? display.value : null;
+  if (![1, 2, 3].includes(value)) return null;
+  const normalized = coefficient?.resolved ? f4DisplayMultiply(value, display?.basis_ratio ?? 1) : value;
+  return {value: normalized, latex: f4DisplayLatex(normalized),
+    basis: display ? "unscaled expanded generators" : "recorded generators",
+    sourceUnit: display?.source_unit ?? 1, targetUnit: display?.target_unit ?? 1};
+}
+
+function differentialCoefficientMarkup(ws, item, algebra, from, to) {
+  const coefficient = differentialDisplayCoefficient(ws, item.diff, algebra);
+  if (coefficient?.value === 1) return "";
+  const metadata = (ws.propositions || []).find(p => p.id === item.diff.proposition_id)?.conclusion || {};
+  const declared = metadata.coefficient_parameter || metadata.atlas_display_coefficient || item.diff.display_coefficient;
+  if (!coefficient && (!declared || !Object.keys(declared).length)) return "";
+  const component = metadata.coefficient_parameter?.target_component;
+  const latex = coefficient?.latex || (component !== undefined ? "\\text{vector}" : "?");
+  const x = (from.x + to.x) / 2, y = (from.y + to.y) / 2;
+  const title = coefficient?.nonzeroUnit
+    ? `A verified nonzero F4 unit relative to ${coefficient.basis}. Its exact value is unassigned; only the isolated one-dimensional kernel and image are unit-independent.`
+    : coefficient ? `Coefficient relative to ${coefficient.basis}; point labels retain transported units.`
+    : component !== undefined ? "This parameter affects one target component, not the whole arrow. Inspect the differential record."
+      : "A normalized scalar is not determined here; this does not mean coefficient 1.";
+  return `<foreignObject class="differential-coefficient" data-coefficient-for="${escapeHtml(item.diff.id)}" data-coefficient="${coefficient?.nonzeroUnit ? "nonzero-unit" : coefficient?.value ?? "unresolved"}" x="${x}" y="${y}" width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${latex}" title="${title}"></div></foreignObject>`;
+}
+
 function renderChart() {
   if (!workspace()) return;
   const ws = workspace();
@@ -1974,9 +2668,24 @@ function renderChart() {
   const previewInstances = drawingPeriodicityPreviewInstances(buffered);
   const allPackedInstances = packedClassInstances(ws, buffered, m, previewInstances);
   const packedInstances = allPackedInstances.filter((record) => !record.preview);
+  const algebra = pageAlgebra(ws, buffered);
+  updateChartPageStatus(ws, pageStatusText(ws, algebra));
   const packedPreviewInstances = allPackedInstances.filter((record) => record.preview);
   const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, packedPoint(record, m)]));
+  for (const record of packedInstances) {
+    instancePoints.set(classInstanceKey(record.item.id, record.grade), packedPoint(record, m));
+    const slot = e2DisplaySlot(record.item, record.grade);
+    if (slot) instancePoints.set(slot, packedPoint(record, m));
+    for (const slot of record.algebraSlots || algebra?.displaySlots(record.item, record.grade) || []) instancePoints.set(slot, packedPoint(record, m));
+  }
   const classesById = new Map(ws.classes.map((item) => [item.id, item]));
+  const endpointPoint = (id, grade, effectiveNode) => {
+    const node = effectiveNode || classesById.get(id);
+    const vectorPoints = (algebra?.endpointSlots(node, grade) || []).map(slot => instancePoints.get(slot)).filter(Boolean);
+    if (vectorPoints.length) return {x: vectorPoints.reduce((sum, p) => sum + p.x, 0) / vectorPoints.length,
+      y: vectorPoints.reduce((sum, p) => sum + p.y, 0) / vectorPoints.length};
+    return instancePoints.get(classInstanceKey(id, grade)) || instancePoints.get(e2DisplaySlot(node, grade)) || pointFor(grade, m);
+  };
   const liveIds = new Set(liveClassesAt(ws).map((item) => item.id));
   const vectorCellLayout = cellChartLayout(ws, m, buffered);
   markup += cellMapSvg(ws, vectorCellLayout);
@@ -1985,18 +2694,25 @@ function renderChart() {
     const relation = item.proposition;
     const source = item.source;
     const target = item.target;
-    const from = instancePoints.get(classInstanceKey(source.id, item.sourceGrade)) || pointFor(item.sourceGrade, m);
-    const to = instancePoints.get(classInstanceKey(target.id, item.targetGrade)) || pointFor(item.targetGrade, m);
+    const from = endpointPoint(source.id, item.sourceGrade);
+    const to = endpointPoint(target.id, item.targetGrade);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
     const chartConnection = relation.conclusion?.chart_connection;
     const chartClass = chartConnection?.kind ? `dkllw-${chartConnection.kind}` : "";
     markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass} ${item.periodic ? "periodic" : ""}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
   }
-  for (const item of periodicDifferentials(ws, buffered)) {
-    const from = instancePoints.get(classInstanceKey(item.diff.source_id, item.sourceGrade)) || pointFor(item.sourceGrade, m);
-    const to = instancePoints.get(classInstanceKey(item.diff.target_id, item.targetGrade)) || pointFor(item.targetGrade, m);
+  const candidateDiagnostics = [];
+  const differentialOccurrences = periodicDifferentials(ws, buffered, candidateDiagnostics);
+  const candidateSummary = differentialCandidateSummary(candidateDiagnostics);
+  if (candidateSummary) updateChartPageStatus(ws, candidateSummary, true);
+  for (const item of differentialRenderGroups(ws, differentialOccurrences, algebra)) {
+    const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode);
+    const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode);
     const manualDrawing = item.diff.manual_periodicity_id ? "manual-drawing-periodic" : "";
-    markup += `<line class="differential ${item.periodic ? "periodic" : ""} ${differentialVisualState(item.diff)} ${manualDrawing}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>`;
+    // escapeHtml is a text-node escape; JSON quotes also need attribute escaping.
+    const aliasIds = escapeHtml(JSON.stringify(item.renderAliases.map(alias => alias.id))).replaceAll('"', "&quot;");
+    markup += `<line class="differential ${item.periodic ? "periodic" : ""} ${differentialVisualState(item.diff)} ${manualDrawing}" data-differential="${escapeHtml(item.diff.id)}" data-differential-aliases="${aliasIds}" data-pattern-period="${Number(item.diff.period_stem || 0)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(differentialRenderTitle(item))}</title></line>`;
+    markup += differentialCoefficientMarkup(ws, item, algebra, from, to);
   }
   if (state.connectionStart && ["differential", "relation"].includes(state.tool)) {
     const source = classesById.get(state.connectionStart);
@@ -2008,27 +2724,40 @@ function renderChart() {
   }
   for (const record of packedInstances) {
     const point = packedPoint(record, m);
-    const selected = state.connectionStart === record.item.id || state.selectedClassId === record.item.id ? "selected" : "";
+    const selected = state.connectionStart === record.item.id || state.selectedClassId === record.item.id || state.selectedQuotientInstance === record.instanceKey ? "selected" : "";
     const manualDrawing = record.item.manual_periodicity_id ? "manual-drawing-periodic" : "";
-    const classes = `${visualStateFor(ws, record.item)} ${selected} ${record.periodic ? "periodic" : ""} ${manualDrawing}`;
+    const classes = `${record.occurrenceState || visualStateFor(ws, record.item)} ${selected} ${record.periodic ? "periodic" : ""} ${manualDrawing}`;
     const label = classLabelMarkup(record, point, m, visible);
     const periodicAttribute = record.periodic ? ' data-periodic-copy="true"' : "";
-    const aria = `${record.item.label} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}`;
-    const tooltip = `${record.item.label} · ${gradeText(record.grade)}${record.periodic ? " · virtual period-family translate" : ""}`;
-    markup += `<g class="class-instance" data-point="${record.item.id}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
+    const truncation = seriesTruncation(record);
+    const seriesText = truncation ? `, ${truncation.text}` : "";
+    const displayLabel = periodicDisplayLabel(record);
+    const representativeText = record.readOnlyRepresentative ? (record.uncertain ? " · Potential representative; outgoing map incomplete · read-only" : " · Computed quotient representative · read-only") : "";
+    const aria = `${displayLabel} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}${seriesText}${representativeText}`;
+    const tooltip = `${displayLabel} · ${gradeText(record.grade)}${record.periodic ? ` · ${record.item.label} translated by the shared D^m/g lattice` : ""}${truncation ? ` · ${truncation.text}` : ""}${record.modulePorts ? ` · ${quotientDescription(record)}` : ""}${representativeText}`;
+    const seriesAttribute = truncation ? ` data-series-bottom-order="${truncation.order}"` : "";
+    const readOnlyAttribute = record.readOnlyRepresentative ? ' data-readonly-representative="true"' : "";
+    markup += `<g class="class-instance" data-point="${escapeHtml(record.item.id)}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute}${seriesAttribute}${readOnlyAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
   }
   markup += cellGlyphSvg(vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "cycles");
   replaceSvgMarkup(svg, markup);
-  renderMathInChart();
+  markChartPageCommitted(svg, ws);
+  renderMathInChart(m);
   const activateClassInstance = (node, event) => {
     event.stopPropagation();
     if (state.suppressClick) {
       state.suppressClick = false;
       return;
     }
+    if (node.dataset.readonlyRepresentative) {
+      const record = packedInstances.find(item => item.instanceKey === node.dataset.classInstance);
+      if (record) { inspectQuotientRepresentative(record); renderChart(); }
+      return;
+    }
     if (node.dataset.periodicCopy && state.tool !== "inspect") return;
-    onClassClick(node.dataset.point);
+    const occurrence = packedInstances.find(item => item.instanceKey === node.dataset.classInstance);
+    onClassClick(node.dataset.point, occurrence);
   };
   svg.onclick = (event) => {
     const cellNode = event.target.closest?.("[data-cell]");
@@ -2061,6 +2790,40 @@ function renderChart() {
   };
 }
 
+function schedulePageRender() {
+  const ws = workspace();
+  const svg = $("#chart");
+  pageRenderRequest = {workspaceId: ws.id, page: ws.page};
+  beginChartPageRender(ws);
+  if (pageRenderFrame) return;
+  pageRenderFrame = requestAnimationFrame(() => {
+    pageRenderFrame = 0;
+    const requested = pageRenderRequest;
+    pageRenderRequest = null;
+    const current = workspace();
+    // A synchronous workspace render may already have replaced this request.
+    if (!requested || current?.id !== requested.workspaceId || current.page !== requested.page) return;
+    try {
+      render();
+    } catch (error) {
+      if (workspace()?.id !== requested.workspaceId || workspace().page !== requested.page) return;
+      const message = error?.message || String(error);
+      svg.dataset.renderError = message;
+      svg.setAttribute("aria-busy", "false");
+      const committed = svg.dataset.renderedWorkspace === requested.workspaceId
+        && svg.dataset.renderedPage === String(requested.page);
+      const status = $("#page-status");
+      if (status) status.textContent = committed
+        ? `E${requested.page} chart updated, but page controls failed: ${message}`
+        : `Unable to render E${requested.page}; the previous chart is retained. ${message}`;
+      if (!committed) {
+        const caption = $("#chart-caption");
+        if (caption) caption.textContent = `Previous chart retained · E${requested.page} not rendered`;
+      }
+    }
+  });
+}
+
 function setPage(page) {
   workspace().page = clamp(Number(page), 2, pageLimit());
   state.pageByWorkspace.set(state.workspaceId, workspace().page);
@@ -2069,7 +2832,7 @@ function setPage(page) {
   state.periodicityPreview = null;
   state.drawingPeriodicityPreview = null;
   state.connectionPointer = null;
-  render();
+  schedulePageRender();
 }
 
 async function extendPageLimit() {
@@ -2097,9 +2860,13 @@ function setTool(tool) {
   render();
 }
 
-async function onClassClick(id) {
+async function onClassClick(id, occurrence = null) {
   const item = workspace().classes.find((point) => point.id === id);
   if (!item) return;
+  state.selectedQuotientInstance = null;
+  state.selectedOccurrence = occurrence && state.tool === "inspect"
+    ? {workspaceId: state.workspaceId, page: workspace().page, classId: id, instanceKey: occurrence.instanceKey,
+      grade: {...occurrence.grade}, label: periodicDisplayLabel(occurrence)} : null;
   if (readOnlyCatalog() && state.tool !== "inspect") state.tool = "inspect";
   if (state.tool === "differential" || state.tool === "relation") {
     if (!state.connectionStart) {
@@ -2140,7 +2907,8 @@ async function onClassClick(id) {
   renderFateInspector();
   renderPersistentPeriodicityTool();
   renderChart();
-  toast(`${item.label} at ${gradeText(item.grade)} · ${fateFor(workspace(), item.id)?.conclusion || "unresolved"}`);
+  const selected = state.selectedOccurrence;
+  toast(`${selected?.label || item.label} at ${gradeText(selected?.grade || item.grade)} · ${fateFor(workspace(), item.id)?.conclusion || "unresolved"}`);
 }
 
 async function clearCurrentCanvas() {
@@ -2187,7 +2955,7 @@ async function createRelation(sourceId, targetId) {
   const source = workspace().classes.find((item) => item.id === sourceId);
   const target = workspace().classes.find((item) => item.id === targetId);
   state.pendingRelation = { sourceId, targetId };
-  $("#relation-endpoints").textContent = `${source.label} → ${target.label} on E${workspace().page}`;
+  $("#relation-endpoints").innerHTML = `${mathMarkup(source.label)} → ${mathMarkup(target.label)} on E${Number(workspace().page)}`;
   $("#relation-form [name=chart_connection_kind]").value = (
     source.grade.stem === target.grade.stem && source.grade.filtration === target.grade.filtration
       ? "vertical-two" : ""
@@ -2340,7 +3108,7 @@ async function materializeE2Presentation(event) {
 
 async function runRules() {
   try {
-    workspace().settings.vanishing_line = Number($("#vanishing-line").value);
+    if ($("#vanishing-line")) workspace().settings.vanishing_line = Number($("#vanishing-line").value);
     const data = await api(`/api/workspaces/${state.workspaceId}/suggestions`, { method: "POST", body: JSON.stringify({ rules: ["LeibnizRule", "VanishingLine"] }) });
     state.suggestions = data.suggestions;
     renderSuggestions();
@@ -2642,16 +3410,16 @@ function bindEvents() {
   $("#redo-action").addEventListener("click", () => changeHistory("redo"));
   $("#comparison-select").addEventListener("change", showComparisonNote);
   document.querySelectorAll("[data-tool]").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
-  $("#add-drawing-period-rule").addEventListener("click", addDrawingPeriodicityRule);
-  $("#preview-drawing-period-box").addEventListener("click", () => previewDrawingPeriodicity("box"));
-  $("#apply-drawing-period-box").addEventListener("click", () => applyDrawingPeriodicity("box"));
-  $("#preview-drawing-diff-period").addEventListener("click", () => previewDrawingPeriodicity("differentials"));
-  $("#apply-drawing-diff-period").addEventListener("click", () => applyDrawingPeriodicity("differentials"));
+  $("#add-drawing-period-rule")?.addEventListener("click", addDrawingPeriodicityRule);
+  $("#preview-drawing-period-box")?.addEventListener("click", () => previewDrawingPeriodicity("box"));
+  $("#apply-drawing-period-box")?.addEventListener("click", () => applyDrawingPeriodicity("box"));
+  $("#preview-drawing-diff-period")?.addEventListener("click", () => previewDrawingPeriodicity("differentials"));
+  $("#apply-drawing-diff-period")?.addEventListener("click", () => applyDrawingPeriodicity("differentials"));
   [
     "#drawing-period-name", "#drawing-period-p", "#drawing-period-q",
     "#drawing-period-p-min", "#drawing-period-p-max", "#drawing-period-q-min", "#drawing-period-q-max",
     "#drawing-diff-period-p", "#drawing-diff-period-q",
-  ].forEach((selector) => $(selector).addEventListener("input", () => {
+  ].forEach((selector) => $(selector)?.addEventListener("input", () => {
     if (!state.drawingPeriodicityPreview) return;
     state.drawingPeriodicityPreview = null;
     renderDrawingPeriodicityTool();
@@ -2677,7 +3445,7 @@ function bindEvents() {
       state.suppressClick = false;
       return;
     }
-    if (state.tool !== "class" || state.drag) return;
+    if (state.tool !== "class" || state.drag || event.target.closest?.("[data-readonly-representative]")) return;
     const rect = chart.getBoundingClientRect();
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;

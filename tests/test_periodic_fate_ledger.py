@@ -140,17 +140,22 @@ def test_vanishing_audit_reports_covered_rank_and_exact_open_obligations():
     assert audit["obligation_count"] == 5
     assert audit["finite_rank_obligation_count"] == 5
     assert audit["formal_series_obligation_count"] == 0
-    assert audit["covered_obligation_count"] == 1
+    assert audit["covered_obligation_count"] == 2
 
     assert obligations["obl-2i-f26-d9-target"]["covered"] is True
     assert obligations["obl-2i-f26-d9-target"]["covered_rank"] == 1
-    assert obligations["obl-2i-f26-d21-target"]["covered"] is False
-    assert any(
-        "FN-2I-019 has non-certifying status review" in reason
-        for reason in obligations["obl-2i-f26-d21-target"]["unresolved_reasons"]
-    )
-    assert obligations["obl-3i-rank2-target-cell"]["covered_rank"] == 0
-    assert obligations["obl-3i-rank2-target-cell"]["required_killed_rank"] == 2
+    d21_target = obligations["obl-2i-f26-d21-target"]
+    assert d21_target["covered"] is True
+    assert d21_target["cell_dimension"] == d21_target["required_killed_rank"] == d21_target["covered_rank"] == 1
+    assert d21_target["accepted_fact_ids"] == ["FN-2I-019"]
+    assert d21_target["unresolved_reasons"] == []
+    rank_two = obligations["obl-3i-rank2-target-cell"]
+    # Independently verified FN-3I-006 kills the line P+Q, not both
+    # coordinates. Admission certifies rank one, not a vanishing cell.
+    assert rank_two["covered_rank"] == 1
+    assert rank_two["required_killed_rank"] == 2
+    assert rank_two["required_killed_rank"] - rank_two["covered_rank"] == 1
+    assert rank_two["covered"] is False
 
 
 def test_vanishing_rank_is_the_span_rank_not_the_number_of_arrows():

@@ -1689,6 +1689,7 @@ dialog.e2-presentation-dialog {
 
 .class-point {
   --point-color: var(--gray-dot);
+  color: var(--point-color);
   pointer-events: none;
   fill: var(--point-color);
   stroke: #ffffff;
@@ -1697,16 +1698,8 @@ dialog.e2-presentation-dialog {
   transform-origin: center;
 }
 
-.class-instance:hover .class-point,
-.class-point.selected {
-  transform: scale(1.24);
-  stroke: var(--blue);
-  stroke-width: 3;
-}
-
 .class-instance { cursor: pointer; }
 .class-instance:focus { outline: none; }
-.class-instance:focus .class-point { stroke: var(--blue); stroke-width: 3; }
 .class-hit-target { fill: transparent; pointer-events: all; }
 
 #chart[data-tool="class"] .class-instance { cursor: cell; }
@@ -1746,6 +1739,30 @@ dialog.e2-presentation-dialog {
   stroke-width: 1;
 }
 
+.class-point.dot-glyph {
+  stroke-width: 0.6;
+}
+
+.class-point.j-series,
+.class-point.j-positive-series,
+.class-point.witt-j-series {
+  fill: white;
+  stroke: var(--point-color);
+  stroke-width: 1.6;
+}
+
+.class-point.j-series .series-core {
+  fill: var(--point-color);
+  stroke: none;
+}
+
+.class-point.j-positive-series .series-hole,
+.class-point.witt-j-series .series-inner {
+  fill: white;
+  stroke: var(--point-color);
+  stroke-width: 1.1;
+}
+
 .class-point.unknown-glyph {
   fill: white;
   stroke: var(--point-color);
@@ -1754,7 +1771,6 @@ dialog.e2-presentation-dialog {
 
 .class-point.periodic {
   opacity: 0.92;
-  stroke-width: 1.25;
 }
 
 .class-point.manual-drawing-periodic {
@@ -1762,7 +1778,16 @@ dialog.e2-presentation-dialog {
   stroke-width: 2.5;
 }
 
-.selected {
+/* Highlight a family without changing the packed glyph's geometry. */
+.class-instance:hover .class-point,
+.class-instance:focus .class-point,
+.class-point.selected {
+  --point-color: var(--blue);
+  color: var(--point-color);
+  transform: none;
+}
+
+.selected:not(.class-point) {
   stroke: var(--blue);
   stroke-width: 3.5px;
 }
@@ -1789,6 +1814,21 @@ dialog.e2-presentation-dialog {
 .latex-label .katex {
   font-size: 1em;
 }
+
+.class-formula { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.class-formula .katex { font-size: 1em; }
+.class-row > span:first-child { display: flex; align-items: center; gap: 5px; }
+.class-row .class-formula { display: inline-block; }
+.toolbar-more { position: relative; }
+.toolbar-more > summary { cursor: pointer; padding: 7px 12px; border: 1px solid var(--border, #d1d5db); border-radius: 6px; background: white; }
+.toolbar-more-actions { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; display: grid; gap: 6px; padding: 10px; width: 230px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-shadow: 0 4px 16px #0f172a18; }
+.toolbar-more-actions button { width: 100%; text-align: left; }
+#legacy-catalog-reference > summary { cursor: pointer; font-weight: 600; }
+#legacy-catalog-reference .legacy-catalog-panel { padding: 12px 0 0; border: 0; }
+.differential-coefficient { pointer-events: none; overflow: visible; }
+.differential-coefficient .latex-label { min-width: 0; padding: 1px 3px; background: #ffffffed; border-radius: 3px; font-size: 12px; transform: translate(-50%, -50%); }
+.selected-class-label { display: inline-flex; flex-direction: column; gap: 3px; padding: 2px 4px; border-radius: 3px; background: #ffffffed; }
+.selected-bidegree { font: 11px/1.1 ui-sans-serif, sans-serif; color: #475569; }
 
 @media (max-width: 1040px) {
   .layout {
@@ -1890,3 +1930,18 @@ dialog.e2-presentation-dialog {
     width: auto;
   }
 }
+.published-table-ledger { margin-top: 12px; min-width: 0; }
+.published-table-ledger summary { cursor: pointer; font-weight: 600; }
+.table-ledger-count { font-size: 0.8rem; color: #64748b; }
+.table-ledger-scroll { overflow: auto; max-height: 420px; margin-top: 10px; }
+.table-ledger-scroll table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 0.78rem; }
+.table-ledger-scroll th, .table-ledger-scroll td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid #e2e8f0; }
+.table-ledger-scroll th { position: sticky; top: 0; background: #f8fafc; }
+.table-ledger-scroll td small { display: block; color: #64748b; margin-top: 4px; }
+.table-ledger-scroll .is-current-page { background: #eff6ff; }
+.review-table-ledger { margin: 0 0 20px; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; }
+.claim-source-audit { margin-top: 8px; font-size: 0.8rem; color: #92400e; }
+.claim-source-audit summary { cursor: pointer; }
+.claim-source-audit li { margin: 6px 0; overflow-wrap: anywhere; }
+.finite-two-tower line { stroke: currentColor; stroke-width: 1; }
+.finite-two-tower circle { fill: currentColor; stroke: white; stroke-width: 0.6; }

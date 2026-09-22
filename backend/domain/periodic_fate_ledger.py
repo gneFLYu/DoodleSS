@@ -23,7 +23,7 @@ DEFAULT_LEDGER_PATH = (
 )
 
 FATE_CERTIFYING_STATUSES = frozenset(
-    {"admitted", "admitted-pattern", "verified-pattern"}
+    {"admitted", "admitted-pattern", "verified-pattern", "verified", "source-verified"}
 )
 PERIOD_CLASS_RE = re.compile(
     r"^pc\.[a-z0-9-]+\.(?:d8|gd8semi|gd8)\.[a-z0-9-]+$"

@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "id": "DER-MIX-PHI-B-D5-A-COEFFICIENT",
+  "status": "independently-verified-source-audit",
+  "runtime_admission": false,
+  "workspace_id": "ws_sigma_i_2sigma_j",
+  "coefficient_parameter_id": "mixed_d5_A",
+  "coefficient_value": 3,
+  "even_coefficient_value": 2,
+  "field_encoding": {"0": 0, "1": 1, "zeta": 2, "zeta^2": 3},
+  "definitions": {
+    "B": "(x+y)u_(3sigma_i)",
+    "P": "(yh2+xh1v1)u_(3sigma_i)",
+    "Q": "(h1^2+xh1v1)u_(3sigma_i)",
+    "U": "v1^2u_(3sigma_i)",
+    "A": "(x^2+y^2)u_(sigma_i+2sigma_j)",
+    "T": "(x+y)h1^2u_(sigma_i+2sigma_j)",
+    "g": "kD^3",
+    "Phi": "N_C4^Q8(dbar) u_(4sigma_k) g^-1 a_H",
+    "F": "a_sigma_j Phi^-1 omega^2"
+  },
+  "convention": {
+    "omega": {"D": "zeta^2 D", "x": "zeta x", "y": "zeta^2 y", "k": "k", "h1": "h1", "v1": "v1"},
+    "omega_squared": {"D": "zeta D", "x": "zeta^2 x", "y": "zeta y"},
+    "a_sigma_j": "(zeta x+zeta^2 y)u_(sigma_j)",
+    "odd_A_map": "d5(AD)=c TkD",
+    "even_A_map": "d5(AD^2)=(c+1)TkD^2"
+  },
+  "source_differential": {
+    "workspace_id": "ws_3sigma_i",
+    "fact_id": "FN-3I-005",
+    "differential_id": "diff_three_d5_xyD2",
+    "proposition_id": "formal_prop_fn-3i-005_1",
+    "page": 5,
+    "source_bidegree": [15, 1],
+    "target_bidegree": [14, 6],
+    "equation": "d5(BD^2)=kQD^2",
+    "coefficient": 1,
+    "unit_detection": "x^2 d5(B)=2k^2U=x^2(kQ), a nonzero order-two class; d5 squared excludes the independent kP direction.",
+    "even_D_translation": "d5(D^2)=2kD^2h2 is nonzero, but its product with B is zero because 2B=0. This gives d5(B)=kQ without declaring D^2 a 5-cycle."
+  },
+  "finite_product_scope": "These are numerator products under the common Thom identification. The representation regrading and D^2 factor are supplied by Phi^-1 in transport, not by an equality of the unregraded RO degrees.",
+  "finite_products": [
+    {"input": "a_sigma_j B_k", "output": "A", "scalar": 1, "relations": ["xy=0", "zeta^3=1"]},
+    {"input": "a_sigma_j Q_k", "output": "T", "scalar": 2, "relations": ["xy=0", "v1 x^2=y h1", "zeta^2+1=zeta"]},
+    {"input": "a_sigma_j P_k", "output": "T", "scalar": 1, "relations": ["P_k=B_k h2", "A h2=T"]}
+  ],
+  "transport": {
+    "spectral_sequence": "tate",
+    "Phi_permanent_unit": true,
+    "Phi_bidegree": [-16, 0],
+    "F_bidegree_shift": [15, 1],
+    "source_image": "F(B)=alpha AD^2",
+    "target_image": "F(kQ)=alpha zeta TkD^2",
+    "common_Thom_unit": {"symbol": "alpha", "chosen_value": null, "constant_nonzero": true},
+    "finite_directions": {"jA": 0, "jT": 0, "2A": 0, "2T": 0},
+    "completion_scope": "The same Thom unit reduces to the same nonzero F4 scalar on these two finite directions. The complete E2 cell at (14,2) also contains a separate bo/series direction; it is not asserted to be one-dimensional.",
+    "hfpss_target": {"bidegree": [13, 7], "earlier_d3_source": [14, 4], "earlier_d3_source_empty": true, "comparison_injective_from_filtration": 4},
+    "hfpss_source": {"bidegree": [14, 2], "pattern": "S62", "port": "0:0", "live_on_E5": true}
+  },
+  "deduction": [
+    "Naturality gives d5(AD^2)=zeta TkD^2 after cancellation of the common nonzero scalar.",
+    "Thus c+1=zeta and c=zeta^2 in the specified basis.",
+    "Cross-check: d5(BD)=kD(P+Q), F(BD)=alpha zeta AD^3, and F(kD(P+Q))=alpha zeta(1+zeta)TkD^3=alpha TkD^3. Dividing the common alpha zeta gives d5(AD^3)=zeta^2 TkD^3."
+  ],
+  "period_scope": "The 16-stem A differential pattern follows from 2A=0 and the Leibniz rule. Only D^8 is a permanent invertible horizontal period. g is inverted solely in the Tate comparison.",
+  "historical_comparison": {
+    "source": "REU Projects/table_Q8.tex",
+    "rows": [
+      {"line": 511, "D_power": 1, "printed_coefficient": "zeta", "current_convention_coefficient": "zeta^2"},
+      {"line": 512, "D_power": 2, "printed_coefficient": "zeta^2", "current_convention_coefficient": "zeta"}
+    ],
+    "disposition": "Preserve the printed rows as historical provenance. Their scalar order differs from this independently checked action/basis convention; do not silently rewrite the table."
+  },
+  "source_refs": [
+    "REU Projects/Note/formal_notes.tex:730-762",
+    "REU Projects/Note/formal_notes.tex:875",
+    "REU Projects/Note/record/note.tex:685",
+    "arXiv-2209.01830v3/main.tex:833-878,915,943,1179-1187,1508",
+    "Beaudry Appendix A, Lemma A.1 and Theorem A.14: omega(k)=k"
+  ],
+  "integration_requirements": {
+    "proof_bound_parameter_resolution": true,
+    "source_parameter_binding": {
+      "kind": "coefficient-proof",
+      "workspace_id": "ws_sigma_i_2sigma_j",
+      "parameter_id": "mixed_d5_A",
+      "proposition_id": "formal_prop_der-mix-phi-b-d5-a-coefficient"
+    },
+    "consumer_raw_value": null,
+    "root_proof_requirements": [
+      "A unique coefficient-proof proposition with accepted status and, when present, accepted admission_status.",
+      "A nonempty explicit premise list and matching conclusion.parameter_id; coefficient_value is a non-boolean F4 unit.",
+      "Every recursively referenced differential proof has one matching current row, accepted status, present nonarchived stored endpoints and an accepted nonarchived matrix when applicable.",
+      "The coefficient-proof mode is strict without changing the legacy cycle-proof convention."
+    ],
+    "registry_requirements": [
+      "All declarations of mixed_d5_A, including same-name duplicate proposition records, must have the same qualified binding.",
+      "A failed binding clears the whole resolved record and cannot fall back to settings, stale raw values or candidate assignments.",
+      "Keep the resolved raw unit separate from each consumer's affine offset, inverse denominator and Frobenius transformation.",
+      "The cache includes recursive proof scopes, differential endpoints/status/page, endpoint existence/archive state and matrix status."
+    ],
+    "withdrawal_makes_parameter_unresolved": true,
+    "preserve_conflicting_user_assignments": true,
+    "do_not_assign_settings_automatically": true,
+    "atlas_images": 6,
+    "reflected_images_use_existing_Frobenius_once": true,
+    "not_yet_integrated": true
+  }
+}

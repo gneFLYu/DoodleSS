@@ -77,7 +77,8 @@ def _integer(value: Any, name: str) -> int:
     return result
 
 
-def _normalize_request(workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
+def _normalize_request(workspace: Workspace, payload: dict[str, Any], *,
+                       project: Project | None = None) -> dict[str, Any]:
     classes = {item.id: item for item in workspace.classes}
     differentials = {item.id: item for item in workspace.differentials}
     anchor_id = str(payload.get("anchor_class_id", ""))
@@ -86,7 +87,7 @@ def _normalize_request(workspace: Workspace, payload: dict[str, Any]) -> dict[st
         raise ManualPeriodicityError("Select a live, non-archived anchor class.")
 
     page = _integer(payload.get("page", workspace.page), "page")
-    if page < 2 or not class_is_live_on_page(workspace, anchor.id, page):
+    if page < 2 or not class_is_live_on_page(workspace, anchor.id, page, project=project):
         raise ManualPeriodicityError(f"The anchor class is not live on E{page}.")
 
     stem = _integer(payload.get("period_stem"), "period_stem")
@@ -118,7 +119,7 @@ def _normalize_request(workspace: Workspace, payload: dict[str, Any]) -> dict[st
             raise ManualPeriodicityError(f"The selected differential is not drawn on E{page}.")
         if anchor.id not in {differential.source_id, differential.target_id}:
             raise ManualPeriodicityError("The selected differential must be incident to the anchor class.")
-        if not all(class_is_live_on_page(workspace, class_id, page) for class_id in (differential.source_id, differential.target_id)):
+        if not all(class_is_live_on_page(workspace, class_id, page, project=project) for class_id in (differential.source_id, differential.target_id)):
             raise ManualPeriodicityError(f"Both differential endpoints must be live on E{page}.")
 
     cycle_label = str(payload.get("cycle_label", "P")).strip()
@@ -170,8 +171,9 @@ def _existing_copy(workspace: Workspace, manual_id: str, base_id: str, translati
     )), None)
 
 
-def preview_manual_periodicity(workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
-    request_data = _normalize_request(workspace, payload)
+def preview_manual_periodicity(workspace: Workspace, payload: dict[str, Any], *,
+                               project: Project | None = None) -> dict[str, Any]:
+    request_data = _normalize_request(workspace, payload, project=project)
     anchor = request_data["anchor"]
     differential = request_data["differential"]
     period = request_data["period"]
@@ -292,13 +294,13 @@ def preview_manual_periodicity(workspace: Workspace, payload: dict[str, Any]) ->
 
 
 def materialize_manual_periodicity(project: Project, workspace: Workspace, payload: dict[str, Any]) -> dict[str, Any]:
-    preview = preview_manual_periodicity(workspace, payload)
+    preview = preview_manual_periodicity(workspace, payload, project=project)
     if preview["conflicts"]:
         raise ManualPeriodicityError(
             "A prior manual-period copy is archived. Undo its deletion or choose another vector/anchor before materializing."
         )
 
-    request_data = _normalize_request(workspace, payload)
+    request_data = _normalize_request(workspace, payload, project=project)
     manual_id = request_data["manual_id"]
     anchor = request_data["anchor"]
     base_differential = request_data["differential"]
@@ -565,14 +567,14 @@ def _compound_translations(rules: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def _active_classes(workspace: Workspace, page: int) -> list[ClassNode]:
+def _active_classes(workspace: Workspace, page: int, *, project: Project | None = None) -> list[ClassNode]:
     return sorted(
         [
             item for item in workspace.classes
             if not item.archived
             and not item.manual_periodicity_id
             and item.page <= page
-            and class_is_live_on_page(workspace, item.id, page)
+            and class_is_live_on_page(workspace, item.id, page, project=project)
         ],
         key=lambda item: item.id,
     )
@@ -616,8 +618,9 @@ def _batch_builder(
     mode: str,
     rules: list[dict[str, Any]],
     scope: dict[str, Any] | None = None,
+    *, project: Project | None = None,
 ) -> dict[str, Any]:
-    active = _active_classes(workspace, page)
+    active = _active_classes(workspace, page, project=project)
     active_by_id = {item.id: item for item in active}
     manual_id = _batch_id(workspace, page, mode, rules, scope)
     plans_by_orbit: dict[str, dict[str, Any]] = {}
@@ -661,13 +664,14 @@ def _batch_builder(
     }
 
 
-def _visible_classes_at(workspace: Workspace, page: int, grade: Grade) -> list[ClassNode]:
+def _visible_classes_at(workspace: Workspace, page: int, grade: Grade, *,
+                        project: Project | None = None) -> list[ClassNode]:
     """All visible dots at a grade, including deliberate manual copies."""
     key = _location_key(grade)
     return [
         item for item in workspace.classes
         if not item.archived and item.page <= page
-        and class_is_live_on_page(workspace, item.id, page)
+        and class_is_live_on_page(workspace, item.id, page, project=project)
         and _location_key(item.grade) == key
     ]
 
@@ -757,7 +761,7 @@ def preview_all_rules_to_box(project: Project, workspace: Workspace, payload: di
         raise ManualPeriodicityError("The drawing box may contain at most 50,000 cells.")
     basis, source_ref = _application_metadata(payload)
     shifts = _compound_translations(rules)
-    builder = _batch_builder(workspace, page, "box", rules, {"bounds": bounds, "limit": LEGACY_TRANSLATION_LIMIT})
+    builder = _batch_builder(workspace, page, "box", rules, {"bounds": bounds, "limit": LEGACY_TRANSLATION_LIMIT}, project=project)
     in_box = lambda grade: (
         bounds["p_min"] <= grade.stem <= bounds["p_max"]
         and bounds["q_min"] <= grade.filtration <= bounds["q_max"]
@@ -834,6 +838,7 @@ def preview_differentials_only(project: Project, workspace: Workspace, payload: 
     builder = _batch_builder(
         workspace, page, "differentials-only", rules,
         {"p": stem, "q": filtration, "limit": LEGACY_TRANSLATION_LIMIT},
+        project=project,
     )
     live_ids = set(builder["active_by_id"])
     connections: list[dict[str, Any]] = []
@@ -850,8 +855,8 @@ def preview_differentials_only(project: Project, workspace: Workspace, payload: 
             shift = {"stem": translation * stem, "filtration": translation * filtration, "exponents": [translation]}
             source_grade = _translated_grade(source_base, Grade(stem, filtration, {}), translation)
             target_grade = _translated_grade(target_base, Grade(stem, filtration, {}), translation)
-            existing_sources = _visible_classes_at(workspace, page, source_grade)
-            existing_targets = _visible_classes_at(workspace, page, target_grade)
+            existing_sources = _visible_classes_at(workspace, page, source_grade, project=project)
+            existing_targets = _visible_classes_at(workspace, page, target_grade, project=project)
             if not existing_sources and not existing_targets:
                 builder["skipped"].append({
                     "kind": "differential", "base_connection_id": base.id,

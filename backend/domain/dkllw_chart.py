@@ -58,6 +58,11 @@ _CLASS_GLYPHS = {
     "fat-dot": r"k[\![j]\!]",
     "circle": r"k[\![j]\!]\{j\}",
     "square": r"\mathbb W(k)",
+    # Completion at (2,v_1^4) makes the zero-line D-families formal
+    # j-series too; a plain square would incorrectly forget that completion.
+    "j-series": r"k[\![j]\!]",
+    "j-positive-series": r"j k[\![j]\!]",
+    "witt-j-series": r"\mathbb W(k)[\![j]\!]",
 }
 _LEGACY_CLASS_ALIASES = {
     "blue-dot": "fat-dot",
@@ -80,7 +85,8 @@ def class_semantic_from_glyph(glyph: str) -> ChartClassSemantic:
     algebra_type = _CLASS_GLYPHS.get(normalized)
     if algebra_type is None:
         raise ChartSemanticError(
-            "glyph must be dot, fat-dot, circle, or square; color/state/fate is not an algebra type."
+            "glyph must be dot, fat-dot, circle, square, j-series, j-positive-series, "
+            "or witt-j-series; color/state/fate is not an algebra type."
         )
     return ChartClassSemantic(normalized, algebra_type)
 

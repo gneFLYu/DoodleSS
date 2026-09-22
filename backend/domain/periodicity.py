@@ -78,7 +78,7 @@ def preview_periodic_translate(project: Project, workspace: Workspace, raw: Mapp
     target_plan = None
     differential_plan = None
     if differential:
-        target = _active_live_class(workspace, differential.target_id, page, role="differential target")
+        target = _active_live_class(workspace, differential.target_id, page, role="differential target", project=project)
         target_plan = _plan_class_copy(workspace, rule, target, translation, page)
         differential_plan = _plan_differential_copy(
             workspace, rule, differential, source_plan, target_plan, translation,
@@ -99,7 +99,7 @@ def materialize_periodic_translate(project: Project, workspace: Workspace, raw: 
     target_plan = None
     differential_plan = None
     if differential:
-        target = _active_live_class(workspace, differential.target_id, page, role="differential target")
+        target = _active_live_class(workspace, differential.target_id, page, role="differential target", project=project)
         target_plan = _plan_class_copy(workspace, rule, target, translation, page)
         differential_plan = _plan_differential_copy(
             workspace, rule, differential, source_plan, target_plan, translation,
@@ -165,7 +165,7 @@ def _parse_operation(
     translation = _integer(raw.get("translation"), "translation")
     if translation == 0:
         raise PeriodicityOperationError("translation must be nonzero; the anchor is not a new periodic copy.")
-    source = _active_live_class(workspace, _required_string(raw, "anchor_class_id"), page, role="anchor")
+    source = _active_live_class(workspace, _required_string(raw, "anchor_class_id"), page, role="anchor", project=project)
     if source.periodicity_rule_id and source.periodicity_rule_id != rule.id:
         raise PeriodicityOperationError("Composing periodicity rules is not automated; use an explicit manual claim instead.")
 
@@ -390,11 +390,12 @@ def _certificate(workspace: Workspace, rule: PeriodicityRule) -> Proposition:
     return certificate
 
 
-def _active_live_class(workspace: Workspace, class_id: str, page: int, *, role: str) -> ClassNode:
+def _active_live_class(workspace: Workspace, class_id: str, page: int, *, role: str,
+                       project: Project | None = None) -> ClassNode:
     node = _active_class(workspace, class_id)
     if node.page > page:
         raise PeriodicityOperationError(f"The {role} class first appears on E_{node.page}, not E_{page}.")
-    if not class_is_live_on_page(workspace, node.id, page):
+    if not class_is_live_on_page(workspace, node.id, page, project=project):
         raise PeriodicityOperationError(f"The {role} class is not live on E_{page}.")
     return node
 

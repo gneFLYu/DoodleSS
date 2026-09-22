@@ -92,6 +92,24 @@ class InteractionContractTest(unittest.TestCase):
         self.assertIn("baseYOffset", self.layout)
         self.assertIn(".class-point.square", self.styles)
 
+    def test_converged_pages_propagate_differential_fates_to_virtual_e2_occurrences(self):
+        self.assertIn("function deadE2OccurrenceKeys", self.script)
+        self.assertIn("e2OccurrenceKey(item, copy.grade)", self.script)
+        self.assertIn("function e2DisplaySlot", self.script)
+        self.assertIn("item.style.two_valuation", self.script)
+        self.assertIn("HFPSSPageAlgebra.compute", self.script)
+        self.assertNotIn('occurrenceState: ws.page >= stableFrom ? "permanent"', self.script)
+        self.assertIn("record.item.style?.multiplicative_unit", self.script)
+        self.assertNotIn("function convergedFiltrationCap", self.script)
+        self.assertNotIn("copy.grade.filtration > filtrationCap", self.script)
+        self.assertIn("no filtration clipping is used", self.script)
+
+    def test_each_table_row_keeps_its_own_rendered_differential_family(self):
+        self.assertIn("`${diff.id}:${sourceGrade.stem}", self.script)
+        self.assertIn('data-differential=', self.script)
+        self.assertIn('data-pattern-period=', self.script)
+        self.assertIn("item.diff.period_notes", self.script)
+
     def test_manual_connections_have_visible_lines_and_pointer_preview(self):
         self.assertIn("function visibleRelations", self.script)
         self.assertIn('proposition.kind !== "relation"', self.script)
@@ -145,7 +163,7 @@ process.stdout.write(JSON.stringify(values));
         values = json.loads(completed.stdout)
         self.assertEqual([item["filtration"] if item else None for item in values], [0, 0, 0, None, 0, -1, None])
 
-    def test_manual_drawing_periodicity_replicates_all_three_ver153_blocks(self):
+    def test_manual_drawing_periodicity_retains_data_support_without_editor_panels(self):
         for label in (
             "Define New Rule",
             "Class Name (LaTeX)",
@@ -154,7 +172,7 @@ process.stdout.write(JSON.stringify(values));
             "Apply Periodicity to Differentials Only",
             "Both endpoints present: connect them. Exactly one missing: create it. Both missing: skip.",
         ):
-            self.assertIn(label, self.markup)
+            self.assertNotIn(label, self.markup)
         for element_id in (
             "drawing-period-name", "drawing-period-p", "drawing-period-q",
             "drawing-periodicity-rules-list", "drawing-period-p-min", "drawing-period-p-max",
@@ -162,8 +180,7 @@ process.stdout.write(JSON.stringify(values));
             "apply-drawing-period-box", "drawing-diff-period-p", "drawing-diff-period-q",
             "preview-drawing-diff-period", "apply-drawing-diff-period",
         ):
-            self.assertIn(f'id="{element_id}"', self.markup)
-        self.assertIn("manual-unverified drawing candidate", self.markup)
+            self.assertNotIn(f'id="{element_id}"', self.markup)
         self.assertIn("ADVANCED / CERTIFIED", self.markup)
         self.assertIn('id="certified-periodicity-details"', self.markup)
         self.assertIn(".drawing-periodicity-block", self.styles)
@@ -196,7 +213,7 @@ process.stdout.write(JSON.stringify(values));
     def test_same_cell_drawing_preview_uses_shared_adaptive_packing(self):
         self.assertIn("function drawingPeriodicityPreviewInstances", self.script)
         self.assertIn("[...instances, ...extraInstances]", self.script)
-        self.assertIn("{ baseYOffset: 0.16 }", self.script)
+        self.assertIn("baseYOffset: 0.16, uniformSize: true, glyphEnvelope", self.script)
         self.assertIn("connection.source_plan_key", self.script)
         self.assertIn("connection.target_plan_key", self.script)
         self.assertIn("packedPreviewInstances", self.script)
@@ -289,13 +306,13 @@ process.stdout.write(JSON.stringify(packed));
         self.assertIn("expression: label", self.script)
 
     def test_page_periods_are_virtual_and_follow_differential_survival(self):
-        self.assertIn('id="page-period-tool"', self.markup)
+        self.assertNotIn('id="page-period-tool"', self.markup)
         self.assertIn("function pagePeriodEligible", self.script)
         self.assertIn("function registerPagePeriodCycle", self.script)
         self.assertIn("/page-periods", self.script)
         self.assertIn("item.source_id, item.target_id", self.script)
         self.assertIn("page <= Number(cycle.declared_page)", self.script)
-        self.assertIn("Translates are viewport-only and never stored as dots", self.markup)
+        self.assertNotIn("Period cycle on E<sub>r</sub>", self.markup)
 
     def test_workspace_selector_separates_charts_atlas_and_support_spaces(self):
         self.assertIn('id="support-workspace-select"', self.markup)

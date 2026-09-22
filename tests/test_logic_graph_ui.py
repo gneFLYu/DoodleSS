@@ -12,10 +12,29 @@ import app as app_module
 from app import app
 from domain.logic_graph import build_logic_graph, validate_logic_graph
 from domain.migrations import migrate_project
+from domain.models import Project, Proposition, Workspace
 from domain.seed import demo_project
 
 
 class LogicGraphTest(unittest.TestCase):
+    def test_required_premises_cannot_be_erased_or_malformed_in_review_graph(self):
+        leaf = Proposition("leaf", "manual", "verified leaf", status="verified")
+        claim = Proposition("dependent", "differential", "derived map", status="verified",
+                            premise_ids=["leaf"], conclusion={"required_admitted_premises": True})
+        legacy = Proposition("legacy", "manual", "independent fact", status="verified")
+        project = Project("proof-gate", "proof gate", [Workspace("ws", "ws", propositions=[leaf, claim, legacy])])
+        for premises in ([], None, "leaf", [None], [[]], [""]):
+            with self.subTest(premises=premises):
+                claim.premise_ids = premises
+                graph = build_logic_graph(project)
+                nodes = {node["record_id"]: node for node in graph["nodes"] if node["kind"] == "proposition"}
+                self.assertFalse(nodes["dependent"]["admitted"])
+                self.assertIn("premises:invalid-or-required", nodes["dependent"]["blocked_by"])
+                self.assertTrue(nodes["legacy"]["admitted"])
+        claim.premise_ids = ["leaf"]
+        restored = next(node for node in build_logic_graph(project)["nodes"] if node.get("record_id") == "dependent")
+        self.assertTrue(restored["admitted"])
+
     def test_graph_has_typed_nodes_and_evidence_edges(self):
         graph = build_logic_graph(migrate_project(demo_project()))
         self.assertEqual(validate_logic_graph(graph), [])

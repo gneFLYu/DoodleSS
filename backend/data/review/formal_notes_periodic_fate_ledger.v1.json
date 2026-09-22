@@ -228,7 +228,7 @@
     {
       "id": "FN-2I-005",
       "kind": "differential-and-zero",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.2i.d8.unit-c2-k0-d1",
         "pc.2i.d8.unit-c2-k0-d2"
@@ -242,12 +242,12 @@
     {
       "id": "FN-2I-006",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.xh1-cone-k0-d0"],
       "target_period_class_ids": ["pc.2i.d8.h1cubed-cone-k1-d0"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.e3.d"],
-      "source_ref": "formal_notes.tex:401-420"
+      "source_ref": "formal_notes.tex:401-420; repaired E2 coefficient Euler sequence and BBHS20 Propositions 5.21,5.25,5.27"
     },
     {
       "id": "FN-2I-007",
@@ -272,7 +272,7 @@
     {
       "id": "FN-2I-009",
       "kind": "differential-family",
-      "status": "verified-pattern",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.2i.d8.a2-cone-k0-d2",
         "pc.2i.d8.a2-cone-k0-d6"
@@ -283,12 +283,12 @@
       ],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:450-470"
+      "source_ref": "formal_notes.tex:450-470; BBHS20 Propositions 5.25,5.28 and explicit earlier-target exclusion"
     },
     {
       "id": "FN-2I-010",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.2i.d8.h2-c2-k1-d2",
         "pc.2i.d8.h2-c2-k1-d6",
@@ -301,47 +301,47 @@
       ],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:472-482"
+      "source_ref": "formal_notes.tex:472-482; FN-2I-009 and independent H2/H6, positive-j Tate cycle certificates"
     },
     {
       "id": "FN-2I-011",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h1sq-cone-k0-d3"],
       "target_period_class_ids": ["pc.2i.d8.h2cubed-cone-k2-d3"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:487-494"
+      "source_ref": "formal_notes.tex:487-494; DKLLW24 Table 8, H2/H6 Tate cycles and nonzero quotient target"
     },
     {
       "id": "FN-2I-012",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d3"],
       "target_period_class_ids": ["pc.2i.d8.unit-c2-k2-d4"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:496-499"
+      "source_ref": "formal_notes.tex:496-499; FN006/FN011 product obstruction and exact E7 two-layer quotient"
     },
     {
       "id": "FN-2I-013",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d4"],
       "target_period_class_ids": ["pc.2i.d8.unit-c4-k2-d5"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:501-506"
+      "source_ref": "formal_notes.tex:501-506; DKLLW24 main:1694-1702 and exact E7 four-layer quotient"
     },
     {
       "id": "FN-2I-014",
       "kind": "differential-family",
-      "status": "admitted-pattern",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h1-cone-k0-d1"],
       "target_period_class_ids": ["pc.2i.d8.unit-c2-k2-d2"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:508-516"
+      "source_ref": "formal_notes.tex:508-516; repaired BBHS20 C4<i> d13 transfer and E2 Euler-kernel exclusion"
     },
     {
       "id": "FN-2I-015",
@@ -359,67 +359,72 @@
     {
       "id": "FN-2I-016",
       "kind": "differential-family",
-      "status": "verified-pattern",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h2-cone-k0-d2"],
       "target_period_class_ids": ["pc.2i.d8.h1sq-cone-k2-d3"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:520-526"
+      "source_ref": "formal_notes.tex:520-526; FN009 d11 zero-product obstruction and earlier incoming-source exclusion"
     },
     {
       "id": "FN-2I-017",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h2-c2-k0-d1"],
       "target_period_class_ids": ["pc.2i.d8.h1sq-cone-k2-d2"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:529-536"
+      "source_ref": "formal_notes.tex:529-536; repaired DKLLW24 Table 8 row 22 product obstruction and finite incoming-source exclusion",
+      "verification_scope": "Target constant is zero on E23 itself by the published integer d23 product; unique earlier incoming d9 kills only the surviving two-layer. Two blocks checked independently, no D4 permanence."
     },
     {
       "id": "FN-2I-018",
       "kind": "differential-family",
-      "status": "verified-pattern",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.a2-cone-k0-d4"],
       "target_period_class_ids": ["pc.2i.d8.h2cubed-cone-k3-d4"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:540-555"
+      "source_ref": "formal_notes.tex:540-555; DKLLW24 Table 9 row 19 and actual Euler-product target quotient",
+      "verification_scope": "Nonzero K after quotient by K+L; permanent D8 repetition only, not D4 or cancellation of g in HFPSS."
     },
     {
       "id": "FN-2I-019",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h2-cone-k1-d7"],
       "target_period_class_ids": ["pc.2i.d8.a2-cone-k6-d2"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:558-563"
+      "source_ref": "formal_notes.tex:558-563; table_Q8.tex:407; DKLLW24 Table 8 d23 product and finite E21 quotient",
+      "verification_scope": "Only the odd I31 source and I62X+I62Y target kernel; permanent D8 and forward g, no D4 unit."
     },
     {
       "id": "FN-2I-020",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.h2cubed-cone-k0-d7"],
       "target_period_class_ids": ["pc.2i.d8.unit-c4-k6-d3"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:565-570"
+      "source_ref": "formal_notes.tex:565-570; table_Q8.tex:408; DKLLW24 Table 8 product, exact Euler image and finite E21 quotient",
+      "verification_scope": "The low two-column map is [1,1] to the four constant; retain its Euler-product kernel. Permanent D8 repetition only."
     },
     {
       "id": "FN-2I-021",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.2i.d8.unit-c4-k2-d3"],
       "target_period_class_ids": ["pc.2i.d8.h2-cone-k7-d5"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:572-577"
+      "source_ref": "formal_notes.tex:572-577; table_Q8.tex:409; DKLLW24 Table 8 d23 product and finite E21 quotient",
+      "verification_scope": "Four constant to odd I31 constant, plus separately justified positive-filtration Tate translate; no assumed HFPSS inverse-g period."
     },
     {
       "id": "FN-3I-001",
       "kind": "differential-and-zero",
-      "status": "source-proved",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.3i.d8.v1sq-cone-k0-d0",
         "pc.3i.d8.h1xv1-cone-k0-d0"
@@ -428,22 +433,24 @@
       "zero_map_period_class_ids": ["pc.3i.d8.h1xv1-cone-k0-d0"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.e3.d"],
-      "source_ref": "formal_notes.tex:678-705"
+      "source_ref": "formal_notes.tex:678-700; DKLLW24 main.tex:1094-1111,1941-1956,2045-2058,2868",
+      "verification_scope": "The two displayed d3 equations and their h1 products only; not the later all-survivors-2-torsion or d5 assertions."
     },
     {
       "id": "FN-3I-002",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.a2-cone-k2-d3"],
       "target_period_class_ids": ["pc.3i.d8.xyh1sq-cone-k3-d3"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.e5.d2"],
-      "source_ref": "formal_notes.tex:707-718"
+      "source_ref": "formal_notes.tex:472-482,678-728; independent FN010 Euler image and finite incoming-source exclusion",
+      "verification_scope": "Nonzero d5 on the finite A line, its positive-filtration Tate translates and 16-stem pattern; no Jan29 or later three-sigma premise. D4 is only a 5-cycle here."
     },
     {
       "id": "FN-3I-003",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.yh2xh1v1-cone-k0-d1"],
       "target_period_class_ids": ["pc.3i.d8.xcubed-cone-k1-d2"],
       "same_object_period_id": "per.hfpss.d8",
@@ -453,7 +460,7 @@
     {
       "id": "FN-3I-004",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.xcubed-cone-k0-d2"],
       "target_period_class_ids": ["pc.3i.d8.v1sq-c2-k2-d2"],
       "same_object_period_id": "per.hfpss.d8",
@@ -463,7 +470,7 @@
     {
       "id": "FN-3I-005",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.xy-cone-k0-d2"],
       "target_period_class_ids": ["pc.3i.d8.h1xv1-h1-cone-k1-d2"],
       "same_object_period_id": "per.hfpss.d8",
@@ -473,7 +480,7 @@
     {
       "id": "FN-3I-006",
       "kind": "matrix-differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.xy-cone-k0-d1"],
       "target_period_class_ids": ["pc.3i.d8.target-cell-line11-cone-k1-d1"],
       "same_object_period_id": "per.hfpss.d8",
@@ -486,7 +493,7 @@
     {
       "id": "FN-3I-007",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.xyh1sq-cone-k0-d3"],
       "target_period_class_ids": ["pc.3i.d8.v1sq-c2-k3-d4"],
       "same_object_period_id": "per.hfpss.d8",
@@ -496,7 +503,7 @@
     {
       "id": "FN-3I-008",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.3i.d8.xyh1-cone-k0-d3"],
       "target_period_class_ids": ["pc.3i.d8.x2h1-cone-k2-d4"],
       "same_object_period_id": "per.hfpss.d8",
@@ -506,7 +513,7 @@
     {
       "id": "FN-3I-009",
       "kind": "differential-family",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.3i.d8.a2-cone-k0-d4",
         "pc.3i.d8.x2h1-cone-k0-d4"
@@ -522,7 +529,10 @@
     {
       "id": "FN-3I-010",
       "kind": "permanent-and-differential-families",
-      "status": "source-proved",
+      "status": "review",
+      "source_status": "withdrawn-proof",
+      "printed_status": "source-proved",
+      "authority_reason": "User withdraws the Jan.29 proof; earlier independently supported propositions prevail.",
       "source_period_class_ids": [
         "pc.3i.d8.h1xv1-cone-k1-d0",
         "pc.3i.d8.a2-cone-k0-d2",
@@ -534,12 +544,12 @@
       ],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:799-845"
+      "source_ref": "formal_notes.tex:799-845,849-860; table_Q8.tex:469,474 (same disputed formulas, not independent proofs)"
     },
     {
       "id": "FN-MIX-001",
       "kind": "differential-family",
-      "status": "source-proved",
+      "status": "verified",
       "source_period_class_ids": [
         "pc.mix-i2j.d8.v1sq-cone-k0-d0",
         "pc.mix-i2j.d8.h1xv1-cone-k0-d0"
@@ -550,7 +560,7 @@
       ],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:865-885"
+      "source_ref": "formal_notes.tex:881-901"
     },
     {
       "id": "FN-MIX-002",
@@ -560,7 +570,7 @@
       "target_period_class_ids": ["pc.mix-i2j.d8.xyh1sq-cone-k3-d3"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:887-900"
+      "source_ref": "formal_notes.tex:903-916"
     },
     {
       "id": "FN-MIX-003",
@@ -570,17 +580,17 @@
       "target_period_class_ids": ["pc.mix-i2j.d8.xyh1sq-cone-k1-d1"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:902-916"
+      "source_ref": "formal_notes.tex:918-932; table_Q8.tex:511-512 (coefficient-choice conflict)"
     },
     {
       "id": "FN-MIX-004",
       "kind": "differential",
-      "status": "review",
+      "status": "verified",
       "source_period_class_ids": ["pc.mix-i2j.d8.yh2xh1v1-cone-k0-d1"],
       "target_period_class_ids": ["pc.mix-i2j.d8.xcubed-cone-k1-d2"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:918-935"
+      "source_ref": "formal_notes.tex:357-379,934-951; omega/Euler and target-survival certificate"
     },
     {
       "id": "FN-MIX-005",
@@ -596,17 +606,21 @@
       ],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": [],
-      "source_ref": "formal_notes.tex:937-954"
+      "source_ref": "formal_notes.tex:953-970; table_Q8.tex:514-515"
     },
     {
       "id": "FN-MIX-006",
       "kind": "differential-family",
-      "status": "review",
-      "source_period_class_ids": ["pc.mix-i2j.d8.xcubed-cone-k0-d2"],
-      "target_period_class_ids": ["pc.mix-i2j.d8.xyh1-cone-k3-d3"],
+      "status": "verified",
+      "source_period_class_ids": ["pc.mix-i2j.d8.xcubed-cone-k0-d2", "pc.mix-i2j.d8.xcubed-cone-k0-d6"],
+      "target_period_class_ids": ["pc.mix-i2j.d8.xyh1-cone-k3-d3", "pc.mix-i2j.d8.xyh1-cone-k3-d7"],
       "same_object_period_id": "per.hfpss.d8",
       "pattern_period_ids": ["pat.d4"],
-      "source_ref": "formal_notes.tex:956-975"
+      "source_ref": "formal_notes.tex:450-470,496-499,972-991; table_Q8.tex:527",
+      "verification_method": "omega-Euler product and finite E11 target survival",
+      "printed_coefficient": "1 (preserved for review)",
+      "verified_coefficient": "zeta^2",
+      "pattern_guard": "D2 and D6 anchors are separately verified; each repeats by D8 and forward g, not a D4 unit."
     }
   ],
   "conditional_comparison_classes": [

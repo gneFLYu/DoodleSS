@@ -82,12 +82,115 @@ class StudioApiTest(unittest.TestCase):
         d3 = next(item for item in workspace["differentials"] if item["id"] == "diff_three_d3")
         self.assertEqual(d3["period_stem"], 8)
         d5 = [item for item in workspace["differentials"] if item["page"] == 5]
-        self.assertEqual(len(d5), 5)
+        derived_id = "formal_diff_three_d5_tate_positive_derived"
+        self.assertEqual(len([item for item in d5 if item["id"] != derived_id]), 5)
+        derived = [item for item in d5 if item["id"] == derived_id]
+        self.assertEqual(len(derived), 1)
+        self.assertEqual(derived[0]["status"], "verified")
+        claim = next(item for item in workspace["propositions"] if item["id"] == derived[0]["proposition_id"])
+        metadata = claim["conclusion"]
+        self.assertEqual(claim["status"], "verified")
+        self.assertEqual(metadata["source_status"], "independently-verified")
+        self.assertEqual(metadata["source_blockers"], [])
+        self.assertEqual(metadata["evidence_kind"], "Tate-comparison-derived")
+        self.assertEqual(metadata["comparison_translation"],
+                         {"g_exponent": -2, "D_exponent": 4, "spectral_sequence": "tate"})
+        self.assertEqual((metadata["comparison_source_filtration"], metadata["comparison_target_filtration"]), (2, 7))
+        self.assertIn("FN-3I-002", metadata["derived_from"])
+        certificate = metadata["verification_certificate"]
+        self.assertEqual(certificate["status"], "verified")
+        self.assertEqual(certificate["method"], "Euler image and finite incoming-source exclusion")
+        self.assertIn("FN-2I-010", certificate["premises"])
+        self.assertTrue(certificate["source_refs"])
+        self.assertFalse({"FN-3I-010", "FN-3I-010-pc"} & set(certificate["premises"]))
         self.assertTrue(all(item["period_stem"] == 16 for item in d5))
         d9 = [item for item in workspace["differentials"] if item["page"] == 9]
-        self.assertEqual(len(d9), 5)
-        self.assertTrue(all(item["period_stem"] == 32 for item in d9))
-        self.assertEqual(next(item for item in workspace["differentials"] if item["page"] == 11)["period_stem"], 32)
+        original_d9 = [item for item in d9 if item["id"] in {"diff_three_d9_25", "diff_three_d9_25b"}]
+        self.assertEqual(len(original_d9), 2)
+        self.assertTrue(all(item["period_stem"] == 64 and item["status"] == "verified" for item in original_d9))
+        siblings = [item for item in d9 if item["id"] in {
+            "formal_diff_three_d9_t_D7_sibling", "formal_diff_three_d9_b_D7_sibling"}]
+        self.assertEqual(len(siblings), 2)
+        self.assertTrue(all(item["period_stem"] == 64 and item["status"] == "verified" for item in siblings))
+        claims = {item["id"]: item for item in workspace["propositions"]}
+        for item in original_d9 + siblings:
+            metadata = claims[item["proposition_id"]]["conclusion"]
+            self.assertEqual(metadata["paired_pattern_stem"], 32)
+            self.assertIn(metadata["coefficient_parameter"]["id"], {"three_sigma_d9_CD3", "three_sigma_d9_CD7"})
+            self.assertEqual(metadata["verification_certificate"]["method"],
+                             "Euler products, finite target survival and h1 detection")
+            self.assertTrue(metadata["verification_certificate"]["no_withdrawn_premise"])
+        derived_d9 = [item for item in d9 if item["label"].startswith("DER-")]
+        self.assertEqual(len(derived_d9), 10)
+        even_facts = {"DER-3I-D9-P", "DER-3I-D9-Q", "DER-3I-D9-C"}
+        self.assertEqual(sum(item["label"] in even_facts for item in derived_d9), 6)
+        for item in derived_d9:
+            metadata = claims[item["proposition_id"]]["conclusion"]
+            self.assertEqual(item["period_stem"], 64)
+            if item["label"] in even_facts:
+                self.assertEqual(item["status"], "verified")
+                self.assertEqual(claims[item["proposition_id"]]["status"], "verified")
+                self.assertEqual(metadata["source_status"], "independently-verified")
+                self.assertEqual(metadata["verification_certificate"]["status"], "verified")
+                self.assertEqual(metadata["verification_certificate"]["method"], "Euler image, finite g-injection and h1 lift")
+                self.assertFalse({"FN-3I-010", "FN-3I-010-pc"} & set(metadata["derived_from"]))
+            else:
+                self.assertIn(item["label"], {"DER-3I-EULER-D9-B", "DER-3I-EULER-D9-C"})
+                self.assertEqual(item["status"], "verified")
+                self.assertEqual(claims[item["proposition_id"]]["status"], "verified")
+                self.assertEqual(metadata["source_status"], "independently-verified")
+                self.assertEqual(metadata["verification_certificate"]["status"], "verified")
+                self.assertEqual(metadata["verification_certificate"]["method"],
+                                 "Euler products, finite target survival and h1 detection")
+                self.assertFalse({"FN-3I-010", "FN-3I-010-pc"} & set(metadata["derived_from"]))
+        d11 = [item for item in workspace["differentials"] if item["page"] == 11]
+        original_d11_ids = {"diff_three_d11_30", "formal_diff_fn-3i-009_2"}
+        cd1_d11_id = "formal_diff_three_d11_c_D1_euler_forced"
+        self.assertEqual(len(d11), 3)
+        self.assertEqual({item["id"] for item in d11}, original_d11_ids | {cd1_d11_id})
+        nodes = {item["id"]: item for item in workspace["classes"]}
+        original_d11_grades = {
+            "diff_three_d11_30": ((30, 2), (29, 13)),
+            "formal_diff_fn-3i-009_2": ((31, 3), (30, 14)),
+        }
+        for item in (row for row in d11 if row["id"] in original_d11_ids):
+            metadata = claims[item["proposition_id"]]["conclusion"]
+            self.assertEqual(metadata["fact_id"], "FN-3I-009")
+            self.assertEqual(tuple((nodes[item[key]]["grade"]["stem"], nodes[item[key]]["grade"]["filtration"])
+                                   for key in ("source_id", "target_id")), original_d11_grades[item["id"]])
+            self.assertEqual(item["status"], "verified")
+            self.assertEqual(claims[item["proposition_id"]]["status"], "verified")
+            self.assertEqual(item["period_stem"], 32)
+            self.assertFalse(metadata["period_is_invertible"])
+            self.assertEqual(metadata["verification_certificate"]["method"],
+                             "C4 restriction detection and finite E11 quotient")
+            self.assertTrue(metadata["verification_certificate"]["no_withdrawn_premise"])
+        cd1 = next(item for item in d11 if item["id"] == cd1_d11_id)
+        claim = claims[cd1["proposition_id"]]
+        metadata = claim["conclusion"]
+        self.assertEqual(cd1["label"], "DER-3I-EULER-CD1-D11")
+        self.assertEqual(metadata["fact_id"], cd1["label"])
+        self.assertEqual((cd1["status"], claim["status"], metadata["source_status"]),
+                         ("verified", "verified", "independently-verified"))
+        self.assertEqual((cd1["period_stem"], metadata["period_stem"]), (64, 64))
+        self.assertTrue(metadata["period_is_invertible"])
+        self.assertEqual(metadata["coefficient_scope"], "exact-port")
+        for key, grade, pattern, two in (("source_id", (9, 1), "S11", 0), ("target_id", (8, 12), "S40", 1)):
+            node = nodes[cd1[key]]
+            self.assertEqual((node["grade"]["stem"], node["grade"]["filtration"]), grade)
+            self.assertEqual((node["style"]["e2_pattern"], node["style"].get("two_valuation", 0),
+                              node["style"].get("j_order", 0)), (pattern, two, 0))
+        certificate = metadata["verification_certificate"]
+        self.assertEqual((certificate["status"], certificate["method"]),
+                         ("verified", "Euler13 product and complete finite incoming inventory"))
+        self.assertEqual(certificate["period"],
+                         {"D_power": 8, "stem": 64, "forward_g": True, "D5_block_inferred": False})
+        self.assertIn("DKLLW24 Table 9 d13", certificate["premises"])
+        self.assertTrue(certificate["source_refs"])
+        self.assertTrue(certificate["no_withdrawn_premise"])
+        self.assertFalse({"FN-3I-010", "FN-3I-010-pc"} & set(certificate["premises"]))
+        self.assertEqual(metadata["source_blockers"], [])
+        self.assertEqual({item["page"] for item in workspace["differentials"] if item["page"] >= 19}, {19, 23})
 
     def test_two_sigma_differential_periods_follow_the_documented_families(self):
         project = self.client.get("/api/project").get_json()
@@ -99,7 +202,12 @@ class StudioApiTest(unittest.TestCase):
         self.assertEqual(periods["diff_two_d5_xh1"], 8)
         self.assertEqual(periods["diff_two_d9"], 32)
         self.assertEqual(periods["diff_two_d11"], 32)
-        self.assertEqual(periods["diff_two_d13"], 32)
+        # FN-2I-018 has only the permanent D^8 repeat. The old 32 fallback
+        # killed the FN-2I-019 target before its d21 page.
+        self.assertEqual(periods["diff_two_d13"], 64)
+        d13 = next(item for item in workspace["differentials"] if item["id"] == "diff_two_d13")
+        claim = next(item for item in workspace["propositions"] if item["id"] == d13["proposition_id"])
+        self.assertEqual(claim["conclusion"]["period_stem"], d13["period_stem"])
 
     def test_legacy_project_periods_are_migrated_without_overwriting_existing_values(self):
         project = app_module.demo_project()
@@ -116,7 +224,8 @@ class StudioApiTest(unittest.TestCase):
         script = (Path(__file__).resolve().parents[1] / "backend" / "static" / "app.js").read_text(encoding="utf-8")
         self.assertIn("function liveClassesAt", script)
         self.assertIn("item.page === ws.page", script)
-        self.assertIn("diff.period_stem", script)
+        self.assertIn("differential.period_stem", script)
+        self.assertIn("function periodsForDifferential", script)
         self.assertIn("__add_page", script)
         self.assertIn("Upper half-plane", script)
         self.assertIn("function periodsForClassOnPage", script)

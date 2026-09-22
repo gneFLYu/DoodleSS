@@ -181,7 +181,6 @@ def research_project() -> Project:
     )
     sigma.classes = [
         _node("sig_a", "a_{\\sigma_i}", -1, 1, {"sigma_i": -1}, state="permanent", notes="Euler class treated as a permanent cycle in the formal notes."),
-        _node("sig_xplusy", "\\{x+y\\}u_{\\sigma_i}", -1, 1, {"sigma_i": -1}, state="unknown", notes="DKLLW24 Table 5 source-backed E2 coordinate."),
         _node("sig_x3", "x^3D^4u_{\\sigma_i}", 32, 3, {"sigma_i": -1}, state="unknown", notes="Used in a non-transfer argument."),
     ]
     sigma.propositions = [

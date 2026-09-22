@@ -169,6 +169,10 @@ class Differential:
     manual_periodicity_translation: int = 0
     manual_periodicity_exponents: list[int] = field(default_factory=list)
     linear_map_id: str | None = None
+    # Presentation basis change, separate from the transported-coordinate map.
+    display_coefficient: dict[str, Any] = field(default_factory=dict)
+    # Opt-in proof dependency gate; retained if its proposition is removed.
+    required_admitted_premises: bool = False
 
 
 @dataclass
@@ -187,6 +191,9 @@ class DifferentialEvent:
     proposition_id: str = ""
     source_refs: list[str] = field(default_factory=list)
     status: str = "claimed"
+
+    # Historical provenance: a withdrawn proof cannot become a legacy event.
+    required_admitted_premises: bool = False
 
 
 @dataclass

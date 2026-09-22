@@ -10,7 +10,12 @@ from .dkllw_fact_chain import ensure_dkllw_fact_chain
 from .reu_fact_chain import ensure_reu_fact_chain
 from .fate import sync_project_fates
 from .actions import ensure_c3_action
+from .atlas_transport import ensure_q8_atlas_transports
 from .grading import ensure_q8_atlas
+from .e2_import import materialize_all_q8_thom_e2_patterns
+from .formal_notes_chart import ensure_formal_notes_chart
+from .document_baseline import apply_document_baseline
+from .published_differentials import ensure_published_differential_charts
 from .manual_periodicity import (
     format_multiplicative_latex,
     normalize_multiplicative_expression,
@@ -425,6 +430,46 @@ def migrate_dkl24_q8_corrections(project: Project) -> Project:
                     product.right_class_id = replacement_id
             sigma.classes = [item for item in sigma.classes if item.id != old_id]
 
+        # The Euler class is the Table-5 class {x+y}u_sigma_i, not a second
+        # generator in the same cell. Collapse every historical/imported alias
+        # onto sig_a while preserving all graph references.
+        euler = next((item for item in sigma.classes if item.id == "sig_a"), None)
+        if euler:
+            duplicate_ids = {
+                item.id for item in sigma.classes
+                if item.id in {
+                    "sig_xplusy",
+                    "e2_sigma_xplusy_usigma_i",
+                    "e2_sigma_i_cell_s7_f1_dm1",
+                }
+            }
+            for old_id in duplicate_ids:
+                for proposition in sigma.propositions:
+                    for key, value in proposition.conclusion.items():
+                        if value == old_id:
+                            proposition.conclusion[key] = euler.id
+                for differential in sigma.differentials:
+                    if differential.source_id == old_id:
+                        differential.source_id = euler.id
+                    if differential.target_id == old_id:
+                        differential.target_id = euler.id
+                for event in sigma.differential_events:
+                    if event.class_id == old_id:
+                        event.class_id = euler.id
+                    if event.counterpart_class_id == old_id:
+                        event.counterpart_class_id = euler.id
+                for fate in sigma.fates:
+                    if fate.class_id == old_id:
+                        fate.class_id = euler.id
+                for product in project.cross_graded_products:
+                    if product.left_workspace_id == sigma.id and product.left_class_id == old_id:
+                        product.left_class_id = euler.id
+                    if product.right_workspace_id == sigma.id and product.right_class_id == old_id:
+                        product.right_class_id = euler.id
+                for sector in project.grading_sectors:
+                    sector.class_ids = [euler.id if item == old_id else item for item in sector.class_ids]
+            sigma.classes = [item for item in sigma.classes if item.id not in duplicate_ids]
+
     known = {item.id for item in project.period_families}
     if integer and "period_integer_D8" not in known:
         project.period_families.extend([
@@ -478,6 +523,9 @@ def ensure_periodic_rendering_contract(project: Project) -> Project:
         "ws_integer", "ws_sigma_i", "ws_2sigma_i", "ws_3sigma_i",
         "ws_sigma_i_2sigma_j",
     }
+    computed_q8_workspaces.update(
+        sector.workspace_id for sector in project.grading_sectors if sector.workspace_id
+    )
     for workspace in project.workspaces:
         if workspace.id not in computed_q8_workspaces:
             continue
@@ -504,6 +552,19 @@ def ensure_periodic_rendering_contract(project: Project) -> Project:
             "RECORD.md sections 2.4 and 10.4; "
             "formal_notes_periodic_fate_ledger.v1.json"
         )
+        # Every RO(Q8) grading uses the fate of the integer D^m classes.  The
+        # pagewise periods are consequences of the same 3-cycle D and the
+        # Leibniz rule, not independently guessed periods for each sector.
+        rendering["page_horizontal_periods"] = [
+            {"from_page": 2, "to_page": 4, "stem": 8, "label": "D"},
+            {"from_page": 5, "to_page": 6, "stem": 16, "label": "D^2"},
+            {"from_page": 7, "to_page": 7, "stem": 32, "label": "D^4"},
+            {"from_page": 8, "to_page": None, "stem": 64, "label": "D^8"},
+        ]
+        rendering["page_horizontal_period_source"] = (
+            "Integer-page D^m fate and the Leibniz rule; D is a 3-cycle, "
+            "so every E3 atlas chart and d3 family is 8-stem periodic."
+        )
     return project
 
 
@@ -514,10 +575,15 @@ def migrate_project(project: Project) -> Project:
     ensure_dkllw_fact_chain(project)
     ensure_reu_fact_chain(project)
     ensure_q8_atlas(project)
+    materialize_all_q8_thom_e2_patterns(project)
+    ensure_published_differential_charts(project)
+    ensure_formal_notes_chart(project)
     ensure_c3_action(project)
     migrate_dkl24_q8_corrections(project)
     ensure_source_backed_q8_periodicity_rules(project)
     ensure_periodic_rendering_contract(project)
+    apply_document_baseline(project)
+    ensure_q8_atlas_transports(project)
     ensure_q8_atlas(project)
     migrate_legacy_period_families(project)
     sync_project_fates(project)

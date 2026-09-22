@@ -74,6 +74,11 @@ def prepare_project_import(
     except (AttributeError, KeyError, TypeError, ValueError) as error:
         raise ProjectImportValidationError(f"Malformed Studio project JSON: {error}") from error
 
+    # Validate the submitted primary graph before migrations repair generated
+    # tables.  Otherwise a damaged endpoint inside a migration-managed table
+    # can be silently replaced by the canonical copy and escape review.
+    _validate_project_references(candidate)
+
     # Fates and events are caches derived from the primary class/differential
     # records.  Never import a stale cache as mathematical evidence.
     for workspace in candidate.workspaces:

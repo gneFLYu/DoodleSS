@@ -81,7 +81,7 @@ def prepare_page_period_cycle(
         )
         if selected is None or selected.archived:
             raise PagePeriodicityError("cycle_class_id must select an active class.")
-        if selected.page > page or not class_is_live_on_page(workspace, selected.id, page):
+        if selected.page > page or not class_is_live_on_page(workspace, selected.id, page, project=project):
             raise PagePeriodicityError(
                 f"The selected cycle is not live on E_{page}."
             )
@@ -211,6 +211,7 @@ def page_period_status(
             workspace,
             cycle.cycle_class_id,
             transition_page + 1,
+            project=project,
         ):
             return PagePeriodStatus(
                 cycle.id,
@@ -269,6 +270,7 @@ def plan_virtual_period_instances(
             workspace,
             node.id,
             target_page,
+            project=project,
         ):
             skipped.append(
                 {"class_id": class_id, "reason": f"not-live-on-E_{target_page}"}
@@ -585,7 +587,7 @@ def apply_manual_periodicity_retirement(
         )
         if before != after:
             affected_workspaces.add(workspace.id)
-            sync_workspace_fates(workspace)
+            sync_workspace_fates(workspace, project=project)
     for sector in project.grading_sectors:
         sector.class_ids = [
             item for item in sector.class_ids if item not in class_ids

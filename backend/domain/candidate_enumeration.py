@@ -19,6 +19,7 @@ class CandidateEnumerationError(ValueError):
 
 def enumerate_differential_candidates(
     workspace: Workspace, source_id: str, page: int,
+    *, project: Project | None = None,
 ) -> list[Proposition]:
     """Return unpersisted targets compatible with ``d_page`` from ``source_id``.
 
@@ -30,11 +31,11 @@ def enumerate_differential_candidates(
 
     source = _active_class(workspace, source_id)
     _validate_page(page)
-    _validate_live(workspace, source, page, role="source")
+    _validate_live(workspace, source, page, role="source", project=project)
     claimed = _claimed_endpoint_keys(workspace)
 
     result: list[Proposition] = []
-    for target in _live_active_classes(workspace, page):
+    for target in _live_active_classes(workspace, page, project=project):
         if target.id == source.id:
             continue
         if not _has_differential_bidegree(source, target, page):
@@ -63,7 +64,7 @@ def enumerate_comparison_transport_candidates(
 
     _validate_page(page)
     target_source = _active_class(target_workspace, target_source_id)
-    _validate_live(target_workspace, target_source, page, role="selected target-workspace source")
+    _validate_live(target_workspace, target_source, page, role="selected target-workspace source", project=project)
     comparison = next((item for item in project.comparisons if item.id == comparison_id), None)
     if comparison is None:
         raise CandidateEnumerationError(f"Unknown comparison {comparison_id!r}.")
@@ -88,14 +89,14 @@ def enumerate_comparison_transport_candidates(
         target = _find_class(source_workspace, differential.target_id)
         if not source or not target or source.archived or target.archived:
             continue
-        if not class_is_live_on_page(source_workspace, source.id, page):
+        if not class_is_live_on_page(source_workspace, source.id, page, project=project):
             continue
-        if not class_is_live_on_page(source_workspace, target.id, page):
+        if not class_is_live_on_page(source_workspace, target.id, page, project=project):
             continue
         if source.grade.shifted(comparison.grade_shift) != target_source.grade:
             continue
         transported_target_grade = target.grade.shifted(comparison.grade_shift)
-        for target_node in _live_active_classes(target_workspace, page):
+        for target_node in _live_active_classes(target_workspace, page, project=project):
             if target_node.grade != transported_target_grade:
                 continue
             if not _has_differential_bidegree(target_source, target_node, page):
@@ -132,20 +133,21 @@ def _validate_page(page: int) -> None:
         raise CandidateEnumerationError("A differential page must be an integer at least 2.")
 
 
-def _validate_live(workspace: Workspace, node: ClassNode, page: int, *, role: str) -> None:
+def _validate_live(workspace: Workspace, node: ClassNode, page: int, *, role: str,
+                   project: Project | None = None) -> None:
     if node.page > page:
         raise CandidateEnumerationError(
             f"The {role} class {node.id!r} first appears on E_{node.page}, not E_{page}."
         )
-    if not class_is_live_on_page(workspace, node.id, page):
+    if not class_is_live_on_page(workspace, node.id, page, project=project):
         raise CandidateEnumerationError(f"The {role} class {node.id!r} is not live on E_{page}.")
 
 
-def _live_active_classes(workspace: Workspace, page: int) -> Iterable[ClassNode]:
+def _live_active_classes(workspace: Workspace, page: int, *, project: Project | None = None) -> Iterable[ClassNode]:
     for node in workspace.classes:
         if node.archived or node.page > page:
             continue
-        if class_is_live_on_page(workspace, node.id, page):
+        if class_is_live_on_page(workspace, node.id, page, project=project):
             yield node
 
 
