@@ -192,3 +192,17 @@ screenshots/
 *.bmp
 *.tif
 *.tiff
+
+# Local reports and research manuscripts (including TeX source)
+*.[tT][eE][xX]
+/output/
+
+# Local conversation history, handoffs, and superseded explanatory documents
+/.codex/
+/ALGEBRA_ENGINE.md
+/CANVAS_CLEAR.md
+/DOODLE_HFPSS_AGENT_BRIEF.md
+/E2_PRESENTATION_INPUT.md
+/MANUAL_PERIODICITY.md
+/NEW_AGENT_HANDOFF_PROMPTS.md
+/PROJECT_JSON_IO.md

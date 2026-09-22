@@ -208,7 +208,7 @@ Materialize 都会拒绝没有准确出处的输入。
 contexts。它绝不会把整数 `2` 静默解释为 `0`。这不是 bug：相应 scalar
 algebra 尚未实现，必须由未来的专门计算模块处理。
 
-完整 JSON contract 见 [E2_PRESENTATION_INPUT.md](E2_PRESENTATION_INPUT.md)。
+独立的 E2-presentation API 说明保留在本地，不再随仓库分发；请求格式以相关 API 实现及测试为准。
 
 ### PowerShell API 示例
 

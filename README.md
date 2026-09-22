@@ -89,15 +89,19 @@ durable.
 ## Guides
 
 - [Chinese operational user guide](USER_GUIDE.zh-CN.md): launch, chart controls, explicit E2-presentation dialog, read-only candidate enumeration, and capability limits.
-- [Explicit E2-presentation JSON/API contract](E2_PRESENTATION_INPUT.md).
-- [Safe structured algebra preview API](ALGEBRA_ENGINE.md): exact integer/F4 polynomial arithmetic, RO(Q8) grading, bounded SymPy expansion, and rewrite limits.
-- [Full project and legacy ver15.3 JSON contract](PROJECT_JSON_IO.md): complete Studio projects, current-page lossy legacy import/export, staged Preview/Apply, validation, and history semantics.
 - [DKLLW chart conventions](DKLLW_CHART_CONVENTIONS.md): class glyphs, multiplication lines, page roles, and period-cycle eligibility.
 - [DKLLW24 F4 argument audit](DKLLW_F4_ARGUMENT_AUDIT.md): residue/Witt coefficient boundaries, up-to-unit precision, mixed-RO scope guard, and the Danus-style fact-admission DAG.
 - [DKLLW24 Q8 fact chain](DKLLW_Q8_FACT_CHAIN.md): C2/C4 and 2-BSS inputs, Q8 differentials/permanent cycles, implication edges, and strict D8-period object identity.
 - Page-aware periods are compact `PagePeriodCycle` records. Viewport copies are virtual, and legacy materialized copies can be retired only through an ownership-checked preview/apply operation.
-- [Safe workspace canvas clear API](CANVAS_CLEAR.md): archive active dots without deleting mathematics, with one-step undo.
-- [Manual drawing periodicity contract](MANUAL_PERIODICITY.md): named vectors, batched chart copies, conflict handling, JSON provenance, and limits.
+
+## Repository scope
+
+Research manuscripts (`*.tex`), generated reports (`output/`), local task
+history (`.codex/`), and superseded standalone API/handoff notes are kept
+locally and ignored by Git. Current verification references, the operational
+guide used by interaction tests, application data, catalog fixtures, and
+deployment configuration remain tracked. JSON under `backend/data/` is
+runtime or verification input, not disposable report output.
 
 ## Deliberate next increments
 

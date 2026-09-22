@@ -139,4 +139,3 @@ exact Thom normalization is certified.
   \(\zeta^2\); typography alone does not identify classes.
 - Corrected chart files corroborate coordinates and arrow locations only.
   They do not settle aliases, exact units, or proof admission.
-
