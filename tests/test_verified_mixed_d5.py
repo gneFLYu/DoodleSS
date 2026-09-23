@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 
 from domain.migrations import migrate_project
+from domain.coefficient_proofs import BINDING
 from domain.seed import demo_project
 
 
@@ -41,7 +42,7 @@ def by_fact(ws, fact):
     return [p for p in ws.propositions if p.conclusion.get("fact_id") == fact]
 
 
-def test_only_independent_p_family_is_verified_in_all_six_atlases(project):
+def test_p_family_and_separately_proof_bound_c_preserve_unresolved_b_in_all_atlases(project):
     images = [w for w in project.workspaces if w.id == MIXED
               or w.settings.get("atlas_transport", {}).get("source_workspace_id") == MIXED]
     assert {w.id for w in images} == set(MIXED_ATLAS)
@@ -84,13 +85,23 @@ def test_only_independent_p_family_is_verified_in_all_six_atlases(project):
         assert len(q_zeros) == 1 and q_zeros[0].status == "verified"
         assert q_zeros[0].kind == "zero-differential"
         assert q_zeros[0].conclusion["period_stem"] == 8
-        # The independent P/Q zero certificates do not choose c or b or
-        # admit the coupled B differential with its still unknown unit.
-        for fact in ("FN-MIX-002", "FN-MIX-003", "FN-MIX-005"):
+        # The separate c source proof is now bound without a numerical user
+        # assignment. P/Q zero certificates still do not determine b.
+        for fact in ("FN-MIX-002", "FN-MIX-003", "DER-MIX-D5-A-EVEN"):
+            proven = by_fact(ws, fact)
+            assert proven and all(p.status == "source-verified" for p in proven)
+            for p in proven:
+                spec = p.conclusion["coefficient_parameter"]
+                assert spec["id"] == "mixed_d5_A" and spec["value"] is None
+                assert spec["proof_binding"] == BINDING
+                assert next(d for d in ws.differentials if d.proposition_id == p.id).status == "source-verified"
+        for fact in ("FN-MIX-005",):
             pending = by_fact(ws, fact)
             assert pending and all(p.status == "review" for p in pending)
-        for p in by_fact(ws, "FN-MIX-002") + by_fact(ws, "FN-MIX-003") + by_fact(ws, "FN-MIX-005"):
-            assert p.conclusion["coefficient_parameter"]["value"] is None
+        for p in by_fact(ws, "FN-MIX-005"):
+            spec = p.conclusion["coefficient_parameter"]
+            assert spec["id"] == "mixed_d5_B" and spec["value"] is None
+            assert "proof_binding" not in spec
         assert not ws.settings.get("coefficient_assignments")
 
 

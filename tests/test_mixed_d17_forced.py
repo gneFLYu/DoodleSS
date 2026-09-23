@@ -16,6 +16,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 from domain.logic_graph import admitted_proposition_ids
+from domain.coefficient_proofs import BINDING
 from domain.migrations import migrate_project
 from domain.seed import demo_project
 from test_mixed_d5_parameters import MIXED_ATLAS
@@ -117,17 +118,30 @@ def test_finite_proof_records_noninvertible_high_multiplier_and_every_odd_page(p
     assert not {"FN-3I-010", "FN-3I-010-pc"}.intersection(claim.conclusion["derived_from"])
 
 
-def test_earlier_mixed_parameter_reviews_are_not_promoted_or_assigned(project):
+def test_proof_bound_c_does_not_promote_remaining_mixed_units_or_assign_settings(project):
     for workspace in images(project):
         assignments = workspace.settings.get("coefficient_assignments", {})
         assert not {PARAMETER, "mixed_d5_A", "mixed_d5_B"}.intersection(assignments)
-        for fact in ("FN-MIX-002", "FN-MIX-003", "FN-MIX-005", "DER-MIX-D5-A-EVEN",
+        for fact in ("FN-MIX-002", "FN-MIX-003", "DER-MIX-D5-A-EVEN"):
+            rows = [row for row in workspace.differentials if row.label == fact]
+            assert rows and all(row.status == "source-verified" for row in rows)
+            for row in rows:
+                claim = next(p for p in workspace.propositions if p.id == row.proposition_id)
+                assert claim.status == "source-verified"
+                spec = claim.conclusion["coefficient_parameter"]
+                assert spec["id"] == "mixed_d5_A" and spec["value"] is None
+                assert spec["proof_binding"] == BINDING
+        for fact in ("FN-MIX-005",
                      "DER-MIX-D9-P-D2", "DER-MIX-D9-P-D6", "DER-MIX-D9-Q-D2", "DER-MIX-D9-Q-D6"):
             rows = [row for row in workspace.differentials if row.label == fact]
             assert rows and all(row.status == "review" for row in rows)
             for row in rows:
                 claim = next(p for p in workspace.propositions if p.id == row.proposition_id)
                 assert claim.status == "review"
+                if fact == "FN-MIX-005":
+                    spec = claim.conclusion["coefficient_parameter"]
+                    assert spec["id"] == "mixed_d5_B" and spec["value"] is None
+                    assert "proof_binding" not in spec
 
 
 def test_migration_restores_all_six_rows_and_is_idempotent(project):

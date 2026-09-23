@@ -2,7 +2,7 @@
   "schema_version": 1,
   "id": "DER-MIX-PHI-B-D5-A-COEFFICIENT",
   "status": "independently-verified-source-audit",
-  "runtime_admission": false,
+  "runtime_admission": "conditional-proof-binding",
   "workspace_id": "ws_sigma_i_2sigma_j",
   "coefficient_parameter_id": "mixed_d5_A",
   "coefficient_value": 3,
@@ -81,11 +81,10 @@
   ],
   "integration_requirements": {
     "proof_bound_parameter_resolution": true,
-    "source_parameter_binding": {
-      "kind": "coefficient-proof",
+    "proof_binding": {
       "workspace_id": "ws_sigma_i_2sigma_j",
       "parameter_id": "mixed_d5_A",
-      "proposition_id": "formal_prop_der-mix-phi-b-d5-a-coefficient"
+      "proposition_id": "coefficient_proof_mixed_d5_A"
     },
     "consumer_raw_value": null,
     "root_proof_requirements": [
@@ -105,6 +104,7 @@
     "do_not_assign_settings_automatically": true,
     "atlas_images": 6,
     "reflected_images_use_existing_Frobenius_once": true,
-    "not_yet_integrated": true
+    "not_yet_integrated": false,
+    "implementation": "coefficient_proofs.ensure_coefficient_proofs registers once; fate.resolve_raw_coefficient_parameter strictly checks the current proof and its qualified differential premises. The JSON alone never assigns settings or guarantees admission."
   }
 }

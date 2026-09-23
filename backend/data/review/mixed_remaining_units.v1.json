@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "id": "MIXED-REMAINING-UNITS-AUDIT",
+  "status": "underdetermined",
+  "workspace_id": "ws_sigma_i_2sigma_j",
+  "runtime_admission": false,
+  "numeric_units": [],
+  "scope": "Six separately unresolved raw units in the fixed canonical mixed basis. No equality between different parameters is established; this is not a claim of formal algebraic independence. Loading this audit is not a numerical coefficient proof or an instruction to assign settings.",
+  "field_encoding": {"0": 0, "1": 1, "zeta": 2, "zeta^2": 3},
+  "fixed_prerequisite": {
+    "parameter_id": "mixed_d5_A", "value": 3, "even_value": 2,
+    "source": "backend/data/review/mixed_phi_a_coefficient.v1.json",
+    "effect": "c=zeta^2 and c+1=zeta exclude their zero branches. This does not determine any of the six parameters below."
+  },
+  "definitions": {
+    "u": "u_(sigma_i+2sigma_j)", "U": "v1^2u", "A": "(x^2+y^2)u",
+    "B": "(x+y)u", "C": "(h1+xv1)u", "P": "Bh2", "Q": "Ch1",
+    "V": "Bh1", "T": "Bh1^2", "X": "x^3u=Bx^2=By^2", "R": "Ah1=x^2h1u",
+    "g": "kD^3", "J": "The actual permanent Witt lift reducing to j; not an assertion about the raw integral polynomial v1^4/D."
+  },
+  "parameters": [
+    {
+      "parameter_id": "mixed_d5_B", "symbol": "b", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "independently-verified",
+      "equations": ["d5(BD^(2m))=b QkD^(2m)", "d5(BD^(2m+1))=(P+bQ)kD^(2m+1)"],
+      "runtime_rows": ["formal_diff_fn-mix-005_1", "formal_diff_fn-mix-005_2"],
+      "source_refs": ["backend/domain/formal_notes_chart.py:1367-1411", "REU Projects/Note/formal_notes.tex:953-970"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:514-515", "REU Projects/Note/formal_notes.tex:956-957"]},
+      "gap": "The original P or P+Q dichotomy does not exhaust P+bQ over F4. The independent contradiction excludes b=0 only."
+    },
+    {
+      "parameter_id": "mixed_d17_VD3", "symbol": "lambda_17", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "independently-verified",
+      "equations": ["d17(VD^3)=lambda_17 Rk^4D^5"],
+      "runtime_rows": ["formal_diff_mixed_d17_v_D3_forced"],
+      "source_bidegree": [24, 2], "target_bidegree": [23, 19],
+      "source_refs": ["backend/domain/formal_notes_chart.py:2034-2118"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:533"]},
+      "gap": "Finite incoming/outgoing exclusion and the strong line prove a nonzero map of F4 lines, not its normalized unit."
+    },
+    {
+      "parameter_id": "mixed_d19_XD4", "symbol": "lambda_19", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "independently-verified",
+      "equations": ["d19(XD^4)=lambda_19 Vk^5D^6"],
+      "runtime_rows": ["formal_diff_mixed_d19_x_D4_forced"],
+      "source_bidegree": [29, 3], "target_bidegree": [28, 22],
+      "source_refs": ["backend/domain/formal_notes_chart.py:2560-2658"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:537"]},
+      "gap": "The independent CD5/Phi cycle and full finite exclusion determine nonzero only. The printed source Bh2^2D^3 equals XD^4, not XD^3."
+    },
+    {
+      "parameter_id": "mixed_d11_R_D2", "symbol": "mu_11_2", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "finite-source-audit",
+      "equations": ["d11(RD^2)=mu_11_2 Qk^3D^3"],
+      "runtime_rows": ["formal_diff_document_mixed_d11_r_D2"],
+      "source_D_residue_mod_8": 2, "source_bidegree": [15, 3], "target_bidegree": [14, 14],
+      "same_object_period_stem": 64, "nonzero_audit": "R-d11-finite-exclusion",
+      "source_refs": ["output/latex/three_sigma_mixed_verification.tex:prop:mR11", "REU Projects/table_Q8.tex:528"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:528"]},
+      "gap": "The finite proof determines nonzero. It does not give the unit or identify it with the D6-block unit."
+    },
+    {
+      "parameter_id": "mixed_d11_R_D6", "symbol": "mu_11_6", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "finite-source-audit",
+      "equations": ["d11(RD^6)=mu_11_6 Qk^3D^7"],
+      "runtime_rows": ["formal_diff_document_mixed_d11_r_D2"],
+      "source_D_residue_mod_8": 6, "source_bidegree": [47, 3], "target_bidegree": [46, 14],
+      "same_object_period_stem": 64, "nonzero_audit": "R-d11-finite-exclusion",
+      "source_refs": ["output/latex/three_sigma_mixed_verification.tex:prop:mR11", "REU Projects/table_Q8.tex:528 (printed 32-pattern sibling)"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:528 (printed 32-pattern sibling)"]},
+      "gap": "The legacy period32 row covers this occurrence but cannot supply a common raw unit for both D8 blocks without a separate coefficient proof."
+    },
+    {
+      "parameter_id": "mixed_d19_R_D5", "symbol": "mu_19", "value": null, "domain": [1, 2, 3],
+      "numeric_status": "unresolved", "nonzero_status": "finite-source-audit",
+      "equations": ["d19(RD^5)=mu_19 Qk^5D^7"],
+      "runtime_rows": ["formal_diff_document_mixed_d19_r_D5"],
+      "source_D_residue_mod_8": 5, "source_bidegree": [39, 3], "target_bidegree": [38, 22],
+      "same_object_period_stem": 64, "nonzero_audit": "R-d19-finite-exclusion",
+      "source_refs": ["output/latex/three_sigma_mixed_verification.tex:prop:mR19", "REU Projects/Note/record/note.tex:847-851"],
+      "document_default": {"value": 1, "status": "document-adopted-only", "source_refs": ["REU Projects/table_Q8.tex:538"]},
+      "gap": "The repaired high quotient uses [Q]=b^-1[P], not the historical equality Q=P. Its one-dimensional nonzero map still has an undetermined unit."
+    }
+  ],
+  "derived_constraints": {
+    "b_d21": {
+      "parameter_id": "mixed_d5_B", "operation": "inverse", "new_independent_parameter": false,
+      "source_basis": ["PD^4", "QD^4"], "target_basis": ["Y=Xk^5D^7"],
+      "equations": ["d21(PD^4)=Y", "d21(QD^4)=b^-1 Y", "g(P+bQ)D^4=d5(BD^7)"],
+      "matrix": ["1", "b^-1"], "constant_kernel": "P+bQ", "rank": 1,
+      "completed_kernel": "F4{(P+bQ)D^4} plus j F4[[j]]{QD^4}",
+      "cases": [{"b": 1, "inverse": 1, "kernel_vector": [1, 1]}, {"b": 2, "inverse": 3, "kernel_vector": [1, 2]}, {"b": 3, "inverse": 2, "kernel_vector": [1, 3]}],
+      "source_refs": ["backend/data/review/mixed_pq_d21_source.v1.json:154-208"],
+      "scope": "The certificate supplies injectivity only on the stated finite Y-to-gY lines. It does not cancel g on arbitrary HFPSS classes."
+    },
+    "galois": {
+      "rule": "Apply the existing Frobenius to a resolved raw unit only once, then apply any recorded source/target basis ratio.",
+      "psi_b_inverse": "(b^-1)^2=b^-2", "self_fixed_mixed_basis_asserted": false,
+      "numeric_value_forced": false
+    }
+  },
+  "degenerate_detectors": [
+    {
+      "multiplier": "x^2", "equations": ["X=Bx^2", "d5(x^2)=0", "Qx^2=Rh1=2kU", "d5(X)=2b k^2U", "d3(zeta^2 Ck)=2k^2U"],
+      "result": "zero-equals-zero-on-E5", "numeric_constraint": null,
+      "reason": "The putative detector of b is already a primitive d3 image. It cannot be divided out, even after c is fixed.",
+      "source_refs": ["arXiv-2209.01830v3/main.tex:1094-1111,1185,1223,1654-1658", "REU Projects/Note/formal_notes.tex:881-898"],
+      "naming_warning": "The integer d is D^2 x^2, not D^2(x^2+y^2). The latter mistaken identification gives an invalid d5(x^2) formula."
+    },
+    {
+      "multiplier": "h1", "equations": ["V=Bh1", "d5(V)=b kQh1"],
+      "result": "primitive-bo-boundary", "numeric_constraint": null,
+      "reason": "The kQh1 direction is already in the primitive d3 image; multiplication is not an injective surviving detector of b.",
+      "source_refs": ["arXiv-2209.01830v3/main.tex:943,949,1181-1190", "backend/domain/formal_notes_chart.py:1693-1714"]
+    },
+    {
+      "multiplier": "h2", "equations": ["P=Bh2", "Qh2=Ch1h2=0", "d5(P)=b kQh2=0"],
+      "result": "zero-product", "numeric_constraint": null,
+      "source_refs": ["arXiv-2209.01830v3/main.tex:1036,1181", "backend/domain/formal_notes_chart.py:1375-1382"]
+    }
+  ],
+  "historical_branch_exclusion": {
+    "source": "REU Projects/Note/record/note.tex:1146-1239",
+    "explicit_assumption_line": 1158, "assumption": "a=1 in d3(u_2sigma_i)=zeta^a x^2h1u_2sigma_i",
+    "branch_mixed_d3_C": "0", "current_mixed_d3_C": "2zeta kU",
+    "repeated_two_candidate_argument_lines": [1204, 1209],
+    "disposition": "Not the current a=0 branch. Its b=1 dichotomy is not a proof of the current relative unit."
+  },
+  "runtime_naming_traps": [
+    {"parameter_id": "mixed_d11_R", "actual_source": "X=x^3u", "verified_value": 3,
+     "actual_equation": "d11(XD^p)=zeta^2 Vk^3D^(p+1), p=2,6",
+     "not_the_source": "R=x^2h1u", "must_not_reuse_for": ["mixed_d11_R_D2", "mixed_d11_R_D6"],
+     "source_refs": ["backend/domain/formal_notes_chart.py:894-928,1051-1099"]}
+  ],
+  "nonzero_audits": {
+    "R-d11-finite-exclusion": {
+      "D_blocks": [2, 6], "hypotheses": ["c=3", "c+1=2", "b nonzero", "existing exact Phi V-d9 and X-d11 blocks", "RO strong filtration23 bound"],
+      "high_target": "Yp=Qk^7D^(p+5), degree (8p+14,30)",
+      "high_source": "Rk^4D^(p+4), degree (8p+15,19)",
+      "incoming": "r3 finite R zero and bo positive-j only; r5 quotient P+bQ; r7,15,23 primitive h1^3 images; r9,17 empty; r13,21 B supports d5; r19 Rk^2D^(p+3) is Phi d9(VD^(p+2)); r11 remains. S73V companions are primitive d3 sources.",
+      "outgoing": "Q zero at3,5; C targets absent at7,15,23; T targets are nonzero A-d5 images at9,17; Uh1 targets primitive at11,19; X target odd-P d5 image at13; at21 the target is a permanent translate of XD6 (p2) or XD2 (p6), each an independently proved d11 source.",
+      "source_survival": "Low RDp has d3 zero, d5/d9 targets empty and d7 targets already A/bo images or sources. Low S00 incoming has zero finite R image by a Tate d3 primitive. High source d3 input zero, d5 empty, d7 whole U slot absent (odd supports d3, even is C image); d9 input is g2D^-8 VD^(p+5), whose d9 is independently zero via VD7/VD3 certificates.",
+      "conclusion": "Nonzero mu_11_p only; no numerical value and no equality of the two blocks."
+    },
+    "R-d19-finite-exclusion": {
+      "hypotheses": ["c=3", "c+1=2", "b nonzero", "pure H=h2u_2sigma_i zero outgoing through23", "RO strong filtration23 bound"],
+      "high_target": "Y=Qk^7D^5, degree (14,30)", "high_source": "Rk^2D^3, degree (15,11)",
+      "quotient": "d5(Bk6D5)=k7D5(P+bQ), so [Y]=b^-1[Pk7D5]; Pk7D5=g7D^-16 P has zero outgoing through23 by omega/Euler from H.",
+      "incoming": "Same finite dispositions as R-d11 except r11 Rk4D4 is Phi d9(Vk2D3), while r19 remains.",
+      "source_survival": "Low RD5: d3 zero, targets5/9/13/17 empty, targets7/15 absent via A-d5 and bo-d3, target11 entire P/Qk3D6 absent via odd-P/even-B d5 and primitive positive-j. High source incoming d3 S00 zero, d5 empty, d7 whole U slot absent, d9 VD2 independently zero. Its d11 input (16,0) has Tate primitive d3(Uh1 k^-1D)=v1^4D u; comparison injective at target filtration11 gives zero d11.",
+      "conclusion": "Nonzero mu_19 only, not its printed value1."
+    }
+  },
+  "admission_guards": {
+    "assign_settings": false, "infer_unit_from_rank_or_convergence": false,
+    "adopt_document_one_as_proof": false, "share_R_d11_block_parameter": false,
+    "remaining_requirement": "An explicit surviving coefficient detector, normalized restriction/transfer comparison, or chain-level/secondary-operation computation is needed to determine the raw units."
+  }
+}

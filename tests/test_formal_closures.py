@@ -166,7 +166,8 @@ def test_mixed_d5_repeats_are_conditioned_on_two_torsion_not_permanence(source_p
     assert parameter["id"] == "mixed_d5_A" and parameter["affine_offset"] == 1
     for row in rows:
         metadata = props[row.proposition_id].conclusion
-        expected_status = "verified" if metadata["fact_id"] == "FN-MIX-004" else "review"
+        expected_status = ("source-verified" if metadata.get("coefficient_parameter", {}).get("proof_binding")
+                           else "verified" if metadata["fact_id"] == "FN-MIX-004" else "review")
         assert row.status == props[row.proposition_id].status == expected_status
         assert row.period_stem == metadata["period_stem"] == 16
         assert metadata["period_kind"] == "repeated-differential-pattern"

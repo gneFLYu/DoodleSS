@@ -77,8 +77,9 @@
     const proofScopes = [ws], seenProofScopes = new Set([ws]), referencedProofScopes = new Set();
     for (let index = 0; index < proofScopes.length; index++) {
       for (const proof of proofScopes[index].propositions || []) {
-        const locators = proof.conclusion?.external_premises;
-        if (!Array.isArray(locators)) continue;
+        const locators = [...(Array.isArray(proof.conclusion?.external_premises) ? proof.conclusion.external_premises : []),
+          proof.conclusion?.coefficient_parameter?.proof_binding,
+          proof.conclusion?.coefficient_parameter?.source_parameter];
         for (const locator of locators) {
           if (typeof locator?.workspace_id !== "string") continue;
           referencedProofScopes.add(locator.workspace_id);
@@ -111,10 +112,13 @@
         (w.propositions || []).map(p => [p.id, p.status, p.conclusion?.coefficient_parameter,
           p.conclusion?.fact_id, p.conclusion?.coefficient_constraints]),
         (w.differentials || []).map(d => [d.id, d.page, d.status, d.proposition_id, d.linear_map_id]),
-        (w.differential_maps || []).map(m => [m.id, m.status, m.archived])]),
+        (w.differential_maps || []).map(m => [m.id, m.status, m.archived, m.page, m.proposition_id, m.source_cell_id, m.target_cell_id])]),
       [...referencedProofScopes].map(id => [id, (proofScopesById.get(id) || []).length]),
-      proofScopes.map(w => [w.id, (w.propositions || []).map(p =>
-        [p.id, p.kind, p.status, p.premise_ids, p.conclusion])]),
+      proofScopes.map(w => [w.id, w.settings?.coefficient_assignments,
+        (w.propositions || []).map(p => [p.id, p.kind, p.status, p.premise_ids, p.conclusion]),
+        (w.differentials || []).map(d => [d.id, d.proposition_id, d.source_id, d.target_id, d.page, d.status, d.archived, d.linear_map_id]),
+        (w.classes || []).map(c => [c.id, c.archived, c.grade, c.page, c.cell_id]),
+        (w.differential_maps || []).map(m => [m.id, m.status, m.archived, m.page, m.proposition_id, m.source_cell_id, m.target_cell_id])]),
       helpers.periodSignature || ""]);
     const cached = caches.get(ws);
     if (cached?.signature === signature) return cached.value;
@@ -138,17 +142,50 @@
       }
       return recordsByScope.get(owner);
     };
-    const acceptedProof = (owner, proof) => {
+    const acceptedProof = (owner, proof, strict = false) => {
       const premiseRecords = scopeRecords(owner);
       const premiseAdmission = admissionByScope.get(owner), checkingPremises = checkingByScope.get(owner);
       if (!proof || typeof proof.id !== "string" || !proof.id.trim()
           || premiseRecords.get(proof.id) !== proof || !helpers.accepted(proof)
           || proof.kind === "tombstone") return false;
-      if (checkingPremises.has(proof.id)) return false;
-      if (premiseAdmission.has(proof.id)) return premiseAdmission.get(proof.id);
+      strict ||= proof.kind === "coefficient-proof" || Boolean(proof.conclusion?.coefficient_proof_registration);
+      const key = `${strict}:${proof.id}`;
+      if (checkingPremises.has(key)) return false;
+      if (premiseAdmission.has(key)) return premiseAdmission.get(key);
+      if (strict) {
+        const data = proof.conclusion || {};
+        if (data.admission_status !== undefined && !helpers.accepted({status: data.admission_status})) return false;
+        if (proof.kind === "coefficient-proof") {
+          if (!Array.isArray(proof.premise_ids) || !proof.premise_ids.length
+              || typeof data.parameter_id !== "string" || !data.parameter_id.trim()) return false;
+          try { if (![1, 2, 3].includes(L.scalar(data.coefficient_value))) return false; } catch (_) { return false; }
+        }
+        if (proof.kind === "differential") {
+          const rows = (owner.differentials || []).filter(d => d.proposition_id === proof.id);
+          const row = rows[0];
+          if (rows.length !== 1 || !helpers.accepted(row) || row.archived
+              || ![data.source_id, data.target_id].every(id => typeof id === "string" && id.trim())
+              || (owner.differentials || []).filter(d => d.id === row.id).length !== 1
+              || !Number.isInteger(data.page) || data.page < 2 || row.page !== data.page
+              || row.source_id !== data.source_id || row.target_id !== data.target_id) return false;
+          for (const id of [row.source_id, row.target_id]) {
+            const endpoints = (owner.classes || []).filter(c => c.id === id);
+            if (endpoints.length !== 1 || endpoints[0].archived) return false;
+          }
+          if (row.linear_map_id) {
+            const matrices = (owner.differential_maps || []).filter(m => m.id === row.linear_map_id);
+            const matrix = matrices[0];
+            if (matrices.length !== 1 || matrix.archived || !helpers.accepted(matrix)
+                || matrix.page !== row.page || matrix.proposition_id !== proof.id
+                || (matrix.source_cell_id ?? null) !== ((owner.classes || []).find(c => c.id === row.source_id).cell_id ?? null)
+                || (matrix.target_cell_id ?? null) !== ((owner.classes || []).find(c => c.id === row.target_id).cell_id ?? null)) return false;
+          }
+        }
+      }
       const premises = proof.premise_ids ?? [];
       const external = proof.conclusion?.external_premises === undefined ? [] : proof.conclusion.external_premises;
       if (!Array.isArray(premises) || !Array.isArray(external)) return false;
+      if (strict && new Set(premises).size !== premises.length) return false;
       const locators = new Map();
       for (const locator of external) {
         if (!locator || typeof locator.workspace_id !== "string" || !locator.workspace_id.trim()
@@ -156,7 +193,7 @@
             || !premises.includes(locator.proposition_id) || locators.has(locator.proposition_id)) return false;
         locators.set(locator.proposition_id, locator.workspace_id);
       }
-      checkingPremises.add(proof.id);
+      checkingPremises.add(key);
       const admitted = premises.every(id => {
         if (typeof id !== "string" || !id.trim()) return false;
         let targetOwner = owner;
@@ -165,10 +202,10 @@
           if (matches.length !== 1) return false;
           targetOwner = matches[0];
         }
-        return acceptedProof(targetOwner, scopeRecords(targetOwner).get(id));
+        return acceptedProof(targetOwner, scopeRecords(targetOwner).get(id), strict);
       });
-      checkingPremises.delete(proof.id);
-      premiseAdmission.set(proof.id, admitted);
+      checkingPremises.delete(key);
+      premiseAdmission.set(key, admitted);
       return admitted;
     };
     const cyclePremisesAccepted = proof => {
@@ -202,7 +239,7 @@
     // A stable parameter names one source-field scalar, even in a psi image.
     // Missing assignments are never interpreted as 1. Conflicting declarations
     // are diagnosed before any page quotient can consume their endpoints.
-    for (const claim of claims.values()) {
+    for (const claim of ws.propositions || []) {
       const spec = claim.conclusion?.coefficient_parameter;
       if (!spec?.id) continue;
       if (!declarations.has(spec.id)) declarations.set(spec.id, []);
@@ -219,6 +256,62 @@
           record.values.add(scalar);
         } catch (error) { record.errors.push(error.message); }
       }
+    }
+    // Opt-in certificate bindings resolve the raw unit, not each occurrence's
+    // affine/Frobenius image. A withdrawn proof cannot fall back to a default.
+    const proofBoundRecord = (owner, id, specs) => {
+      const registered = (owner.propositions || []).some(p => p.conclusion?.coefficient_proof_registration?.parameter_id === id);
+      if (!registered && !specs.some(s => Object.prototype.hasOwnProperty.call(s, "proof_binding"))) return null;
+      const record = {values: new Set(), errors: [], domains: specs.filter(s => Array.isArray(s.domain)).map(s => s.domain), proofBound: true};
+      const fail = reason => { record.values.clear(); record.errors.push(reason); record.bindingReason = reason; return record; };
+      const ref = specs[0]?.proof_binding;
+      if (!ref || typeof ref !== "object" || Array.isArray(ref)
+          || Object.keys(ref).length !== 3
+          || !["workspace_id", "parameter_id", "proposition_id"].every(k => typeof ref[k] === "string" && ref[k].trim())
+          || ref.parameter_id !== id || specs.some(s => !s.proof_binding || "source_parameter" in s
+            || Object.keys(s.proof_binding).length !== 3
+            || ["workspace_id", "parameter_id", "proposition_id"].some(k => s.proof_binding[k] !== ref[k])))
+        return fail("invalid coefficient proof binding");
+      const scopes = proofScopesById.get(ref.workspace_id) || [];
+      if (scopes.length !== 1) return fail("coefficient proof workspace is missing or ambiguous");
+      const source = scopes[0], proof = scopeRecords(source).get(ref.proposition_id), data = proof?.conclusion;
+      const sourceSpecs = (source.propositions || []).map(p => p.conclusion?.coefficient_parameter).filter(s => s?.id === id);
+      if (sourceSpecs.some(s => !s.proof_binding || "source_parameter" in s
+          || Object.keys(s.proof_binding).length !== 3
+          || ["workspace_id", "parameter_id", "proposition_id"].some(k => s.proof_binding[k] !== ref[k])))
+        return fail("coefficient proof source declarations have inconsistent bindings");
+      for (const scope of source === owner ? [owner] : [owner, source]) {
+        for (const claim of scope.propositions || []) {
+          if (claim.conclusion?.coefficient_proof_registration?.parameter_id !== id) continue;
+          const spec = claim.conclusion?.coefficient_parameter, binding = spec?.proof_binding;
+          if (spec?.id !== id || !binding || Object.keys(binding).length !== 3
+              || ["workspace_id", "parameter_id", "proposition_id"].some(k => binding[k] !== ref[k]))
+            return fail("registered coefficient proof declaration is missing or changed");
+        }
+      }
+      let unit;
+      try { unit = L.scalar(data?.coefficient_value); } catch (_) { return fail("coefficient proof value is not an F4 unit"); }
+      if (!proof || proof.kind !== "coefficient-proof" || data?.parameter_id !== id
+          || ![1, 2, 3].includes(unit)
+          || !Array.isArray(proof.premise_ids) || !proof.premise_ids.length
+          || !acceptedProof(source, proof, true)) return fail("coefficient proof is not admitted");
+      record.values.add(unit);
+      const allSpecs = source === owner ? specs : [...specs, ...sourceSpecs];
+      record.domains = allSpecs.filter(s => Array.isArray(s.domain)).map(s => s.domain);
+      for (const value of [...allSpecs.map(s => s.value), owner.settings?.coefficient_assignments?.[id], source.settings?.coefficient_assignments?.[id]]) {
+        if (value == null) continue;
+        try {
+          const scalar = L.scalar(value);
+          if (![1, 2, 3].includes(scalar)) throw new Error("invalid unit");
+          if (scalar !== unit) return fail("coefficient assignment conflicts with proof");
+        } catch (_) { return fail("invalid coefficient proof assignment"); }
+      }
+      if (record.domains.some(d => !d.includes(unit))) return fail("coefficient proof value is outside its domain");
+      return record;
+    };
+    for (const [id, specs] of declarations) {
+      const record = proofBoundRecord(ws, id, specs);
+      if (record) parameters.set(id, record);
     }
     // A transported coefficient is a reference to the live source workspace,
     // not a second, independently assignable mixed-sector scalar. Resolve raw
@@ -308,6 +401,16 @@
       if (sourceSpecs.some(s => Object.prototype.hasOwnProperty.call(s, "source_parameter"))) {
         fail("nested linked coefficient references are not supported"); continue;
       }
+      const proved = proofBoundRecord(source, id, sourceSpecs);
+      if (proved) {
+        record.proofBound = true;
+        record.domains.push(...proved.domains);
+        if (proved.errors.length) { proved.errors.forEach(fail); continue; }
+        record.values = proved.values;
+        if (sourceConstraintConflict(source, ref.page, new Map([[id, [...record.values][0]]])))
+          fail("linked coefficient source coefficient constraints conflict");
+        continue;
+      }
       for (const spec of sourceSpecs) {
         if (Array.isArray(spec.domain)) record.domains.push(spec.domain);
         for (const value of [spec.value, source.settings?.coefficient_assignments?.[id]]) {
@@ -333,7 +436,7 @@
     // a missing/unadmitted/malformed source reference may not.
     const parameterView = (id, choices = null) => {
       const record = parameters.get(id);
-      if (!record || !choices?.has(id)) return record;
+      if (!record || record.proofBound || !choices?.has(id)) return record;
       const unresolvedLink = "linked coefficient source parameter is unresolved";
       return {...record, values: new Set([choices.get(id)]),
         errors: record.errors.filter(reason => reason !== unresolvedLink),
@@ -357,6 +460,11 @@
         : {resolved: true, id: condition.parameter_id, value: values[0], nonzero: values[0] === condition.equals};
     };
     const coefficientState = (diff, choices = null) => {
+      const metadata = claims.get(diff.proposition_id)?.conclusion || {};
+      const registered = metadata.coefficient_proof_registration;
+      if (registered && (metadata.coefficient_parameter?.id !== registered.parameter_id
+          || !metadata.coefficient_parameter?.proof_binding))
+        return {resolved: false, reason: "registered coefficient proof binding is missing"};
       const condition = conditionState(diff, choices);
       if (!condition.resolved) return condition;
       if (!condition.nonzero) return {resolved: true, value: 0, zeroEulerImage: true, condition};
@@ -544,7 +652,7 @@
           || metadata.coefficient_scope !== "exact-port" || !copies?.length
           || !spec?.id || spec.value !== null || ![0, 1].includes(spec.frobenius_power)
           || !Array.isArray(spec.domain) || !spec.domain.length || spec.domain.some(unit => ![1, 2, 3].includes(unit))
-          || ["target_component", "affine_offset", "source_parameter", "inverse_parameter_id"].some(key => key in spec)
+          || ["target_component", "affine_offset", "source_parameter", "proof_binding", "inverse_parameter_id"].some(key => key in spec)
           || "coefficient_condition" in metadata || (declarations.get(spec.id) || []).length !== 1
           || ws.differentials.filter(row => row.id === diff.id).length !== 1) continue;
       // A shared relative coefficient can change a diagonal kernel. This

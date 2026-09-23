@@ -125,7 +125,7 @@
           <div><i class="key-line accepted"></i><span><strong>Multiplication lines</strong> — vertical: 2 in the same cell; slope 1: h<sub>1</sub>; slope 1/3: h<sub>2</sub>; dashed in 2BSS: hidden extension.</span></div>
           <div><i class="key-line accepted"></i><span><strong>Solid charcoal arrow</strong> — accepted differential claim.</span></div>
           <div><i class="key-line provisional"></i><span><strong>Amber dashed arrow</strong> — candidate or under-review differential.</span></div>
-          <div><span><strong>Atlas coefficients</strong> — point labels retain the transported scalar to show their origin. A scalar at an arrow's midpoint is relative to the unscaled expanded generators, not an additional multiplier on those full point labels. Common endpoint units cancel; coefficient 1 is omitted; ? means unresolved and vector means a component-wise map. The class inspector records both bases.</span></div>
+          <div><span><strong>Atlas coefficients</strong> — point labels retain transported scalars. Known incoming combinations can form an adapted display basis; arrow and relation coefficients then use that displayed basis. Coefficient 1 is omitted; ? means unresolved. Σ denotes an exact dependent combination, not an extra basis generator: select it to inspect its expression and coordinates. Stored equations and their computational basis are unchanged.</span></div>
         </div>
       </section>
 
@@ -379,6 +379,8 @@
   </main>
   {% endif %}
   <script src="{{ url_for('static', filename='graded-quotient.js') }}"></script>
+  <script src="{{ url_for('static', filename='display-basis.js') }}"></script>
+  <script src="{{ url_for('static', filename='chart-presentation.js') }}"></script>
   <script src="{{ url_for('static', filename='vector-page-algebra.js') }}"></script>
   <script src="{{ url_for('static', filename='page-algebra.js') }}"></script>
   <script src="{{ url_for('static', filename='table-ledger.js') }}"></script>

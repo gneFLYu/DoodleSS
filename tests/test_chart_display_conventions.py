@@ -245,6 +245,47 @@ def test_unit_one_produces_no_arrow_coefficient_badge():
     assert result["result"] == ""
 
 
+@pytest.mark.parametrize("coefficient", [
+    {"resolved": False}, {"resolved": True, "value": 1},
+    {"resolved": True, "value": 2}, {"resolved": True, "value": 3},
+])
+@pytest.mark.parametrize("relative", [False, True])
+def test_multicomponent_targets_keep_relative_and_overall_coefficients_distinct(coefficient, relative):
+    result = app_helper(["escapeHtml", *COEFFICIENT_HELPERS, "differentialCoefficientMarkup"], """(() => {
+      const parameter = {id: 'b', symbol: 'b', frobenius_power: 0};
+      if (input.relative) parameter.target_component = 'Q';
+      const workspace = {classes: [{id: 'target', label: 'P+Q',
+        style: {e2_components: {P: 1, Q: 1}}}], propositions: [{id: 'claim', conclusion: {
+          coefficient_parameter: parameter
+        }}]};
+      const item = {diff: {id: 'arrow', proposition_id: 'claim', target_id: 'target'}};
+      const original = JSON.stringify({workspace, item, coefficient: input.coefficient});
+      const markup = differentialCoefficientMarkup(workspace, item,
+        {coefficientState: () => input.coefficient}, {x: 0, y: 2}, {x: 4, y: 8});
+      return {markup, unchanged: original === JSON.stringify({workspace, item, coefficient: input.coefficient})};
+    })()""", coefficient=coefficient, relative=relative)["result"]
+    assert result["unchanged"]
+    assert "vector" not in result["markup"]
+    if relative or coefficient.get("value") == 1:
+        assert result["markup"] == ""
+    else:
+        expression = {2: r"\zeta", 3: r"\zeta^{2}"}.get(coefficient.get("value"), "?")
+        assert f'data-latex="{expression}"' in result["markup"]
+        assert 'x="2" y="5"' in result["markup"]
+
+
+def test_runtime_relative_component_never_gets_an_overall_arrow_badge():
+    result = app_helper(["escapeHtml", *COEFFICIENT_HELPERS, "differentialCoefficientMarkup"], """(() => {
+      const workspace = {propositions: [{id: 'claim', conclusion: {
+        coefficient_parameter: {id: 'b', symbol: 'b'}
+      }}]};
+      return differentialCoefficientMarkup(workspace, {diff: {id: 'arrow', proposition_id: 'claim'}},
+        {coefficientState: () => ({resolved: true, value: 2, component: 'Q'})},
+        {x: 0, y: 0}, {x: 4, y: 8});
+    })()""")
+    assert result["result"] == ""
+
+
 @pytest.mark.parametrize("horizontal,vertical,expected", [
     (1, 0, r"h_1D^{10}u_{\sigma_j}"),
     (-1, 0, r"{\zeta}h_1D^{-6}u_{\sigma_j}"),

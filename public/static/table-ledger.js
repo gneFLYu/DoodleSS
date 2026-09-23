@@ -22,7 +22,7 @@
     return escape(text);
   }
 
-  function rowsForWorkspace(workspace) {
+  function rowsForWorkspace(workspace, algebra = null) {
     const classes = new Map((workspace?.classes || []).map(node => [node.id, node]));
     const propositions = new Map((workspace?.propositions || []).map(claim => [claim.id, claim]));
     const rows = [];
@@ -66,7 +66,7 @@
         evidence: original ? (transport ? "Transported table row" : "Published table row")
           : (claim?.rule || (tableRecord ? "Derived from table row" : kind === "manual" ? "Manual differential" : "Recorded differential")),
         factId: metadata.fact_id || "",
-        coefficient: coefficientDisplay(metadata, differential),
+        coefficient: coefficientDisplay(metadata, differential, algebra?.coefficientState(differential)),
         sourceRef: claim?.source_ref || claim?.source_refs?.join("; ") || "Source locator not recorded",
         status: differential.status || claim?.status || "unrecorded",
         current: Number(differential.page) === Number(workspace?.page),
@@ -82,13 +82,23 @@
   const fieldTex = value => Number.isInteger(value) && value >= 0 && value <= 3
     ? ["0", "1", "\\zeta", "\\zeta^2"][value] : String(value ?? "");
 
-  function coefficientDisplay(metadata, differential) {
+  function coefficientDisplay(metadata, differential, live = null) {
     const display = metadata.atlas_display_coefficient
       || (differential.display_coefficient && Object.keys(differential.display_coefficient).length
         ? differential.display_coefficient : null);
     const parameter = display?.transported_parameter || metadata.coefficient_parameter;
+    if (parameter?.proof_binding || metadata.coefficient_proof_registration) {
+      const ref = parameter?.proof_binding || metadata.coefficient_proof_registration.binding || {};
+      return {
+        status: live?.resolved ? "resolved" : "unresolved",
+        expression: live?.resolved ? fieldTex(live.value) : String(parameter?.expression || parameter?.symbol || "?"),
+        basis: "Recorded basis coefficient · live proof binding",
+        details: [`certificate ${ref.workspace_id || ""} / ${ref.proposition_id || ""}`,
+          live?.reason || (live ? "Current proof premises checked" : "See chart for current proof resolution")],
+      };
+    }
     if (display && typeof display === "object") {
-      const resolved = display.resolved !== false && display.value !== null && display.value !== undefined;
+      const resolved = !parameter?.proof_binding && display.resolved !== false && display.value !== null && display.value !== undefined;
       return {
         status: resolved ? "resolved" : "unresolved",
         expression: resolved ? fieldTex(display.value)
@@ -109,7 +119,7 @@
       const raw = parameter.value;
       const fixed = Number.isInteger(raw) && raw >= 0 && raw <= 3
         && (!Array.isArray(parameter.domain) || parameter.domain.includes(raw))
-        && [0, 1].includes(parameter.frobenius_power || 0) && !parameter.source_parameter
+        && [0, 1].includes(parameter.frobenius_power || 0) && !parameter.source_parameter && !parameter.proof_binding
         && parameter.inverse_parameter_id == null && parameter.affine_offset == null;
       const value = fixed && parameter.frobenius_power === 1 && Number.isInteger(raw) ? [0, 1, 3, 2][raw] : raw;
       return {
@@ -169,8 +179,8 @@
     return `<div class="table-ledger-scroll" role="region" aria-label="Formal, derived and manual differential records" tabindex="0"><table class="table-ledger-table"><caption>Formal, other derived and manual records · ${selected.length}</caption>${tableHeader()}<tbody>${selected.map(rowMarkup).join("")}</tbody></table></div>`;
   }
 
-  function markup(workspace) {
-    const rows = rowsForWorkspace(workspace);
+  function markup(workspace, algebra = null) {
+    const rows = rowsForWorkspace(workspace, algebra);
     const published = rows.filter(row => row.original).length;
     const derived = rows.filter(row => row.tableRecord && !row.original).length;
     const other = rows.filter(row => !row.tableRecord).length;
@@ -190,13 +200,15 @@
     };
   }
 
-  function renderPublishedTableLedger(workspace, mount) {
+  function renderPublishedTableLedger(workspace, mount, algebra = null) {
     const disclosure = mount || root.document?.getElementById("published-table-ledger");
     if (!disclosure) return;
+    if (algebra && disclosure._coefficientAlgebra === algebra) return;
+    disclosure._coefficientAlgebra = algebra;
     const content = disclosure.querySelector("[data-table-ledger-content]");
     const count = disclosure.querySelector("[data-table-ledger-count]");
     const total = disclosure.querySelector("#shown-differential-count");
-    const result = markup(workspace);
+    const result = markup(workspace, algebra);
     if (count) count.textContent = result.summary;
     if (total) total.textContent = String(result.count);
     if (content) content.innerHTML = result.html;
@@ -257,7 +269,7 @@
     }
     if (metadata.coefficient_parameter) {
       const parameter = metadata.coefficient_parameter;
-      if (parameter.value !== null && parameter.value !== undefined && !parameter.source_parameter) {
+      if (parameter.value !== null && parameter.value !== undefined && !parameter.source_parameter && !parameter.proof_binding) {
         const sourceValue = Number(parameter.value);
         const displayValue = parameter.frobenius_power === 1 ? [0, 1, 3, 2][sourceValue] : sourceValue;
         const scalar = ["0", "1", "ζ", "ζ²"][displayValue] ?? parameter.value;
@@ -268,6 +280,10 @@
       if (parameter.source_parameter) {
         const source = parameter.source_parameter;
         issues.push(`<li>Shared source coefficient: ${escape(source.workspace_id)} / ${escape(source.parameter_id)}<small>Requires source differential ${escape(source.differential_id)} on E${escape(source.page)}. Resolve the unit in that source workspace; a local assignment cannot override it. Frobenius is applied only after resolving the shared source-field unit.</small></li>`);
+      }
+      if (parameter.proof_binding) {
+        const proof = parameter.proof_binding;
+        issues.push(`<li>Proof-bound coefficient: ${escape(proof.workspace_id)} / ${escape(proof.proposition_id)}<small>The chart resolves the raw unit from this live certificate and its premises, then applies the occurrence's affine term and Frobenius. Withdrawal or conflicting assignments leaves the coefficient unresolved.</small></li>`);
       }
       if (parameter.target_component !== undefined) issues.push(`<li>Relative coefficient on ${escape(parameter.target_component)} only<small>The other target basis columns are unchanged; P+bQ is not b(P+Q).</small></li>`);
       if (parameter.inverse_parameter_id !== undefined) issues.push(`<li>Linked coefficient ratio: ${escape(parameter.expression || parameter.symbol)}<small>Divide by the shared source-field parameter ${escape(parameter.inverse_parameter_id)} before applying Frobenius. An unresolved denominator does not mean 1.</small></li>`);

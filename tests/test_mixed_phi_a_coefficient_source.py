@@ -1,4 +1,4 @@
-"""Source audit for c=zeta^2; this file does NOT admit a production mixed map.
+"""Source audit for c=zeta^2 and its separately checked proof-bound integration.
 
 The finite products use the real F4 arithmetic and action implementation.
 The small polynomial reducer uses only the cited mod-2 relations; actual E5
@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "backend"))
 from domain.actions import expanded_action_basis, normalized_scalar_ratio
 from domain.algebra import F4Element
 from domain.migrations import migrate_project
+from domain.fate import resolve_raw_coefficient_parameter
 from domain.seed import demo_project
 
 
@@ -325,7 +326,7 @@ def test_printed_table_coefficients_are_reversed_historical_provenance(sources):
     assert image_q[monomial(x=1, h1=2)] + image_b[monomial(x=2)] != ZETA
 
 
-def test_source_audit_does_not_fix_c_or_promote_production_rows(project):
+def test_runtime_c_is_proof_bound_without_assigning_settings_or_raw_defaults(project):
     mixed_images = [w for w in project.workspaces if w.id == MIXED or
                     w.settings.get("atlas_transport", {}).get("source_workspace_id") == MIXED]
     assert len(mixed_images) == 6
@@ -334,12 +335,24 @@ def test_source_audit_does_not_fix_c_or_promote_production_rows(project):
         declarations = [p.conclusion["coefficient_parameter"] for p in workspace.propositions
                         if p.conclusion.get("coefficient_parameter", {}).get("id") == "mixed_d5_A"]
         assert declarations and all(item.get("value") is None for item in declarations)
+        assert all(item.get("proof_binding") == {
+            "workspace_id": MIXED, "parameter_id": "mixed_d5_A",
+            "proposition_id": "coefficient_proof_mixed_d5_A",
+        } for item in declarations)
+        assert resolve_raw_coefficient_parameter(workspace, "mixed_d5_A", project=project) == {
+            "id": "mixed_d5_A", "proof_bound": True, "resolved": True, "value": 3,
+        }
         rows = [d for d in workspace.differentials
                 if d.label in {"FN-MIX-002", "FN-MIX-003", "DER-MIX-D5-A-EVEN"}]
-        assert len(rows) == 3 and all(d.status == "review" for d in rows)
+        assert len(rows) == 3 and all(d.status == "source-verified" and d.required_admitted_premises for d in rows)
+        for row in rows:
+            claim = next(p for p in workspace.propositions if p.id == row.proposition_id)
+            assert claim.conclusion["required_admitted_premises"] is True
+            assert claim.premise_ids
+            assert not claim.conclusion["source_blockers"]
 
 
-def test_new_audit_json_matches_computation_without_claiming_runtime_admission(project):
+def test_new_audit_json_matches_computation_with_conditional_proof_binding(project):
     path = ROOT / "backend/data/review/mixed_phi_a_coefficient.v1.json"
     evidence = json.loads(path.read_text(encoding="utf-8"))
     image_b, image_q = finite_products()
@@ -348,8 +361,9 @@ def test_new_audit_json_matches_computation_without_claiming_runtime_admission(p
     assert UNIT[evidence["coefficient_value"]] == odd
     assert UNIT[evidence["even_coefficient_value"]] == even
     assert evidence["coefficient_parameter_id"] == "mixed_d5_A"
-    assert evidence["runtime_admission"] is False
-    assert evidence["integration_requirements"]["not_yet_integrated"] is True
+    assert evidence["runtime_admission"] == "conditional-proof-binding"
+    assert evidence["integration_requirements"]["not_yet_integrated"] is False
+    assert evidence["integration_requirements"]["proof_binding"]["proposition_id"] == "coefficient_proof_mixed_d5_A"
     pure = next(w for w in project.workspaces if w.id == THREE)
     source = evidence["source_differential"]
     row = next(d for d in pure.differentials if d.id == source["differential_id"])

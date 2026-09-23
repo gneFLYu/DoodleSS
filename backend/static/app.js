@@ -451,7 +451,6 @@ function render() {
   renderLegacyCatalogState(ws);
   constrainView();
   renderChart();
-  window.renderPublishedTableLedger?.(ws);
   syncLayoutHeight();
 }
 
@@ -1260,7 +1259,6 @@ function showComparisonNote() {
 
 function renderProofTree() {
   const ws = workspace();
-  window.renderPublishedTableLedger?.(ws);
   const all = $("#proof-scope").value === "project" ? allPropositions() : ws.propositions.map((item) => ({ ...item, workspaceName: ws.name }));
   const graphPropositions = new Map((state.logicGraph?.nodes || []).filter((item) => item.kind === "proposition").map((item) => [item.record_id, item]));
   const admissionFilter = $("#proof-admission").value;
@@ -1769,6 +1767,7 @@ function shiftPeriodFactor(label, symbol, delta) {
 }
 
 function periodicDisplayLabel(record) {
+  if (record.presentationLabel) return record.presentationLabel;
   const survivingLabel = (label) => {
     // A single finite quotient port names its actual surviving multiple,
     // not the E2 module generator chosen first by display-slot deduplication.
@@ -1894,7 +1893,7 @@ function deadE2OccurrenceKeys(ws, bounds, page = ws.page) {
   return keys;
 }
 
-function periodicClassInstances(ws, bounds) {
+function periodicClassInstances(ws, bounds, presentation = null) {
   const rendered = [];
   const seen = new Set();
   const occupiedSlots = new Set();
@@ -1903,17 +1902,23 @@ function periodicClassInstances(ws, bounds) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = latticeCopies(item.grade, periods, bounds);
     for (const copy of copies) {
-      const modulePorts = algebra?.ports(item, copy.grade);
+      const modulePorts = (presentation || algebra)?.ports(item, copy.grade);
       if (modulePorts && !modulePorts.size) continue;
-      const displayLabel = periodicDisplayLabel({ item, ...copy });
-      const algebraSlots = algebra?.displaySlots(item, copy.grade) || [];
+      const displayLabel = periodicDisplayLabel({item, ...copy,
+        modulePorts: modulePorts ? [...modulePorts] : null, uncertain: algebra?.blockedFromPage != null});
+      const algebraSlots = (presentation || algebra)?.displaySlots(item, copy.grade) || [];
       const algebraSlot = algebraSlots.join("|") || e2DisplaySlot(item, copy.grade) || `${displayLabel}:${glyphShapeFor(ws, item)}`;
       const key = `${algebraSlot}:${copy.grade.stem}:${copy.grade.filtration}`;
       if (seen.has(key) || !inBounds(copy.grade, bounds)) continue;
       seen.add(key);
       for (const slot of algebraSlots) occupiedSlots.add(slot);
+      const displayLine = presentation?.endpoint(item, copy.grade);
+      const displayedName = displayLine?.adapted && !Number(item.style?.two_valuation || 0)
+        && !String(item.coefficient_context_id || "").toLowerCase().includes("witt")
+        ? window.HFPSSDisplayBasis?.combineLabels([{coefficient: 1, label: displayLabel}], {coefficientContext: "F4"}) : null;
       rendered.push({
         item,
+        ...(displayedName?.supported ? {presentationLabel: displayedName.label} : {}),
         algebraSlots,
         modulePorts: modulePorts ? [...modulePorts] : null,
         uncertain: algebra?.blockedFromPage != null,
@@ -1933,7 +1938,7 @@ function periodicClassInstances(ws, bounds) {
     if (!patterns.has(pattern)) patterns.set(pattern, []);
     patterns.get(pattern).push(item);
   }
-  for (const representative of algebra?.representatives?.(bounds) || []) {
+  for (const representative of (presentation || algebra)?.representatives?.(bounds) || []) {
     if (occupiedSlots.has(representative.slot) || !inBounds(representative.grade, bounds)) continue;
     const label = quotientRepresentativeLabel(ws, representative, patterns);
     const instanceKey = `computed-quotient:${ws.id}:E${ws.page}:${representative.slot}`;
@@ -1944,7 +1949,8 @@ function periodicClassInstances(ws, bounds) {
         style: {computed_quotient: true, glyph: positiveJ ? "j-positive-series" : "dot"}},
       grade, instanceKey, algebraSlots: [representative.slot], modulePorts: null,
       readOnlyRepresentative: true, uncertain: Boolean(representative.uncertain),
-      representativeTerms: representative.terms, periodic: false, occurrenceState: "unknown",
+      representativeTerms: representative.terms, displayBasis: representative.displayBasis,
+      periodic: false, occurrenceState: "unknown",
     });
     occupiedSlots.add(representative.slot);
   }
@@ -1954,20 +1960,30 @@ function periodicClassInstances(ws, bounds) {
 function quotientRepresentativeLabel(ws, representative, patterns) {
   const grade = representative.grade;
   const bounds = {stemMin: grade.stem, stemMax: grade.stem, filtrationMin: grade.filtration, filtrationMax: grade.filtration};
-  return representative.terms.filter(term => term.coefficient).map(term => {
+  const collected = [];
+  let residueFieldLabels = true;
+  const fallback = representative.terms.filter(term => term.coefficient).map(term => {
     let basisLabel = `\\operatorname{${String(term.pattern).replace(/[^a-zA-Z0-9_-]/g, "")}}`;
     for (const item of patterns.get(term.pattern) || []) {
       const copy = latticeCopies(item.grade, periodsForClassOnPage(ws, item), bounds)[0];
       if (!copy) continue;
       basisLabel = periodicDisplayLabel({item, ...copy});
+      if (String(item.coefficient_context_id || "").toLowerCase().includes("witt")
+          || item.style?.multiplicative_unit || item.style?.dkllw_glyph === "witt-j-series") residueFieldLabels = false;
       break;
     }
     const coefficient = Number(term.coefficient) === 2 ? "\\zeta" : Number(term.coefficient) === 3 ? "\\zeta^{2}" : "";
     const two = Number(term.two) ? String(2 ** Number(term.two)) : "";
     const j = Number(term.j) ? latexPower("j", Number(term.j)) : "";
     const factor = `${two}${coefficient}${j}`;
+    collected.push({coefficient: term.coefficient, label: `${two}${j}(${basisLabel})`});
     return factor ? `${factor}\\left(${basisLabel}\\right)` : basisLabel;
   }).join("+") || "0";
+  // Only the explicitly F4 quotient is collected here. Unsupported syntax
+  // and integer/Witt levels retain their original, unguessed expression.
+  const simplified = residueFieldLabels
+    ? window.HFPSSDisplayBasis?.combineLabels(collected, {coefficientContext: "F4"}) : null;
+  return simplified?.supported ? simplified.label : fallback;
 }
 
 function inspectQuotientRepresentative(record) {
@@ -1976,7 +1992,8 @@ function inspectQuotientRepresentative(record) {
   state.selectedQuotientInstance = record.instanceKey;
   renderFateInspector();
   const description = record.uncertain ? "Potential representative; outgoing map incomplete" : "Computed quotient representative";
-  toast(`${description}: ${record.item.label}. Read-only viewport result; no saved class was changed.`);
+  const basis = record.displayBasis ? ` Display coordinates in the computed quotient basis: [${record.displayBasis.row.map(f4DisplayLatex).join(", ")}].` : "";
+  toast(`${description}: ${record.item.label}.${basis} Read-only viewport result; no saved class was changed.`);
 }
 
 function drawingPreviewCycleKey(cycle, index) {
@@ -2004,8 +2021,8 @@ function drawingPeriodicityPreviewInstances(bounds) {
   });
 }
 
-function packedClassInstances(ws, bounds, metrics, extraInstances = []) {
-  const instances = periodicClassInstances(ws, bounds).map((record) => ({
+function packedClassInstances(ws, bounds, metrics, extraInstances = [], presentation = null) {
+  const instances = periodicClassInstances(ws, bounds, presentation).map((record) => ({
     ...record,
     key: record.instanceKey,
     cellKey: `${record.grade.stem}:${record.grade.filtration}`,
@@ -2605,7 +2622,8 @@ function differentialDisplayCoefficient(ws, diff, algebra) {
     return {value: null, latex: `${scalar}${conjugate}`, nonzeroUnit: true,
       basis: display ? "unscaled expanded generators" : "recorded generators"};
   }
-  const value = coefficient?.resolved ? coefficient.value : display?.resolved ? display.value : null;
+  const value = coefficient?.resolved ? coefficient.value
+    : !parameter?.proof_binding && !metadata.coefficient_proof_registration && display?.resolved ? display.value : null;
   if (![1, 2, 3].includes(value)) return null;
   const normalized = coefficient?.resolved ? f4DisplayMultiply(value, display?.basis_ratio ?? 1) : value;
   return {value: normalized, latex: f4DisplayLatex(normalized),
@@ -2614,19 +2632,26 @@ function differentialDisplayCoefficient(ws, diff, algebra) {
 }
 
 function differentialCoefficientMarkup(ws, item, algebra, from, to) {
+  const metadata = (ws.propositions || []).find(p => p.id === item.diff.proposition_id)?.conclusion || {};
+  if (item.displayBasisCoefficient !== undefined) {
+    const value = item.displayBasisCoefficient;
+    if (value === 1) return "";
+    return `<foreignObject class="differential-coefficient" data-coefficient-for="${escapeHtml(item.diff.id)}" data-coefficient="${value}" x="${(from.x + to.x) / 2}" y="${(from.y + to.y) / 2}" width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${f4DisplayLatex(value)}" title="Coefficient in the displayed basis; the stored equation is unchanged."></div></foreignObject>`;
+  }
+  // Relative coefficients belong to the target expression, not a scalar badge.
+  // Keep P+bQ distinct from an overall b(P+Q); the target and record retain it.
+  if (metadata.coefficient_parameter?.target_component !== undefined
+      || algebra?.coefficientState(item.diff)?.component !== undefined) return "";
   const coefficient = differentialDisplayCoefficient(ws, item.diff, algebra);
   if (coefficient?.value === 1) return "";
-  const metadata = (ws.propositions || []).find(p => p.id === item.diff.proposition_id)?.conclusion || {};
   const declared = metadata.coefficient_parameter || metadata.atlas_display_coefficient || item.diff.display_coefficient;
   if (!coefficient && (!declared || !Object.keys(declared).length)) return "";
-  const component = metadata.coefficient_parameter?.target_component;
-  const latex = coefficient?.latex || (component !== undefined ? "\\text{vector}" : "?");
+  const latex = coefficient?.latex || "?";
   const x = (from.x + to.x) / 2, y = (from.y + to.y) / 2;
   const title = coefficient?.nonzeroUnit
     ? `A verified nonzero F4 unit relative to ${coefficient.basis}. Its exact value is unassigned; only the isolated one-dimensional kernel and image are unit-independent.`
     : coefficient ? `Coefficient relative to ${coefficient.basis}; point labels retain transported units.`
-    : component !== undefined ? "This parameter affects one target component, not the whole arrow. Inspect the differential record."
-      : "A normalized scalar is not determined here; this does not mean coefficient 1.";
+    : "A normalized scalar is not determined here; this does not mean coefficient 1.";
   return `<foreignObject class="differential-coefficient" data-coefficient-for="${escapeHtml(item.diff.id)}" data-coefficient="${coefficient?.nonzeroUnit ? "nonzero-unit" : coefficient?.value ?? "unresolved"}" x="${x}" y="${y}" width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${latex}" title="${title}"></div></foreignObject>`;
 }
 
@@ -2672,10 +2697,14 @@ function renderChart() {
     markup += `<text class="axis-text y-axis-label" x="${gridX - 13}" y="${point.y + 3}">${filtration}</text>`;
   }
 
-  const previewInstances = drawingPeriodicityPreviewInstances(buffered);
-  const allPackedInstances = packedClassInstances(ws, buffered, m, previewInstances);
-  const packedInstances = allPackedInstances.filter((record) => !record.preview);
   const algebra = pageAlgebra(ws, buffered);
+  const candidateDiagnostics = [];
+  const differentialOccurrences = periodicDifferentials(ws, buffered, candidateDiagnostics);
+  const presentation = window.HFPSSChartPresentation?.create(algebra, differentialOccurrences, buffered);
+  const previewInstances = drawingPeriodicityPreviewInstances(buffered);
+  const allPackedInstances = packedClassInstances(ws, buffered, m, previewInstances, presentation);
+  const packedInstances = allPackedInstances.filter((record) => !record.preview);
+  window.renderPublishedTableLedger?.(ws, undefined, algebra);
   updateChartPageStatus(ws, pageStatusText(ws, algebra));
   const packedPreviewInstances = allPackedInstances.filter((record) => record.preview);
   const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, packedPoint(record, m)]));
@@ -2683,11 +2712,36 @@ function renderChart() {
     instancePoints.set(classInstanceKey(record.item.id, record.grade), packedPoint(record, m));
     const slot = e2DisplaySlot(record.item, record.grade);
     if (slot) instancePoints.set(slot, packedPoint(record, m));
-    for (const slot of record.algebraSlots || algebra?.displaySlots(record.item, record.grade) || []) instancePoints.set(slot, packedPoint(record, m));
+    for (const slot of record.algebraSlots || (presentation || algebra)?.displaySlots(record.item, record.grade) || []) instancePoints.set(slot, packedPoint(record, m));
   }
   const classesById = new Map(ws.classes.map((item) => [item.id, item]));
-  const endpointPoint = (id, grade, effectiveNode) => {
+  const combinationPorts = new Map(), patternLabels = new Map();
+  for (const node of ws.classes) {
+    const pattern = node.style?.e2_pattern;
+    if (!pattern || node.archived || node.style.two_valuation || node.style.j_order) continue;
+    if (!patternLabels.has(pattern)) patternLabels.set(pattern, []);
+    patternLabels.get(pattern).push(node);
+  }
+  const endpointPoint = (id, grade, effectiveNode, branch) => {
     const node = effectiveNode || classesById.get(id);
+    const display = presentation?.endpoint(node, grade, branch?.two || 0, branch?.j || 0);
+    if (display?.live) {
+      if (display.entries.length === 1) {
+        const point = instancePoints.get(display.entries[0].slot);
+        if (point) return {...point, basisEndpoint: display};
+      } else if (display.entries.length > 1) {
+        // A remaining dependent direction is an exact named combination,
+        // not an extra basis dot and not the unweighted centre of its terms.
+        if (!combinationPorts.has(display.key)) {
+          const center = pointFor(grade, m);
+          const siblings = [...combinationPorts.values()].filter(p => p.grade.stem === grade.stem && p.grade.filtration === grade.filtration).length;
+          combinationPorts.set(display.key, {x: center.x + m.cell * (0.18 - 0.12 * (siblings % 3)),
+            y: center.y + m.cell * (0.3 - 0.14 * Math.floor(siblings / 3)), grade,
+            label: quotientRepresentativeLabel(ws, {grade, terms: display.terms}, patternLabels), basisEndpoint: display});
+        }
+        return combinationPorts.get(display.key);
+      }
+    }
     const vectorPoints = (algebra?.endpointSlots(node, grade) || []).map(slot => instancePoints.get(slot)).filter(Boolean);
     if (vectorPoints.length) return {x: vectorPoints.reduce((sum, p) => sum + p.x, 0) / vectorPoints.length,
       y: vectorPoints.reduce((sum, p) => sum + p.y, 0) / vectorPoints.length};
@@ -2701,25 +2755,44 @@ function renderChart() {
     const relation = item.proposition;
     const source = item.source;
     const target = item.target;
-    const from = endpointPoint(source.id, item.sourceGrade);
-    const to = endpointPoint(target.id, item.targetGrade);
+    const branch = presentation && algebra.maps(source, target, item.sourceGrade, item.targetGrade)[0];
+    const from = endpointPoint(source.id, item.sourceGrade, source, branch);
+    const to = endpointPoint(target.id, item.targetGrade, target, branch);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
     const chartConnection = relation.conclusion?.chart_connection;
     const chartClass = chartConnection?.kind ? `dkllw-${chartConnection.kind}` : "";
     markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass} ${item.periodic ? "periodic" : ""}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
+    if (from.basisEndpoint?.adapted || to.basisEndpoint?.adapted) {
+      const unit = point => point.basisEndpoint?.entries.length === 1 ? point.basisEndpoint.entries[0].coefficient : 1;
+      const value = f4DisplayMultiply(unit(to), f4DisplayMultiply(unit(from), unit(from)));
+      markup += differentialCoefficientMarkup(ws, {diff: {id: relation.id}, displayBasisCoefficient: value}, null, from, to);
+    }
   }
-  const candidateDiagnostics = [];
-  const differentialOccurrences = periodicDifferentials(ws, buffered, candidateDiagnostics);
   const candidateSummary = differentialCandidateSummary(candidateDiagnostics);
   if (candidateSummary) updateChartPageStatus(ws, candidateSummary, true);
   for (const item of differentialRenderGroups(ws, differentialOccurrences, algebra)) {
-    const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode);
-    const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode);
+    // Use one actual common surviving 2/j branch at both ends. The constant
+    // term may already be a boundary while its positive-j tail still maps.
+    const branch = presentation && algebra.maps(item.sourceNode, item.targetNode, item.sourceGrade, item.targetGrade)
+      .find(value => window.HFPSSPageAlgebra.allowsConstraintBranch(item.diff, value.two || 0, value.j || 0));
+    const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode, branch);
+    const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode, branch);
+    const coefficient = algebra?.coefficientState(item.diff);
+    if ((from.basisEndpoint?.adapted || to.basisEndpoint?.adapted) && coefficient?.resolved) {
+      const unit = point => point.basisEndpoint?.entries.length === 1 ? point.basisEndpoint.entries[0].coefficient : 1;
+      const targetUnit = to.basisEndpoint ? unit(to) : coefficient.component === undefined ? coefficient.value : 1;
+      item.displayBasisCoefficient = f4DisplayMultiply(targetUnit, f4DisplayMultiply(unit(from), unit(from)));
+    }
     const manualDrawing = item.diff.manual_periodicity_id ? "manual-drawing-periodic" : "";
     // escapeHtml is a text-node escape; JSON quotes also need attribute escaping.
     const aliasIds = escapeHtml(JSON.stringify(item.renderAliases.map(alias => alias.id))).replaceAll('"', "&quot;");
     markup += `<line class="differential ${item.periodic ? "periodic" : ""} ${differentialVisualState(item.diff)} ${manualDrawing}" data-differential="${escapeHtml(item.diff.id)}" data-differential-aliases="${aliasIds}" data-pattern-period="${Number(item.diff.period_stem || 0)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(differentialRenderTitle(item))}</title></line>`;
     markup += differentialCoefficientMarkup(ws, item, algebra, from, to);
+  }
+  for (const [key, point] of combinationPorts) {
+    const coordinates = point.basisEndpoint.coordinates.map(f4DisplayLatex).join(", ");
+    markup += `<g class="combination-endpoint" data-combination-endpoint="${escapeHtml(key)}" role="button" tabindex="0" aria-label="Combination, not an extra basis generator: ${escapeHtml(point.label)} at ${gradeText(point.grade)}"><title>${escapeHtml(point.label)} · (${point.grade.stem}, ${point.grade.filtration}) · displayed-basis coordinates [${coordinates}] · not an extra basis generator</title><text x="${point.x}" y="${point.y}" text-anchor="middle" dominant-baseline="central" font-size="${clamp(m.cell * 0.19, 7, 12)}" paint-order="stroke" stroke="white" stroke-width="3" fill="#334155">Σ</text></g>`;
+    if (state.selectedCombinationKey === key) markup += `<foreignObject class="label-host" x="${point.x + 10}" y="${point.y - 12}" width="280" height="42"><div xmlns="http://www.w3.org/1999/xhtml" class="selected-class-label"><span class="latex-label" data-latex="${escapeHtml(point.label)}"></span><small class="selected-bidegree">(${point.grade.stem}, ${point.grade.filtration}) · [${coordinates}]</small></div></foreignObject>`;
   }
   if (state.connectionStart && ["differential", "relation"].includes(state.tool)) {
     const source = classesById.get(state.connectionStart);
@@ -2739,7 +2812,7 @@ function renderChart() {
     const truncation = seriesTruncation(record);
     const seriesText = truncation ? `, ${truncation.text}` : "";
     const displayLabel = periodicDisplayLabel(record);
-    const representativeText = record.readOnlyRepresentative ? (record.uncertain ? " · Potential representative; outgoing map incomplete · read-only" : " · Computed quotient representative · read-only") : "";
+    const representativeText = record.readOnlyRepresentative ? (record.uncertain ? " · Potential representative; outgoing map incomplete · read-only" : record.displayBasis?.adapted ? " · Adapted display basis · read-only" : " · Computed quotient representative · read-only") : "";
     const aria = `${displayLabel} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}${seriesText}${representativeText}`;
     const unitPeriodText = record.item.style?.multiplicative_unit && !record.periodic
       ? " · W(F4)[[j]] 2-adic unit tower; virtual copies use forward g and D^8"
@@ -2770,6 +2843,17 @@ function renderChart() {
     onClassClick(node.dataset.point, occurrence);
   };
   svg.onclick = (event) => {
+    const combination = event.target.closest?.("[data-combination-endpoint]");
+    if (combination) {
+      event.stopPropagation();
+      const record = combinationPorts.get(combination.dataset.combinationEndpoint);
+      if (record) {
+        state.selectedCombinationKey = combination.dataset.combinationEndpoint;
+        toast(`${record.label} at (${record.grade.stem}, ${record.grade.filtration}); displayed-basis coordinates [${record.basisEndpoint.coordinates.map(f4DisplayLatex).join(", ")}]. Not an extra basis generator; saved data unchanged.`);
+        renderChart();
+      }
+      return;
+    }
     const cellNode = event.target.closest?.("[data-cell]");
     if (cellNode) {
       event.stopPropagation();
@@ -2784,6 +2868,8 @@ function renderChart() {
   };
   svg.onkeydown = (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
+    const combination = event.target.closest?.("[data-combination-endpoint]");
+    if (combination) { event.preventDefault(); svg.onclick(event); return; }
     const cellNode = event.target.closest?.("[data-cell]");
     if (cellNode) {
       event.preventDefault();

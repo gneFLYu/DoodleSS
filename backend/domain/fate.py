@@ -154,13 +154,29 @@ def _coefficient_scalar(value: object) -> int:
     raise ValueError("Invalid F4 scalar")
 
 
-def _raw_parameter_record(workspace: Workspace, ident: str) -> dict:
+def _raw_parameter_record(workspace: Workspace, ident: str, *, project: Project | None = None,
+                          candidates: dict | None = None) -> dict:
     """Read a shared source-field unit, without evaluating or following links."""
     declarations = [claim.conclusion.get("coefficient_parameter") for claim in workspace.propositions]
     declarations = [spec for spec in declarations if isinstance(spec, dict) and spec.get("id") == ident]
     assignments = workspace.settings.get("coefficient_assignments", {})
     assignments = assignments if isinstance(assignments, dict) else {}
     values, invalid = set(), False
+    domains = [spec["domain"] for spec in declarations if isinstance(spec.get("domain"), list)]
+    known_binding = any(isinstance(claim.conclusion.get("coefficient_proof_registration"), dict)
+                        and claim.conclusion["coefficient_proof_registration"].get("parameter_id") == ident
+                        for claim in workspace.propositions)
+    if project is not None:
+        installed = project.research_brief.get("coefficient_proof_registry", {})
+        # A separately declared link resolves the registered unit at its source.
+        # Directly registered consumers cannot replace their binding with a link.
+        linked_only = bool(declarations) and all("source_parameter" in spec for spec in declarations)
+        known_binding = known_binding or (isinstance(installed, dict) and ident in installed and not linked_only)
+    if known_binding or any("proof_binding" in spec for spec in declarations):
+        bound = _proof_bound_parameter(workspace, ident, declarations, project=project, candidates=candidates)
+        return {"declarations": declarations, "domains": domains, "proof_bound": True,
+                "values": {bound["value"]} if bound["resolved"] else set(),
+                "invalid": not bound["resolved"], "reason": bound.get("reason", "")}
     for spec in declarations:
         for value in (spec.get("value"), assignments.get(ident)):
             if value is None:
@@ -172,11 +188,131 @@ def _raw_parameter_record(workspace: Workspace, ident: str) -> dict:
                 values.add(scalar)
             except ValueError:
                 invalid = True
+    if candidates is not None and ident in candidates:
+        try:
+            scalar = _coefficient_scalar(candidates[ident])
+            if not scalar:
+                raise ValueError("A candidate parameter must be an F4 unit")
+            values.add(scalar)
+        except ValueError:
+            invalid = True
     return {"declarations": declarations, "values": values, "invalid": invalid,
-            "domains": [spec["domain"] for spec in declarations if isinstance(spec.get("domain"), list)]}
+            "domains": domains, "proof_bound": False}
 
 
-def _source_parameter_constraint_conflict(workspace: Workspace, page: int) -> bool:
+def _proof_bound_parameter(workspace: Workspace, ident: str, declarations: list[dict], *,
+                           project: Project | None = None, candidates: dict | None = None) -> dict:
+    """Resolve a qualified proof before considering any local assignment.
+
+    A stale scalar is never an alternative to a missing or withdrawn proof.
+    Consumer affine/Frobenius transformations are deliberately not applied.
+    """
+    def failure(reason):
+        return {"resolved": False, "id": ident, "proof_bound": True,
+                "reason": "coefficient proof " + reason}
+
+    fields = {"workspace_id", "parameter_id", "proposition_id"}
+    binding = declarations[0].get("proof_binding") if declarations else None
+    if (not isinstance(binding, dict) or set(binding) != fields
+            or any(not isinstance(binding[key], str) or not binding[key].strip() for key in fields)
+            or binding["parameter_id"] != ident
+            or any(spec.get("proof_binding") != binding or "source_parameter" in spec for spec in declarations)):
+        return failure("bindings are missing, invalid or inconsistent")
+    scopes = list(project.workspaces) if project is not None else []
+    if not any(owner is workspace for owner in scopes):
+        scopes.append(workspace)
+    owners = [owner for owner in scopes if owner.id == binding["workspace_id"]]
+    if len(owners) != 1:
+        return failure("workspace is missing or ambiguous")
+    owner = owners[0]
+    # Also inspect the authoritative source declarations when resolving an
+    # atlas image. Same-name duplicate proposition records are not collapsed.
+    owner_specs = [p.conclusion.get("coefficient_parameter") for p in owner.propositions]
+    owner_specs = [spec for spec in owner_specs if isinstance(spec, dict) and spec.get("id") == ident]
+    if any(spec.get("proof_binding") != binding or "source_parameter" in spec for spec in owner_specs):
+        return failure("source declarations have inconsistent bindings")
+    for scope in (workspace,) if owner is workspace else (workspace, owner):
+        for claim in scope.propositions:
+            registration = claim.conclusion.get("coefficient_proof_registration")
+            if not isinstance(registration, dict) or registration.get("parameter_id") != ident:
+                continue
+            spec = claim.conclusion.get("coefficient_parameter")
+            if (not isinstance(spec, dict) or spec.get("id") != ident or spec.get("proof_binding") != binding):
+                return failure("registered consumer declaration is missing or changed")
+    proofs = [p for p in owner.propositions if p.id == binding["proposition_id"]]
+    if len(proofs) != 1:
+        return failure("root is missing or ambiguous")
+    proof = proofs[0]
+    if (proof.kind != "coefficient-proof" or not isinstance(proof.conclusion, dict)
+            or proof.conclusion.get("parameter_id") != ident
+            or not isinstance(proof.premise_ids, list) or not proof.premise_ids
+            or not _cycle_premises_accepted(owner, proof, project, strict=True)):
+        return failure("root or its current premises are not accepted")
+    try:
+        value = _coefficient_scalar(proof.conclusion.get("coefficient_value"))
+        if not value:
+            raise ValueError("A proved coefficient must be nonzero")
+    except ValueError:
+        return failure("value is not a nonzero F4 scalar")
+    specs = declarations + ([] if owner is workspace else owner_specs)
+    for spec in specs:
+        if spec.get("value") is None:
+            continue
+        try:
+            if _coefficient_scalar(spec["value"]) != value:
+                return failure("conflicts with a preserved raw assignment")
+        except ValueError:
+            return failure("raw assignment is invalid")
+    if any(isinstance(spec.get("domain"), list) and not any(
+            type(item) in (int, float) and item == value for item in spec["domain"]) for spec in specs):
+        return failure("value is outside the declared domain")
+    for scope in (workspace,) if owner is workspace else (workspace, owner):
+        assignments = scope.settings.get("coefficient_assignments", {})
+        if not isinstance(assignments, dict) or assignments.get(ident) is None:
+            continue
+        try:
+            if _coefficient_scalar(assignments[ident]) != value:
+                return failure("conflicts with a preserved user assignment")
+        except ValueError:
+            return failure("user assignment is invalid")
+    if candidates is not None and ident in candidates:
+        try:
+            if _coefficient_scalar(candidates[ident]) != value:
+                return failure("conflicts with the candidate assignment")
+        except ValueError:
+            return failure("candidate assignment is invalid")
+    return {"resolved": True, "id": ident, "value": value, "proof_bound": True}
+
+
+def resolve_raw_coefficient_parameter(workspace: Workspace, ident: str, *,
+                                      project: Project | None = None, candidates: dict | None = None) -> dict:
+    """Public source-field resolver shared by fate and read-only audits."""
+    record = _raw_parameter_record(workspace, ident, project=project, candidates=candidates)
+    base = {"id": ident, "proof_bound": record["proof_bound"]}
+    if record["proof_bound"]:
+        if record["invalid"]:
+            return {**base, "resolved": False, "reason": record["reason"]}
+        return {**base, "resolved": True, "value": next(iter(record["values"]))}
+    if any("source_parameter" in spec for spec in record["declarations"]):
+        linked = _linked_source_parameter(workspace, ident, record["declarations"], project=project)
+        if linked["resolved"] and candidates is not None and ident in candidates:
+            try:
+                if _coefficient_scalar(candidates[ident]) != linked["value"]:
+                    return {**base, "resolved": False, "reason": "linked coefficient conflicts with candidate"}
+            except ValueError:
+                return {**base, "resolved": False, "reason": "linked coefficient candidate is invalid"}
+        return {**base, **linked}
+    if record["invalid"]:
+        return {**base, "resolved": False, "reason": "coefficient assignment is invalid"}
+    if len(record["values"]) != 1:
+        return {**base, "resolved": False, "reason": "coefficient assignments conflict" if record["values"] else "coefficient is unassigned"}
+    value = next(iter(record["values"]))
+    if any(not any(type(item) in (int, float) and item == value for item in domain) for domain in record["domains"]):
+        return {**base, "resolved": False, "reason": "coefficient assignment is outside its domain"}
+    return {**base, "resolved": True, "value": value}
+
+
+def _source_parameter_constraint_conflict(workspace: Workspace, page: int, *, project: Project | None = None) -> bool:
     """Check the existing finite coefficient constraints, without recursive fate queries."""
     claims = {item.id: item for item in workspace.propositions}
     matrices = {item.id: item for item in workspace.differential_maps}
@@ -208,7 +344,7 @@ def _source_parameter_constraint_conflict(workspace: Workspace, page: int) -> bo
                 or not all(isinstance(item, dict) and (item.get("fact_id"), item.get("page")) in active_fact_pages
                            for item in constraint.get("required_differentials", []))):
             continue
-        records = [_raw_parameter_record(workspace, ident) for ident in ids]
+        records = [_raw_parameter_record(workspace, ident, project=project) for ident in ids]
         if not records or any(len(record["values"]) != 1 for record in records):
             continue
         values = {next(iter(record["values"])) for record in records}
@@ -276,11 +412,11 @@ def _linked_source_parameter(workspace: Workspace, ident: str, declarations: lis
         return failure("source differential parameter does not match")
     if not is_accepted(claims[0].status):
         return failure("source proposition is not accepted")
-    record = _raw_parameter_record(source, source_id)
+    record = _raw_parameter_record(source, source_id, project=project)
     if any("source_parameter" in item for item in record["declarations"]):
         return failure("nested source bindings are unsupported")
     if record["invalid"]:
-        return failure("source assignment is invalid")
+        return failure(record.get("reason") or "source assignment is invalid")
     if len(record["values"]) > 1:
         return failure("source assignments conflict")
     if not record["values"]:
@@ -289,14 +425,17 @@ def _linked_source_parameter(workspace: Workspace, ident: str, declarations: lis
     if any(not any(type(item) in (int, float) and item == value for item in domain)
            for domain in record["domains"]):
         return failure("source assignment is outside its domain")
-    if _source_parameter_constraint_conflict(source, page):
+    if _source_parameter_constraint_conflict(source, page, project=project):
         return failure("source coefficient constraints conflict")
     return {"resolved": True, "id": ident, "value": value}
 
 
-def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: Project | None = None) -> bool:
+def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: Project | None = None,
+                             *, strict: bool = False) -> bool:
     """Resolve local premises unless an explicit workspace locator qualifies the ID."""
-    if (claim.premise_ids is None or claim.premise_ids == []) and not claim.conclusion.get("external_premises"):
+    if (not strict and claim.kind != "coefficient-proof"
+            and "coefficient_proof_registration" not in claim.conclusion
+            and (claim.premise_ids is None or claim.premise_ids == []) and not claim.conclusion.get("external_premises")):
         if "external_premises" in claim.conclusion and claim.conclusion["external_premises"] != []:
             return False
         return True  # Preserve legacy certificates with no declared premises.
@@ -314,12 +453,60 @@ def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: 
             records_by_scope[key] = values
         return records_by_scope[key]
 
-    def visit(owner, proof):
+    def current_differential(owner, proof):
+        data = proof.conclusion
+        if (not all(isinstance(data.get(key), str) and data[key].strip() for key in ("source_id", "target_id"))
+                or type(data.get("page")) is not int or data["page"] < 2):
+            return False
+        rows = [row for row in owner.differentials if row.proposition_id == proof.id]
+        if len(rows) != 1:
+            return False
+        row = rows[0]
+        if (not isinstance(row.status, str) or not is_accepted(row.status) or getattr(row, "archived", False)
+                or sum(other.id == row.id for other in owner.differentials) != 1
+                or type(row.page) is not int or row.page != data["page"]
+                or row.source_id != data["source_id"] or row.target_id != data["target_id"]):
+            return False
+        endpoints = []
+        for ident in (row.source_id, row.target_id):
+            nodes = [node for node in owner.classes if node.id == ident]
+            if len(nodes) != 1 or nodes[0].archived:
+                return False
+            endpoints.append(nodes[0])
+        if row.linear_map_id:
+            matrices = [matrix for matrix in owner.differential_maps if matrix.id == row.linear_map_id]
+            if (len(matrices) != 1 or matrices[0].archived
+                    or not isinstance(matrices[0].status, str) or not is_accepted(matrices[0].status)
+                    or matrices[0].page != row.page or matrices[0].proposition_id != proof.id
+                    or matrices[0].source_cell_id != endpoints[0].cell_id
+                    or matrices[0].target_cell_id != endpoints[1].cell_id):
+                return False
+        return True
+
+    def visit(owner, proof, strict_scope=False):
         if (proof is None or not isinstance(proof.id, str) or not proof.id.strip()
-                or records(owner).get(proof.id) is not proof or not is_accepted(proof.status)
+                or records(owner).get(proof.id) is not proof or not isinstance(proof.status, str)
+                or not is_accepted(proof.status) or not isinstance(proof.conclusion, dict)
                 or proof.kind == "tombstone"):
             return False
-        key = (id(owner), proof.id)
+        strict_scope = (strict_scope or proof.kind == "coefficient-proof"
+                        or "coefficient_proof_registration" in proof.conclusion)
+        if strict_scope:
+            admission = proof.conclusion.get("admission_status", proof.status)
+            if not isinstance(admission, str) or not is_accepted(admission):
+                return False
+            if proof.kind == "differential" and not current_differential(owner, proof):
+                return False
+            if proof.kind == "coefficient-proof":
+                if (not proof.premise_ids or not isinstance(proof.conclusion.get("parameter_id"), str)
+                        or not proof.conclusion["parameter_id"].strip()):
+                    return False
+                try:
+                    if not _coefficient_scalar(proof.conclusion.get("coefficient_value")):
+                        return False
+                except ValueError:
+                    return False
+        key = (id(owner), proof.id, strict_scope)
         if key in visiting:
             return False
         if key in admitted:
@@ -327,6 +514,9 @@ def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: 
         premises = proof.premise_ids if proof.premise_ids is not None else []
         external = proof.conclusion.get("external_premises", [])
         if not isinstance(premises, list) or not isinstance(external, list):
+            return False
+        if strict_scope and (any(not isinstance(ident, str) or not ident.strip() for ident in premises)
+                             or len(set(premises)) != len(premises)):
             return False
         locators = {}
         for locator in external:
@@ -348,7 +538,7 @@ def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: 
                 if len(matches) != 1:
                     return False
                 target_owner = matches[0]
-            return visit(target_owner, records(target_owner).get(ident))
+            return visit(target_owner, records(target_owner).get(ident), strict_scope)
 
         visiting.add(key)
         result = all(resolve(ident) for ident in premises)
@@ -356,7 +546,7 @@ def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: 
         admitted[key] = result
         return result
 
-    return visit(workspace, claim)
+    return visit(workspace, claim, strict)
 
 
 def _cycle_claim_covers(workspace: Workspace, claim: Proposition, node, page: int, project: Project | None = None) -> bool:
@@ -488,10 +678,10 @@ def _isolated_rank_one_unit(workspace: Workspace, differential, *, project: Proj
             or type(spec.get("frobenius_power")) is not int or spec["frobenius_power"] not in (0, 1)
             or not isinstance(domain, list) or not domain
             or any(type(value) is not int or value not in (1, 2, 3) for value in domain)
-            or any(key in spec for key in ("affine_offset", "target_component", "source_parameter",
+            or any(key in spec for key in ("affine_offset", "target_component", "source_parameter", "proof_binding",
                                           "inverse_parameter_id"))):
         return False
-    record = _raw_parameter_record(workspace, ident)
+    record = _raw_parameter_record(workspace, ident, project=project)
     if record["invalid"] or record["values"] or len(record["declarations"]) != 1:
         return False
     for other in workspace.propositions:
@@ -633,41 +823,25 @@ def _parameterized_event_eligibility(workspace: Workspace, *, project: Project |
     differentials = {item.id: item for item in workspace.differentials}
     matrices = {item.id: item for item in workspace.differential_maps}
     classes = {item.id: item for item in workspace.classes}
-    assignments = workspace.settings.get("coefficient_assignments", {})
-    if not isinstance(assignments, dict):
-        assignments = {}
     parameters: dict[str, set[int]] = {}
     parameter_domains: dict[str, list[list]] = {}
     invalid = set()
-    for claim in claims.values():
+    declarations_by_id: dict[str, list[dict]] = {}
+    for claim in workspace.propositions:
         spec = claim.conclusion.get("coefficient_parameter")
+        registration = claim.conclusion.get("coefficient_proof_registration")
+        if isinstance(registration, dict) and isinstance(registration.get("parameter_id"), str):
+            declarations_by_id.setdefault(registration["parameter_id"], [])
         if not isinstance(spec, dict) or not isinstance(spec.get("id"), str) or not spec["id"]:
             continue
         ident = spec["id"]
-        values = parameters.setdefault(ident, set())
+        declarations_by_id.setdefault(ident, []).append(spec)
         if isinstance(spec.get("domain"), list):
             parameter_domains.setdefault(ident, []).append(spec["domain"])
-        for value in (spec.get("value"), assignments.get(ident)):
-            if value is None:
-                continue
-            try:
-                scalar = _coefficient_scalar(value)
-                if scalar == 0:
-                    raise ValueError("Base parameter is a nonzero unit")
-                values.add(scalar)
-            except ValueError:
-                invalid.add(ident)
-    declarations_by_id: dict[str, list[dict]] = {}
-    for claim in claims.values():
-        spec = claim.conclusion.get("coefficient_parameter")
-        if isinstance(spec, dict) and isinstance(spec.get("id"), str) and spec["id"]:
-            declarations_by_id.setdefault(spec["id"], []).append(spec)
     for ident, declarations in declarations_by_id.items():
-        if not any("source_parameter" in spec for spec in declarations):
-            continue
-        linked = _linked_source_parameter(workspace, ident, declarations, project=project)
-        parameters[ident] = {linked["value"]} if linked["resolved"] else set()
-        if not linked["resolved"]:
+        resolved = resolve_raw_coefficient_parameter(workspace, ident, project=project)
+        parameters[ident] = {resolved["value"]} if resolved["resolved"] else set()
+        if not resolved["resolved"]:
             invalid.add(ident)
 
     def coefficient(spec):
@@ -726,6 +900,13 @@ def _parameterized_event_eligibility(workspace: Workspace, *, project: Project |
         return value == expected
 
     def effective_coefficient(metadata):
+        registration = metadata.get("coefficient_proof_registration")
+        if registration is not None:
+            spec = metadata.get("coefficient_parameter")
+            if (not isinstance(registration, dict) or not isinstance(spec, dict)
+                    or spec.get("id") != registration.get("parameter_id")
+                    or "proof_binding" not in spec):
+                return None
         nonzero = condition(metadata)
         if nonzero is None:
             return None

@@ -15,6 +15,9 @@ from .grading import ensure_q8_atlas
 from .e2_import import materialize_all_q8_thom_e2_patterns
 from .formal_notes_chart import ensure_formal_notes_chart
 from .document_baseline import apply_document_baseline
+from .coefficient_proofs import (
+    capture_coefficient_proof_inputs, ensure_coefficient_proofs, restore_coefficient_proof_inputs,
+)
 from .published_differentials import ensure_published_differential_charts
 from .manual_periodicity import (
     format_multiplicative_latex,
@@ -569,6 +572,7 @@ def ensure_periodic_rendering_contract(project: Project) -> Project:
 
 
 def migrate_project(project: Project) -> Project:
+    coefficient_proof_inputs = capture_coefficient_proof_inputs(project)
     ensure_foundations(project)
     ensure_f4_high_rank_cell_sample(project)
     ensure_dkllw_f4_argument_audit(project)
@@ -583,6 +587,8 @@ def migrate_project(project: Project) -> Project:
     ensure_source_backed_q8_periodicity_rules(project)
     ensure_periodic_rendering_contract(project)
     apply_document_baseline(project)
+    restore_coefficient_proof_inputs(project, coefficient_proof_inputs)
+    ensure_coefficient_proofs(project)
     ensure_q8_atlas_transports(project)
     ensure_q8_atlas(project)
     migrate_legacy_period_families(project)

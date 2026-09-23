@@ -25,7 +25,7 @@ from domain.seed import demo_project
 
 MIXED = "ws_sigma_i_2sigma_j"
 FIVE_LABELS = {"FN-MIX-002", "FN-MIX-003", "DER-MIX-D5-A-EVEN", "FN-MIX-005"}
-PARAMETERS = {"mixed_d5_A": 3, "mixed_d5_B": 1,
+PARAMETERS = {"mixed_d5_B": 1,
               "mixed_d17_VD3": 1, "mixed_d19_XD4": 1}
 NEW_ROWS = {
     "formal_diff_document_mixed_d11_r_D2":
@@ -124,12 +124,18 @@ def test_profile_parameters_are_claim_defaults_not_user_assignments(strict_proje
         assert {s["value"] for s in specs} == {value}, (ident, specs)
 
 
-def test_five_d5_rows_are_adopted_but_not_verified(adopted_project):
+def test_only_b_rows_remain_document_adopted_while_c_has_a_live_proof(adopted_project):
     ws = workspace(adopted_project)
     rows = [d for d in ws.differentials if d.page == 5 and d.label in FIVE_LABELS]
     assert len(rows) == 5
     for row in rows:
         claim = claim_for(ws, row)
+        if claim.conclusion.get("coefficient_parameter", {}).get("id") == "mixed_d5_A":
+            assert row.status == claim.status == "source-verified"
+            assert claim.conclusion["coefficient_parameter"]["proof_binding"]
+            assert claim.conclusion["coefficient_parameter"]["value"] is None
+            assert "document_baseline" not in claim.conclusion
+            continue
         assert row.status == claim.status == "admitted"
         assert claim.conclusion["source_status"] == "document-adopted"
         assert claim.conclusion["document_baseline"]["authority"] == "document-adopted"

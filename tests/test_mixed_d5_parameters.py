@@ -40,6 +40,14 @@ def candidate_project(original, c, b, *, close_zero_directions=False):
     """
     assert c in (1, 2, 3) and b in (None, 1, 2, 3)
     project = deepcopy(original)
+    # Counterfactual solver tests deliberately replace the c theorem with a
+    # hypothesis in this private copy. Production cannot override the binding.
+    for scope in project["workspaces"]:
+        for proof in scope["propositions"]:
+            parameter = proof["conclusion"].get("coefficient_parameter", {})
+            if parameter.get("id") == "mixed_d5_A":
+                parameter.pop("proof_binding", None)
+                proof["conclusion"].pop("coefficient_proof_registration", None)
     ws = next(w for w in project["workspaces"] if w["id"] == MIXED)
     ws["settings"].setdefault("coefficient_assignments", {})["mixed_d5_A"] = c
     if b is None:
@@ -199,7 +207,7 @@ def mixed_atlas_parameter_audit():
     return run_audit(inputs)
 
 
-def test_nine_coefficients_only_assign_production_parameters_and_never_rewrite_the_maps():
+def test_counterfactual_coefficients_preserve_maps_and_only_detach_the_c_binding():
     original = asdict(migrate_project(demo_project()))
     snapshot = json.dumps(original, sort_keys=True)
     original_ws = next(w for w in original["workspaces"] if w["id"] == MIXED)
@@ -235,7 +243,11 @@ def test_nine_coefficients_only_assign_production_parameters_and_never_rewrite_t
                 {k: v for k, v in m.items() if k != "status"} for m in original_ws["differential_maps"]]
             assert row["target_id"] == next(d for d in original_ws["differentials"] if d["id"] == row["id"])["target_id"]
             for claim in ws["propositions"]:
-                assert claim["conclusion"].get("coefficient_parameter") == original_claims[claim["id"]]["conclusion"].get("coefficient_parameter")
+                expected = deepcopy(original_claims[claim["id"]]["conclusion"].get("coefficient_parameter"))
+                if expected and expected.get("id") == "mixed_d5_A":
+                    assert expected.pop("proof_binding")["parameter_id"] == "mixed_d5_A"
+                    assert "coefficient_proof_registration" not in claim["conclusion"]
+                assert claim["conclusion"].get("coefficient_parameter") == expected
                 if claim["id"] in PRODUCTION_ZERO_CLAIMS:
                     assert claim == original_claims[claim["id"]]
             production_even = [d for d in ws["differentials"] if d["id"] == "formal_diff_mixed_d5_a_D2_leibniz_derived"]

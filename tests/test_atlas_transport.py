@@ -366,6 +366,11 @@ def test_rendered_atlas_has_no_arrows_with_dead_periodic_endpoints(rendered_atla
     invalid = [(workspace, page["page"], page["dangling"])
                for workspace, pages in output.items() for page in pages if page["dangling"]]
     assert not invalid, invalid
+    for workspace, pages in output.items():
+        for page in pages:
+            assert page["renderedEndpointCount"] == page["edges"]
+            assert not set(page["zeroRows"]).intersection(page["rows"]), (workspace, page["page"])
+            assert page["nonzeroEndpointMapCount"] == page["edges"], (workspace, page["page"])
     dead_anchors = [(workspace, page["page"], anchor)
                     for workspace, pages in output.items() for page in pages for anchor in page["anchors"]
                     if anchor["sourceDead"] or anchor["targetDead"]]

@@ -18,12 +18,11 @@ _PROFILE = "mixed-document-baseline-v1"
 _NOTE = "Document baseline: independently unresolved values temporarily follow the cited document; not a verification claim."
 _AUDIT = "backend/data/review/mixed_pq_d21_source.v1.json"
 _DEFAULTS = {
-    "mixed_d5_A": (3, "backend/data/review/mixed_phi_a_coefficient.v1.json", "independently-audited"),
     "mixed_d5_B": (1, "REU Projects/Note/formal_notes.tex:953-970", "document-adopted"),
     "mixed_d17_VD3": (1, "REU Projects/table_Q8.tex:533", "document-adopted"),
     "mixed_d19_XD4": (1, "REU Projects/table_Q8.tex:537", "document-adopted"),
 }
-_ALLOW_FACTS = {"FN-MIX-002", "FN-MIX-003", "FN-MIX-005", "DER-MIX-D5-A-EVEN"}
+_ALLOW_FACTS = {"FN-MIX-005"}
 _FORWARD = {"multiplier": "g=kD^3", "stem": 20, "filtration": 4, "nonnegative": True}
 _U = r"u_{\sigma_i+2\sigma_j}"
 

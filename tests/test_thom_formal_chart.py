@@ -14,9 +14,33 @@ from domain.periodic_fate_ledger import load_periodic_fate_ledger
 from domain.algebra_labels import parse_algebra_label
 from domain.migrations import migrate_project
 from domain.seed import demo_project
-from domain.fate import class_is_live_on_page, sync_workspace_fates
+from domain.fate import class_is_live_on_page, resolve_raw_coefficient_parameter, sync_workspace_fates
 from domain.models import Workspace
 from domain.algebra import F4Element
+
+
+MIXED_A_BINDING = {
+    "workspace_id": "ws_sigma_i_2sigma_j",
+    "parameter_id": "mixed_d5_A",
+    "proposition_id": "coefficient_proof_mixed_d5_A",
+}
+
+
+def assert_current_mixed_a_binding(project, workspace, claim):
+    metadata = claim.conclusion
+    assert metadata["fact_id"] in {"FN-MIX-002", "FN-MIX-003", "DER-MIX-D5-A-EVEN"}
+    assert claim.status == metadata["admission_status"] == "source-verified"
+    assert metadata["source_status"] == "proof-bound-coefficient"
+    assert metadata["source_blockers"] == metadata["machine_verification_pending"] == []
+    assert metadata["required_admitted_premises"] is True
+    parameter = metadata["coefficient_parameter"]
+    assert parameter["id"] == "mixed_d5_A"
+    assert parameter["value"] is None and parameter["domain"] == [1, 2, 3]
+    assert parameter["proof_binding"] == MIXED_A_BINDING
+    assert any(ident.endswith(MIXED_A_BINDING["proposition_id"]) for ident in claim.premise_ids)
+    assert resolve_raw_coefficient_parameter(workspace, "mixed_d5_A", project=project) == {
+        "resolved": True, "proof_bound": True, "id": "mixed_d5_A", "value": 3,
+    }
 
 
 def test_all_sixteen_sectors_are_materialized_from_exactly_two_thom_patterns():
@@ -369,7 +393,8 @@ def test_mixed_low_d5_has_a_positive_filtration_comparison_not_an_extra_open_pre
     low = claims["FN-MIX-003"]
     high = claims["FN-MIX-002"]
     certificate = low.conclusion["comparison_certificate"]
-    assert low.status == high.status == "review"
+    for claim in (low, high):
+        assert_current_mixed_a_binding(project, ws, claim)
     assert certificate["status"] == "verified-comparison-conditional-on-premise"
     assert certificate["scope"] == "source-workspace-comparison"
     assert certificate["premise"] == "FN-MIX-002"
@@ -383,7 +408,9 @@ def test_mixed_low_d5_has_a_positive_filtration_comparison_not_an_extra_open_pre
     assert min(certificate["source_bidegree"][1], certificate["target_bidegree"][1]) > 0
     assert "4h2=0" in certificate["derivation"]
     assert "not a permanent period" in certificate["derivation"]
-    assert "coefficient remain under review" in low.conclusion["source_blockers"][0]
+    history = low.conclusion["coefficient_proof_history"]
+    assert history["source_status"] == "active-proof-with-review"
+    assert "coefficient remain under review" in history["source_blockers"][0]
 
 def test_every_formal_d3_family_uses_the_integer_D_three_cycle():
     # The Thom factors do not change d3(D)=0.  A missing period here leaves
@@ -398,10 +425,11 @@ def test_mixed_d5_affine_branch_keeps_one_parameter_and_its_actual_premises():
     odd = claims["FN-MIX-003"].conclusion["coefficient_parameter"]
     assert claims["FN-MIX-002"].conclusion["coefficient_parameter"] == odd
     assert odd == {"id": "mixed_d5_A", "symbol": "c", "domain": [1, 2, 3],
-                   "value": None, "frobenius_power": 0}
+                   "value": None, "frobenius_power": 0, "proof_binding": MIXED_A_BINDING}
     derived = next(p for p in source.propositions
                    if p.conclusion.get("coefficient_parameter", {}).get("affine_offset") == 1)
-    assert derived.status == "review"
+    for claim in (claims["FN-MIX-002"], claims["FN-MIX-003"], derived):
+        assert_current_mixed_a_binding(project, source, claim)
     assert derived.conclusion["coefficient_parameter"] == {
         **odd, "affine_offset": 1, "expression": "(c+1)",
     }
@@ -413,7 +441,7 @@ def test_mixed_d5_affine_branch_keeps_one_parameter_and_its_actual_premises():
         if plan.get("source_workspace_id") != source.id:
             continue
         image = next(p for p in workspace.propositions if p.id.endswith(derived.id))
-        assert image.status == "review"
+        assert_current_mixed_a_binding(project, workspace, image)
         assert image.conclusion["coefficient_parameter"] == {
             **derived.conclusion["coefficient_parameter"], "frobenius_power": int(plan["reflected"]),
         }
@@ -451,12 +479,14 @@ def test_old_period_tables_remain_source_provenance_in_all_formal_atlas_images()
             assert "table_number" not in claim.conclusion
         if source_id == "ws_sigma_i_2sigma_j":
             odd = next(p for p in claims if p.conclusion.get("fact_id") == "FN-MIX-003")
-            assert odd.status == "review"
-            assert odd.conclusion["coefficient_parameter"]["value"] is None
+            assert_current_mixed_a_binding(project, workspace, odd)
+            assert odd.conclusion["related_period_table"]["status"] == "historical-review"
+            assert odd.conclusion["coefficient_proof_history"]["source_status"] == "active-proof-with-review"
             assert "c=zeta" in odd.conclusion["source_conflicts"][0]["conditional_family"]
             mixed_b = next(p for p in claims if p.conclusion.get("fact_id") == "FN-MIX-005")
             assert mixed_b.status == "review"
             assert mixed_b.conclusion["coefficient_parameter"]["value"] is None
+            assert "proof_binding" not in mixed_b.conclusion["coefficient_parameter"]
             cycle = mixed_b.conclusion["verified_cycle_subpremise"]
             assert cycle["status"] == "verified" and cycle["runtime_admission"] is False
             assert cycle["source_fact_id"] == "DER-2I-TATE-H2-cycle" and cycle["action"] == "omega"
@@ -533,23 +563,32 @@ def test_formal_admission_is_separate_from_written_proofs_and_repeated_patterns(
                 continue
             proposition = next(item for item in workspace.propositions if item.id == differential.proposition_id)
             metadata = proposition.conclusion
-            assert differential.status == proposition.status == ledger[differential.label]["status"]
+            assert differential.status == proposition.status
+            if differential.label in {"FN-MIX-002", "FN-MIX-003"}:
+                # The historical table is not rewritten when current c evidence is bound.
+                assert ledger[differential.label]["status"] == "review"
+                assert_current_mixed_a_binding(project, workspace, proposition)
+                history = metadata["coefficient_proof_history"]
+                assert history["source_status"] == "active-proof-with-review"
+                assert history["source_blockers"]
+                if differential.label == "FN-MIX-002":
+                    assert "[TBD]" in " ".join(history["source_blockers"])
+            else:
+                assert differential.status == ledger[differential.label]["status"]
             assert metadata["admission_status"] == differential.status
             assert metadata["period_is_invertible"] == (metadata["period_stem"] == 64)
-            if differential.label in {"FN-MIX-002", "FN-MIX-005"}:
+            if differential.label == "FN-MIX-005":
                 assert differential.status == "review"
                 assert metadata["coefficient_parameter"]["value"] is None
                 assert metadata["coefficient_parameter"]["domain"] == [1, 2, 3]
                 blockers = " ".join(metadata["source_blockers"])
-                if differential.label == "FN-MIX-002":
-                    assert "[TBD]" in blockers
-                else:
-                    assert "relative unit in P+bQ remains unresolved" in blockers
-                    certificate = metadata["nonzero_parameter_certificate"]
-                    assert certificate["id"] == "DER-MIX-D5-B-NONZERO"
-                    assert certificate["status"] == "verified"
-                    assert certificate["parameter_id"] == "mixed_d5_B"
-                    assert certificate["domain"] == [1, 2, 3] and certificate["value"] is None
+                assert "proof_binding" not in metadata["coefficient_parameter"]
+                assert "relative unit in P+bQ remains unresolved" in blockers
+                certificate = metadata["nonzero_parameter_certificate"]
+                assert certificate["id"] == "DER-MIX-D5-B-NONZERO"
+                assert certificate["status"] == "verified"
+                assert certificate["parameter_id"] == "mixed_d5_B"
+                assert certificate["domain"] == [1, 2, 3] and certificate["value"] is None
             if differential.label == "FN-3I-010":
                 assert differential.status == "review"
                 assert ledger[differential.label]["source_status"] == metadata["source_status"] == "withdrawn-proof"
@@ -627,14 +666,17 @@ def test_source_proof_editorial_warning_and_machine_check_are_distinct():
     assert metadata["coefficient_parameter"]["value"] == 3
     assert metadata["period_stem"] == 64 and metadata["period_is_invertible"] is True
     assert metadata["paired_pattern_stem"] == 32
-    for fact_id in ("FN-MIX-002", "FN-MIX-005"):
-        metadata = props[fact_id].conclusion
-        assert metadata["source_status"] == "active-proof-with-review"
-        assert props[fact_id].status == "review"
-        assert metadata["coefficient_parameter"]["domain"] == [1, 2, 3]
-        assert metadata["coefficient_parameter"]["value"] is None
-    assert "[TBD]" in " ".join(props["FN-MIX-002"].conclusion["source_blockers"])
+    mixed_workspace = next(w for w in project.workspaces if w.id == "ws_sigma_i_2sigma_j")
+    for fact_id in ("FN-MIX-002", "FN-MIX-003"):
+        assert_current_mixed_a_binding(project, mixed_workspace, props[fact_id])
+        assert props[fact_id].conclusion["coefficient_proof_history"]["source_status"] == "active-proof-with-review"
+    assert "[TBD]" in " ".join(props["FN-MIX-002"].conclusion["coefficient_proof_history"]["source_blockers"])
     mixed_b = props["FN-MIX-005"].conclusion
+    assert props["FN-MIX-005"].status == "review"
+    assert mixed_b["source_status"] == "active-proof-with-review"
+    assert mixed_b["coefficient_parameter"]["domain"] == [1, 2, 3]
+    assert mixed_b["coefficient_parameter"]["value"] is None
+    assert "proof_binding" not in mixed_b["coefficient_parameter"]
     assert "relative unit in P+bQ remains unresolved" in " ".join(mixed_b["source_blockers"])
     nonzero = mixed_b["nonzero_parameter_certificate"]
     assert nonzero["id"] == "DER-MIX-D5-B-NONZERO" and nonzero["status"] == "verified"

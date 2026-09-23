@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from .models import Project
+from .fate import _cycle_premises_accepted, resolve_raw_coefficient_parameter
 
 
 ADMITTED_PROPOSITION_STATUSES = frozenset({"established", "verified", "source-verified"})
@@ -62,6 +63,18 @@ def _proposition_state(project: Project) -> dict[str, dict]:
             and all(premise in propositions for premise in premises)
             and all(is_admitted(premise, trail | {ident}) for premise in premises)
         )
+        data = proposition.conclusion
+        parameter = data.get("coefficient_parameter")
+        if value and (proposition.kind == "coefficient-proof"
+                      or data.get("coefficient_proof_registration")
+                      or isinstance(parameter, dict) and "proof_binding" in parameter):
+            owners = [w for w in project.workspaces if any(p is proposition for p in w.propositions)]
+            value = len(owners) == 1 and _cycle_premises_accepted(owners[0], proposition, project, strict=True)
+            if value and proposition.kind != "coefficient-proof":
+                registration = data.get("coefficient_proof_registration", {})
+                value = (isinstance(parameter, dict) and "proof_binding" in parameter
+                         and parameter.get("id") == registration.get("parameter_id", parameter.get("id"))
+                         and resolve_raw_coefficient_parameter(owners[0], parameter["id"], project=project)["resolved"])
         admitted[ident] = value
         return value
 
