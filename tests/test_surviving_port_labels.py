@@ -1,4 +1,4 @@
-"""Finite surviving multiples are named consistently without changing page algebra."""
+"""Surviving constant multiples are named without changing Witt/j page algebra."""
 from pathlib import Path
 
 import pytest
@@ -15,11 +15,14 @@ from test_selected_occurrence_refresh import HELPERS
     ("2D", 1, ["2:0"], "4D"),
     ("4D", 2, ["2:0"], "4D"),
     ("D", 0, ["0:0"], "D"),
-    ("D", 0, ["1:0", "2:0"], "D"),  # A tower is not a single finite port.
-    ("D", 0, ["3:0"], "D"),  # The compressed free Witt tail is not finite.
+    ("D", 0, ["1:0", "2:0"], "2D"),
+    ("D", 0, ["3:0"], "8D"),  # The compressed free Witt tail starts at 8W.
     ("D", 0, ["0:1"], "D"),
     ("D", 0, ["1:1"], "D"),
-    ("D", 0, ["1:0", "0:1"], "D"),
+    ("D", 0, ["1:0", "0:1"], "2D"),  # A positive-j ideal is separate.
+    ("D", 0, ["2:0", "3:0", "1:1", "2:1", "3:1"], "4D"),
+    ("2D", 1, ["2:0", "3:0", "1:1", "2:1", "3:1"], "4D"),
+    ("4D", 2, ["3:0", "1:1", "2:1", "3:1"], "8D"),
     ("D", 0, [], "D"),
     ("D", 0, None, "D"),
     ("0", 0, ["1:0"], "0"),
@@ -31,7 +34,7 @@ from test_selected_occurrence_refresh import HELPERS
     (r"{\zeta^{2}}D", 0, ["1:0"], r"2{\zeta^{2}}D"),
     (r"\zeta^2D", 0, ["1:0"], r"2\zeta^2D"),
 ])
-def test_single_finite_port_uses_actual_witt_multiple(label, two, ports, expected):
+def test_constant_representative_uses_actual_witt_multiple(label, two, ports, expected):
     row = app_helper(HELPERS, """(() => {
       const record = {item: {label: input.label, style: {e2_pattern: 'S40', two_valuation: input.two}},
         periodic: false, modulePorts: input.ports};
@@ -74,9 +77,36 @@ def test_transported_unit_is_distinct_from_the_witt_two_multiple():
     assert row == r"4{\zeta}k^{3}v_1^2D^{6}"
 
 
+def test_successive_constant_layers_do_not_change_the_positive_j_ideal_or_metadata():
+    row = app_helper(HELPERS + ["quotientDescription"], r"""(() => {
+      const item = {label: 'v_1^2D^{-3}u_{3\\sigma_i}',
+        expression: 'v_1^2D^{-3}u_{3\\sigma_i}',
+        style: {e2_pattern: 'S40', two_valuation: 0,
+          algebra: {coefficient_context: 'q8-witt-f4'}}};
+      const tails = ['1:1', '2:1', '3:1'];
+      const before = JSON.stringify(item);
+      const pages = [[0, 1, 2, 3], [1, 2, 3], [2, 3], [3]].map(levels => {
+        const record = {item, periodic: false,
+          modulePorts: [...levels.map(level => `${level}:0`), ...tails]};
+        const originalPorts = JSON.stringify(record.modulePorts);
+        return {label: periodicDisplayLabel(record), description: quotientDescription(record),
+          tails: record.modulePorts.filter(port => port.endsWith(':1')),
+          unchanged: originalPorts === JSON.stringify(record.modulePorts)};
+      });
+      return {pages, unchanged: before === JSON.stringify(item)};
+    })()""")["result"]
+    assert row["unchanged"] is True
+    base = r"v_1^2D^{-3}u_{3\sigma_i}"
+    assert [page["label"] for page in row["pages"]] == [base, "2" + base, "4" + base, "8" + base]
+    for page in row["pages"]:
+        assert page["tails"] == ["1:1", "2:1", "3:1"] and page["unchanged"]
+        assert "2 · positive-j ideal" in page["description"]
+        assert "positive-j ideals are listed separately" in page["description"]
+
+
 @pytest.mark.parametrize("alias_first", [False, True])
 def test_display_slot_deduplication_does_not_change_the_surviving_name(alias_first):
-    row = app_helper(HELPERS + ["periodicClassInstances"], r"""(() => {
+    row = app_helper(HELPERS + ["periodicClassInstances", "uniqueClassDisplaySlots"], r"""(() => {
       const base = {id: 'base', label: 'v_1^2D^{-3}u_{3\\sigma_i}',
         grade: {stem: -20, filtration: 0}, style: {e2_pattern: 'S40'}};
       const alias = {id: 'alias', label: '2k^{3}v_1^2D^{6}u_{3\\sigma_i}',

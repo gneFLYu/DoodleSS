@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from contextvars import ContextVar
 from math import gcd
 
 from .models import (
@@ -18,6 +19,11 @@ ACCEPTED_STATUSES = frozenset({
     "admitted", "admitted-pattern", "verified-pattern", "verified", "source-verified",
 })
 REJECTED_STATUSES = frozenset({"rejected", "superseded"})
+
+# A fate synchronization reads each certificate once for hundreds of classes.
+# This memo exists only during that read-only phase, never across user edits or
+# independent queries, and ContextVar keeps simultaneous requests isolated.
+_CYCLE_PREMISE_CACHE: ContextVar[dict | None] = ContextVar("cycle_premise_cache", default=None)
 
 
 def is_accepted(status: str) -> bool:
@@ -432,6 +438,17 @@ def _linked_source_parameter(workspace: Workspace, ident: str, declarations: lis
 
 def _cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: Project | None = None,
                              *, strict: bool = False) -> bool:
+    cache = _CYCLE_PREMISE_CACHE.get()
+    if cache is None:
+        return _uncached_cycle_premises_accepted(workspace, claim, project, strict=strict)
+    key = (id(workspace), id(claim), id(project), strict)
+    if key not in cache:
+        cache[key] = _uncached_cycle_premises_accepted(workspace, claim, project, strict=strict)
+    return cache[key]
+
+
+def _uncached_cycle_premises_accepted(workspace: Workspace, claim: Proposition, project: Project | None = None,
+                                      *, strict: bool = False) -> bool:
     """Resolve local premises unless an explicit workspace locator qualifies the ID."""
     if (not strict and claim.kind != "coefficient-proof"
             and "coefficient_proof_registration" not in claim.conclusion
@@ -1141,9 +1158,15 @@ def derive_class_fate(workspace: Workspace, class_id: str, *, project: Project |
 def sync_workspace_fates(workspace: Workspace, *, project: Project | None = None) -> None:
     """Refresh fates; cross-workspace coefficients require an explicit project."""
     sync_differential_events(workspace)
-    coefficient_guard = _parameterized_event_eligibility(workspace, project=project)
-    workspace.fates = [derive_class_fate(workspace, item.id, project=project, _coefficient_guard=coefficient_guard)
-                       for item in workspace.classes]
+    # Event migration above may create premises. Start memoization only once
+    # all inputs are settled; nothing inside this phase changes those inputs.
+    token = _CYCLE_PREMISE_CACHE.set({})
+    try:
+        coefficient_guard = _parameterized_event_eligibility(workspace, project=project)
+        workspace.fates = [derive_class_fate(workspace, item.id, project=project, _coefficient_guard=coefficient_guard)
+                           for item in workspace.classes]
+    finally:
+        _CYCLE_PREMISE_CACHE.reset(token)
     # Retain this private cache provenance if the last certificate is removed
     # between syncs; otherwise the formerly blocked deaths would stay masked.
     workspace._fate_has_cycle_certificates = any(

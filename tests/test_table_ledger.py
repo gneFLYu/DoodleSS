@@ -178,11 +178,29 @@ if (process.argv[2] === 'render') {
   const count = {textContent: ''}, total = {textContent: ''}, content = {innerHTML: ''};
   const elements = {'[data-table-ledger-count]': count,
     '#shown-differential-count': total, '[data-table-ledger-content]': content};
-  const mount = {open: payload.open, querySelector: selector => elements[selector] || null};
+  const listeners = {};
+  const mount = {open: payload.open, querySelector: selector => elements[selector] || null,
+    addEventListener: (name, listener) => {listeners[name] = listener;}};
   const before = JSON.stringify(payload.workspace);
-  helper.render(payload.workspace, mount);
+  let workspace = payload.workspace;
+  let algebra = payload.live ? {coefficientState: () => payload.live} : null;
+  const snapshots = [];
+  const capture = () => snapshots.push({open: mount.open, html: content.innerHTML,
+    total: total.textContent, mathCallCount: mathCalls.length});
+  helper.render(workspace, mount, algebra);
+  capture();
+  for (const action of payload.actions || []) {
+    if (action.workspace) workspace = action.workspace;
+    if (action.live) algebra = {coefficientState: () => action.live};
+    if (action.workspace || action.live || action.render) helper.render(workspace, mount, algebra);
+    if (Object.prototype.hasOwnProperty.call(action, 'open')) {
+      mount.open = action.open;
+      listeners.toggle?.();
+    }
+    capture();
+  }
   result = {open: mount.open, summary: count.textContent, total: total.textContent, html: content.innerHTML,
-            unmodified: before === JSON.stringify(payload.workspace), mathCalls};
+            unmodified: before === JSON.stringify(payload.workspace), mathCalls, snapshots};
 } else if (process.argv[2] === 'audit') result = helper.claimAuditMarkup(payload);
 else if (process.argv[2] === 'markup') result = helper.markup(payload);
 else result = helper.rowsForWorkspace(payload);
@@ -309,6 +327,9 @@ def test_table_ledger_is_read_only_preserves_disclosure_state_and_escapes_source
         assert result["unmodified"]
         assert result["total"] == "1"
         assert result["summary"] == "1 published · 0 derived"
+        if not opened:
+            assert result["html"] == "" and result["mathCalls"] == []
+            continue
         assert '<img ' not in result["html"] and '<script>' not in result["html"]
         assert '&lt;img ' in result["html"] and '&lt;script&gt;' in result["html"]
         assert 'class="is-current-page"' in result["html"]
@@ -392,12 +413,63 @@ def test_formal_only_workspace_displays_resolved_atlas_coefficient_not_the_raw_p
     assert row["coefficient"]["status"] == "resolved"
     assert row["coefficient"]["expression"] == r"\zeta^2"
     assert row["target"] == "4k^3D^3"  # Witt factors are endpoint data, not F4 scalar codes.
-    result = run_ledger({"workspace": workspace, "open": False}, "render", katex="available")
+    result = run_ledger({"workspace": workspace, "open": True}, "render", katex="available")
     assert result["total"] == "1" and result["summary"] == "0 published · 0 derived · 1 other records"
     assert [call["formula"] for call in result["mathCalls"]] == ["RD^2", "4k^3D^3", r"\zeta^2"]
     assert "Normalized basis coefficient" in result["html"]
     assert "unresolved; no implicit" not in result["html"]
-    assert result["unmodified"] and not result["open"]
+    assert result["unmodified"] and result["open"]
+
+
+def test_closed_ledger_defers_table_and_math_until_open_and_reuses_expansion():
+    workspace = coefficient_workspace({"coefficient_parameter": {"id": "c", "value": 3}})
+    result = run_ledger({"workspace": workspace, "open": False,
+                         "actions": [{"open": True}, {"open": False}, {"open": True}]},
+                        "render", katex="available")
+    assert result["snapshots"][0] == {"open": False, "html": "", "total": "1", "mathCallCount": 0}
+    assert [state["mathCallCount"] for state in result["snapshots"]] == [0, 3, 3, 3]
+    assert result["html"].count("data-differential-id=") == 1
+    assert [call["formula"] for call in result["mathCalls"]] == ["RD^2", "4k^3D^3", r"\zeta^2"]
+    assert result["unmodified"]
+
+
+def test_closed_ledger_uses_latest_workspace_and_record_count_when_expanded():
+    first = coefficient_workspace({"coefficient_parameter": {"id": "c", "value": 3}})
+    second = coefficient_workspace({"coefficient_parameter": {"id": "c", "value": 2}})
+    second["classes"][0]["label"] = "RD^6"
+    second["differentials"].append({**second["differentials"][0], "id": "d11-second"})
+    result = run_ledger({"workspace": first, "open": False,
+                         "actions": [{"workspace": second}, {"open": True}]},
+                        "render", katex="available")
+    assert [state["total"] for state in result["snapshots"]] == ["1", "2", "2"]
+    assert [state["mathCallCount"] for state in result["snapshots"]] == [0, 0, 6]
+    assert result["html"].count("data-differential-id=") == 2
+    assert [call["formula"] for call in result["mathCalls"]] == ["RD^6", "4k^3D^3", r"\zeta"] * 2
+    assert result["unmodified"]
+
+
+def test_lazy_ledger_cache_keeps_live_coefficients_and_refreshes_open_rows():
+    workspace = coefficient_workspace({"coefficient_parameter": {
+        "id": "c", "proof_binding": {"workspace_id": "source", "proposition_id": "certificate"}}})
+    result = run_ledger({"workspace": workspace, "open": False,
+                         "live": {"resolved": True, "value": 3},
+                         "actions": [{"render": True}, {"open": True},
+                                     {"live": {"resolved": True, "value": 2}}]},
+                        "render", katex="available")
+    assert [state["mathCallCount"] for state in result["snapshots"]] == [0, 0, 3, 6]
+    assert [call["formula"] for call in result["mathCalls"]] == [
+        "RD^2", "4k^3D^3", r"\zeta^2", "RD^2", "4k^3D^3", r"\zeta"]
+    assert result["total"] == "1" and result["unmodified"]
+
+
+def test_expanded_ledger_marks_escaped_math_for_deferred_renderer_hydration():
+    workspace = coefficient_workspace({"coefficient_parameter": {"id": "c", "value": 3}})
+    workspace["classes"][0]["label"] = '<img src=x onerror="bad()">'
+    result = run_ledger({"workspace": workspace, "open": True}, "render")
+    assert result["html"].count("data-math-source=") == 3
+    assert 'data-math-source="%5Czeta%5E2"' in result["html"]
+    assert '<img ' not in result["html"] and '&lt;img ' in result["html"]
+    assert result["unmodified"] and result["mathCalls"] == []
 
 
 def test_unresolved_atlas_coefficient_does_not_treat_the_basis_ratio_as_a_computed_scalar():

@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import gzip
+from io import BytesIO
 import shutil
 import tempfile
+from copy import deepcopy
 from pathlib import Path
-from threading import Lock
-from dataclasses import asdict
+from threading import Lock, RLock
+from dataclasses import asdict, dataclass, fields, is_dataclass
 
 from flask import Flask, jsonify, render_template, request
 
@@ -80,6 +83,7 @@ from domain.products import create_cross_graded_product, preview_cross_graded_pr
 from domain.proof_engine import comparison_suggestions, leibniz_suggestions, vanishing_line_suggestions
 from domain.seed import demo_project
 from domain.tex_renderer import render_article_tex, render_chart_tex
+from project_response_cache import ProjectResponseCache
 
 ROOT = Path(__file__).resolve().parent
 SEED_DATA_PATH = ROOT / "data" / "project.json"
@@ -111,6 +115,95 @@ LOCK = Lock()
 # CDN.  Flask still serves the same directory for the local launcher.
 app = Flask(__name__, static_folder=ROOT.parent / "public" / "static")
 APP_VERSION = "2026.08.18-f4-cells"
+_PROJECT_WIRE_CACHE = ProjectResponseCache(ROOT)
+
+
+@dataclass
+class _ProjectSnapshot:
+    """Private, immutable-by-convention read model for one on-disk revision."""
+
+    key: tuple | None
+    project: Project
+    api_json: bytes | None = None
+    api_gzip: bytes | None = None
+
+
+_PROJECT_CACHE_LOCK = RLock()
+_PROJECT_CACHE: _ProjectSnapshot | None = None
+
+
+def _file_version(path: Path) -> tuple:
+    try:
+        stat = path.stat()
+        return (str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size,
+                stat.st_mtime_ns, stat.st_ctime_ns)
+    except FileNotFoundError:
+        return (str(path.resolve()), None)
+
+
+def _project_version() -> tuple | None:
+    # Non-filesystem test/storage adapters still use the uncached loader.
+    if not isinstance(DATA_PATH, Path):
+        return None
+    review_sources = tuple(_file_version(path) for path in sorted((ROOT / "data" / "review").glob("*.json")))
+    return (_file_version(DATA_PATH), review_sources, migrate_legacy_periods, migrate_project,
+            demo_project, _load_project_uncached)
+
+
+def _invalidate_project_cache() -> None:
+    global _PROJECT_CACHE
+    with _PROJECT_CACHE_LOCK:
+        _PROJECT_CACHE = None
+
+
+def _project_snapshot() -> _ProjectSnapshot:
+    global _PROJECT_CACHE
+    with _PROJECT_CACHE_LOCK:
+        key = _project_version()
+        if key is not None and _PROJECT_CACHE is not None and _PROJECT_CACHE.key == key:
+            return _PROJECT_CACHE
+        snapshot = _ProjectSnapshot(key, _load_project_uncached())
+        # If an external editor replaced a source during migration, do not
+        # reuse that read on a later request. Atomic saves also invalidate here.
+        if key is not None and key == _project_version():
+            _PROJECT_CACHE = snapshot
+        return snapshot
+
+
+def _json_dataclass(value):
+    # json's encoder already traverses containers. asdict would first copy the
+    # entire 40+ MB evidence graph, only to traverse it again while encoding.
+    if is_dataclass(value) and not isinstance(value, type):
+        return {field.name: getattr(value, field.name) for field in fields(value)}
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
+
+
+def _project_api_json(project: Project) -> bytes:
+    payload = _json_dataclass(project)
+    workspaces = []
+    for workspace in project.workspaces:
+        workspace_payload = _json_dataclass(workspace)
+        cells = []
+        for cell in workspace.cells:
+            cell_payload = _json_dataclass(cell)
+            for key in ("display_basis", "named_vectors"):
+                cell_payload[key] = [dict(_json_dataclass(vector),
+                    projective_coordinates=projective_normal_form(vector.coordinates))
+                    for vector in getattr(cell, key)]
+            cells.append(cell_payload)
+        workspace_payload["cells"] = cells
+        workspace_payload["differential_maps"] = [dict(_json_dataclass(item),
+            image_ports=map_image_ports(workspace, item)) for item in workspace.differential_maps]
+        workspaces.append(workspace_payload)
+    payload["workspaces"] = workspaces
+    # Stream UTF-8 chunks so the complete evidence graph never needs both a
+    # giant Unicode JSON string (including its newline copy) and a bytes copy.
+    buffer = BytesIO()
+    encoder = json.JSONEncoder(default=_json_dataclass, ensure_ascii=False, separators=(",", ":"))
+    for chunk in encoder.iterencode(payload):
+        buffer.write(chunk.encode("utf-8"))
+    buffer.write(b"\n")
+    return buffer.getvalue()
 
 # Compatibility map for project.json files created before periodicity was
 # attached to individual differential families.  It is intentionally limited
@@ -125,7 +218,7 @@ def migrate_legacy_periods(project: Project) -> Project:
     return migrate_project(project)
 
 
-def load_project() -> Project:
+def _load_project_uncached() -> Project:
     project = (project_from_dict(json.loads(DATA_PATH.read_text(encoding="utf-8")))
                if DATA_PATH.exists() else demo_project())
     if project.id == "hfpss_studio":
@@ -133,6 +226,23 @@ def load_project() -> Project:
         # Strict source audits can retain an explicit False in the project.
         project.research_brief.setdefault("document_baseline", True)
     return migrate_legacy_periods(project)
+
+
+def load_project() -> Project:
+    # Mutation, preview and audit routes own their copy. Never expose the
+    # shared snapshot to code that may alter classes, claims or fates.
+    return deepcopy(_project_snapshot().project)
+
+
+_WIRE_LOADERS = (migrate_legacy_periods, migrate_project, demo_project, _load_project_uncached, load_project)
+
+
+def _wire_cache_key() -> str | None:
+    # Test/storage adapters or overridden migrations are not represented by
+    # the installed source-file fingerprint and must never reuse a disk cache.
+    if _WIRE_LOADERS != (migrate_legacy_periods, migrate_project, demo_project, _load_project_uncached, load_project):
+        return None
+    return _PROJECT_WIRE_CACHE.key(DATA_PATH)
 
 
 def save_project(project: Project) -> None:
@@ -146,6 +256,7 @@ def save_project(project: Project) -> None:
         # ``replace`` is atomic within the data directory, so a completed
         # checkpoint cannot be paired with a half-written replacement file.
         temporary_path.replace(DATA_PATH)
+        _invalidate_project_cache()
     finally:
         if temporary_path.exists():
             temporary_path.unlink()
@@ -188,18 +299,38 @@ def review():
 
 @app.get("/api/project")
 def get_project():
-    project = load_project()
-    payload = project_to_dict(project)
-    for workspace_payload, workspace in zip(payload.get("workspaces", []), project.workspaces):
-        for cell_payload in workspace_payload.get("cells", []):
-            for key in ("display_basis", "named_vectors"):
-                for vector in cell_payload.get(key, []):
-                    vector["projective_coordinates"] = projective_normal_form(vector.get("coordinates", []))
-        by_id = {item.id: item for item in workspace.differential_maps}
-        for map_payload in workspace_payload.get("differential_maps", []):
-            item = by_id.get(map_payload.get("id"))
-            map_payload["image_ports"] = map_image_ports(workspace, item) if item else []
-    return jsonify(payload)
+    compressed = request.accept_encodings["gzip"] > 0
+    with _PROJECT_CACHE_LOCK:
+        warm = _PROJECT_CACHE is not None and _PROJECT_CACHE.key == _project_version()
+    wire_key = None if warm else _wire_cache_key()
+    if wire_key is not None:
+        wire = _PROJECT_WIRE_CACHE.read(DATA_PATH, wire_key)
+        if wire is not None:
+            try:
+                return _project_response(wire if compressed else gzip.decompress(wire), compressed)
+            except (OSError, EOFError):
+                pass  # A damaged optional cache falls back to the real model.
+    snapshot = _project_snapshot()
+    with _PROJECT_CACHE_LOCK:
+        if snapshot.api_json is None:
+            snapshot.api_json = _project_api_json(snapshot.project)
+        if (compressed or wire_key is not None) and snapshot.api_gzip is None:
+            snapshot.api_gzip = gzip.compress(snapshot.api_json, compresslevel=5, mtime=0)
+        body = snapshot.api_gzip if compressed else snapshot.api_json
+    # Never persist a snapshot if any source changed while it was constructed.
+    if wire_key is not None and wire_key == _wire_cache_key():
+        _PROJECT_WIRE_CACHE.write(DATA_PATH, wire_key, snapshot.api_gzip)
+    return _project_response(body, compressed)
+
+
+def _project_response(body: bytes, compressed: bool):
+    response = app.response_class(body, mimetype="application/json")
+    response.headers["Cache-Control"] = "private, no-cache"
+    response.vary.add("Accept-Encoding")
+    if compressed:
+        response.headers["Content-Encoding"] = "gzip"
+    response.add_etag()
+    return response.make_conditional(request)
 
 
 @app.get("/api/v2/legacy-catalog")

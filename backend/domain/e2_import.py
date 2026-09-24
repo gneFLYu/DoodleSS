@@ -467,7 +467,7 @@ def materialize_verified_e2_records(workspace: Workspace, workspace_key: str) ->
                 item.conclusion["source_schema_retirement"] = reason
 
     result = {
-        "added_classes": [], "existing_classes": [], "removed_classes": [],
+        "added_classes": [], "existing_classes": [], "removed_classes": [], "restored_classes": [],
         "archived_classes": sorted(stale_class_ids),
         "added_propositions": [], "existing_propositions": [],
     }
@@ -542,6 +542,8 @@ def materialize_verified_e2_records(workspace: Workspace, workspace_key: str) ->
                 ),
                 **_series_style(record),
             })
+        if _restore_source_audit_archive(node, record.source_ref):
+            result["restored_classes"].append(node.id)
         nodes_by_record_id[record.id] = node
 
         proposition_id = f"source_{record.id}"
@@ -607,6 +609,7 @@ def materialize_verified_e2_records(workspace: Workspace, workspace_key: str) ->
         for record in catalogue
     }
     shifts = {"h1": (1, 1, "h_1"), "h2": (3, 1, "h_2")}
+    desired_edge_ids: set[str] = set()
     for source_record in catalogue:
         for source_pattern, target_pattern, kind in _PERIODIC_EDGE_MOTIFS[workspace_key]:
             if source_record.pattern_key != source_pattern:
@@ -620,7 +623,11 @@ def materialize_verified_e2_records(workspace: Workspace, workspace_key: str) ->
             if target_record is None:
                 continue
             proposition_id = f"source_e2_edge_{source_record.id}_{kind}"
+            desired_edge_ids.add(proposition_id)
             if proposition_id in existing_propositions:
+                proposition = next(item for item in workspace.propositions if item.id == proposition_id)
+                _refresh_e2_edge(proposition, nodes_by_record_id[source_record.id],
+                                 nodes_by_record_id[target_record.id], multiplier)
                 result["existing_propositions"].append(proposition_id)
                 continue
             workspace.propositions.append(Proposition(
@@ -650,7 +657,74 @@ def materialize_verified_e2_records(workspace: Workspace, workspace_key: str) ->
             ))
             existing_propositions.add(proposition_id)
             result["added_propositions"].append(proposition_id)
+    result["superseded_propositions"] = _retire_obsolete_e2_edges(
+        workspace, desired_edge_ids, "DKLLW24 E2 chart enumeration"
+    )
     return result
+
+
+def _restore_source_audit_archive(node: ClassNode, source_ref: str) -> bool:
+    # Only the old missing-source quarantine is discharged by an exact cited
+    # catalogue match. Manual archives and retired, incorrect motifs stay so.
+    reason = "Archived during source audit: active local display point had no source locator or notes."
+    if not node.archived or node.archived_reason != reason:
+        return False
+    node.style["source_audit_restoration"] = {"archived_reason": reason, "source_ref": source_ref}
+    node.archived = False
+    node.archived_reason = ""
+    return True
+
+
+def _refresh_e2_edge(proposition: Proposition, source: ClassNode, target: ClassNode, multiplier: str) -> None:
+    # Endpoint IDs can change when a generated motif is retired or an exact
+    # existing class is reused. Refresh only our own source-backed edges.
+    if proposition.kind != "relation" or proposition.rule not in {
+        "DKLLW24 E2 chart enumeration", "ThomIsomorphism + DKLLW24 E2 chart",
+    }:
+        return
+    if (proposition.conclusion.get("source_id"), proposition.conclusion.get("target_id")) != (source.id, target.id):
+        proposition.conclusion.setdefault("source_schema_rebinding", {
+            "previous_source_id": proposition.conclusion.get("source_id"),
+            "previous_target_id": proposition.conclusion.get("target_id"),
+            "previous_status": proposition.status,
+        })
+    proposition.statement = f"{multiplier} multiplication: {source.label} to {target.label}"
+    proposition.conclusion.update({"source_id": source.id, "target_id": target.id})
+    proposition.conclusion.setdefault("chart_connection", {}).update({
+        "kind": multiplier.replace("_", ""), "multiplier": multiplier, "hidden_extension": False,
+    })
+    retirement = proposition.conclusion.pop("source_schema_retirement", None)
+    if retirement and proposition.status == "superseded":
+        proposition.status = "established"
+
+
+def _retire_obsolete_e2_edges(workspace: Workspace, desired_ids: set[str], rule: str) -> list[str]:
+    """Retain old generated edges as provenance, not as active products.
+
+    Schema changes can replace an edge ID even when both endpoint classes
+    survive (the old S71 -> S40 edge is one example). Endpoint retirement
+    alone therefore cannot determine which generated edges are current.
+    Ownership requires both the generator's namespace and its exact rule;
+    manual relations and independently documented extensions are untouched.
+    """
+
+    retired: list[str] = []
+    for proposition in workspace.propositions:
+        if (proposition.kind != "relation" or proposition.rule != rule
+                or not proposition.id.startswith("source_e2_edge_")
+                or proposition.id in desired_ids):
+            continue
+        if proposition.status == "superseded":
+            continue
+        proposition.conclusion.setdefault("source_schema_retirement_previous_status", proposition.status)
+        proposition.conclusion["source_schema_retirement"] = (
+            "Retired obsolete generated E2 multiplication edge after source-schema correction. "
+            "Its ID is absent from the current cited motif catalogue; original endpoints and "
+            "claim are retained for review. This is not a spectral-sequence differential."
+        )
+        proposition.status = "superseded"
+        retired.append(proposition.id)
+    return retired
 
 
 def _series_style(record: VerifiedE2Class) -> dict[str, Any]:
@@ -772,6 +846,7 @@ def materialize_all_q8_thom_e2_patterns(project: Project) -> Project:
         nodes: dict[tuple[str, int, int], ClassNode] = {}
         proposition_ids = {item.id for item in workspace.propositions}
 
+        desired_edge_ids: set[str] = set()
         for record in base_catalogue:
             label = _transported_label(record.label, pattern_key, sector.a, sector.b)
             key = (label, record.stem, record.filtration)
@@ -816,6 +891,7 @@ def materialize_all_q8_thom_e2_patterns(project: Project) -> Project:
                     "thom_pattern": workspace.settings["e2_thom_pattern"],
                     **_series_style(record),
                 })
+            _restore_source_audit_archive(node, record.source_ref)
             nodes[(record.pattern_key, record.stem, record.filtration)] = node
             proposition_id = f"source_{node.id}"
             if proposition_id not in proposition_ids:
@@ -847,7 +923,10 @@ def materialize_all_q8_thom_e2_patterns(project: Project) -> Project:
                 if source_node is None or target_node is None:
                     continue
                 proposition_id = f"source_e2_edge_{source_node.id}_{kind}"
+                desired_edge_ids.add(proposition_id)
                 if proposition_id in proposition_ids:
+                    proposition = next(item for item in workspace.propositions if item.id == proposition_id)
+                    _refresh_e2_edge(proposition, source_node, target_node, multiplier)
                     continue
                 workspace.propositions.append(Proposition(
                     id=proposition_id,
@@ -858,7 +937,10 @@ def materialize_all_q8_thom_e2_patterns(project: Project) -> Project:
                         "source_id": source_node.id,
                         "target_id": target_node.id,
                         "page": 2,
-                        "chart_connection": {"kind": kind, "multiplier": multiplier, "status": "thom-transported"},
+                        "chart_connection": {
+                            "kind": kind, "multiplier": multiplier, "hidden_extension": False,
+                            "status": "thom-transported",
+                        },
                         "period_scope": ["D^8", "kD^3"],
                     },
                     rule="ThomIsomorphism + DKLLW24 E2 chart",
@@ -868,6 +950,7 @@ def materialize_all_q8_thom_e2_patterns(project: Project) -> Project:
                     source_refs=[E2_CHART_SOURCE],
                 ))
                 proposition_ids.add(proposition_id)
+        _retire_obsolete_e2_edges(workspace, desired_edge_ids, "ThomIsomorphism + DKLLW24 E2 chart")
     return project
 
 

@@ -103,6 +103,17 @@ def test_e2_orientation_display_has_only_the_two_catalogue_families():
     assert result["result"] == ["oriented", "non-oriented", "unspecified"]
 
 
+def test_superseded_relations_are_not_drawn_when_both_endpoints_still_survive():
+    result = app_helper(["visibleRelations"], """(() => {
+      const edge = (id, status, conclusion={}) => ({id, kind:'relation', status,
+        conclusion:{source_id:'a',target_id:'b',page:2,...conclusion}});
+      const ws = {page:2,propositions:[edge('active','established'), edge('manual','review'),
+        edge('retired','superseded'), edge('retired-metadata','established',{source_schema_retirement:'old schema'})]};
+      return visibleRelations(ws,new Set(['a','b'])).map(p=>p.id);
+    })()""")
+    assert result["result"] == ["active", "manual"]
+
+
 def test_low_zoom_threshold_eases_sparse_glyph_toward_cell_fill():
     sample = run_node(r"""
 const fs = require('fs');
@@ -155,7 +166,10 @@ def test_math_label_fallback_escapes_html_when_katex_is_unavailable(renderer_thr
       if (input.renderer_throws) window.katex = {renderToString() {throw new Error('unavailable');}};
       return mathMarkup(input.label);
     })()""", renderer_throws=renderer_throws, label='<img src=x onerror="boom()"> & D')
-    assert result["result"] == '&lt;img src=x onerror="boom()"&gt; &amp; D'
+    from urllib.parse import unquote
+    node = ElementTree.fromstring(result["result"])
+    assert unquote(node.attrib["data-math-source"]) == '<img src=x onerror="boom()"> & D'
+    assert node.text == '<img src=x onerror="boom()"> & D'
     assert "<img" not in result["result"]
 
 

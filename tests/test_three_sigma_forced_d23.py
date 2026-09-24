@@ -163,7 +163,7 @@ def chart(project, request):
         if g in (0, 1):
             probes.append(probe(prefix+":old-source", "S40", stem-32, filtration, two=1))
     payload = {
-        "project": asdict(project), "workspaces": [workspace.id], "pages": [23, 24],
+        "project": asdict(project), "workspaces": [workspace.id], "pages": [3, 4, 23, 24],
         "bounds": {"stemMin": shift-60, "stemMax": shift+136, "filtrationMin": 0, "filtrationMax": 30},
         "vectorAudit": True, "d23Probes": probes, "fact": FACT,
         "auditWithoutRow": workspace.id == "ws_3sigma_i",
@@ -188,6 +188,9 @@ def chart(project, request):
       }finally{ws.differentials=saved;}
     }
     return {
+      displayedWitt: points.filter(p=>p.item.style?.e2_pattern==='S40' && p.grade.filtration===0)
+        .map(p=>({grade:p.grade,label:periodicDisplayLabel(p),ports:p.modulePorts,
+          storedLabel:p.item.label,storedExpression:p.item.expression})),
       d23Probes:input.d23Probes.map(probe=>probeOne(algebra,probe)),
       withoutForcedRow,
       forcedEdges:edges.filter(e=>e.diff.label===input.fact).map(e=>({
@@ -257,6 +260,30 @@ def test_e24_takes_only_the_constant_two_layer_and_preserves_witt_and_j(chart):
                 assert retained["live"] and f"{two}:{j}" in retained["ports"]
     assert not rows[24]["forcedEdges"]
     assert not rows[24]["oldEdges"] and not rows[24]["renderedGroups"]
+
+
+def test_current_witt_names_follow_d3_and_d23_in_every_transported_atlas(chart):
+    workspace_id, rows = chart
+    for d8 in (-1, 0, 1):
+        stem = 44 + ATLAS[workspace_id] + 64*d8
+        shown = {page: next(p for p in rows[page]["displayedWitt"] if p["grade"]["stem"] == stem)
+                 for page in (3, 4, 23, 24)}
+        # This includes the reported (-20,0) D^-8 translate. The same
+        # coefficient progression applies to both C3/Picard atlas images.
+        assert shown[4]["label"].startswith("2")
+        assert shown[23]["label"] == shown[4]["label"]
+        assert shown[24]["label"] == "4" + shown[23]["label"][1:]
+        assert not shown[3]["label"].startswith(("2", "4", "8"))
+        assert "0:0" in shown[3]["ports"] and "0:0" not in shown[4]["ports"]
+        assert "1:0" in shown[23]["ports"] and "1:0" not in shown[24]["ports"]
+        assert [p for p in shown[23]["ports"] if p.endswith(":1")] == [
+            p for p in shown[24]["ports"] if p.endswith(":1")]
+        # E3 can use a different anchor because D is still an 8-stem
+        # period there. E23/E24 use the same D8 anchor and only its display
+        # coefficient changes; neither the saved name nor expression does.
+        assert shown[23]["storedLabel"] == shown[24]["storedLabel"]
+        assert shown[23]["storedExpression"] == shown[24]["storedExpression"]
+        assert all(p["grade"]["filtration"] == 0 for p in shown.values())
 
 
 def test_historical_d5_alias_is_retained_but_drawn_as_one_verified_equation(chart):

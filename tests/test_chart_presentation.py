@@ -16,13 +16,13 @@ require('./backend/static/chart-presentation.js');
 const identity=n=>Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>+(i===j)));
 const bounds={stemMin:0,stemMax:63,filtrationMin:0,filtrationMax:6};
 const node=(id,pattern,grade)=>({id,label:id,page:2,grade,style:{e2_pattern:pattern}});
-function fixture(ports=['0:0']) {
+function fixture(ports=['0:0'], qPorts=ports) {
   const sourceGrade={stem:6,filtration:0}, targetGrade={stem:5,filtration:3};
   const source=node('source','S',sourceGrade), p=node('p','P',targetGrade), q=node('q','Q',targetGrade);
   const target={id:'sum',label:'P+zeta Q',page:2,grade:targetGrade,style:{e2_components:{P:1,Q:2}}};
   const diff={id:'a',page:3,status:'proven',source_id:source.id,target_id:target.id};
   const ws={id:'test',page:3,classes:[source,p,q,target],differentials:[diff],differential_maps:[]};
-  const cells=new Map([['S:6:0',new Set(ports)],['P:5:3',new Set(ports)],['Q:5:3',new Set(ports)]]);
+  const cells=new Map([['S:6:0',new Set(ports)],['P:5:3',new Set(ports)],['Q:5:3',new Set(qPorts)]]);
   const vectors=HFPSSVectorPageAlgebra.create(ws,cells,[],{filtrationMin:0,filtrationMax:6});
   const f={sourceGrade,targetGrade,source,p,q,target,diff,ws,cells,vectors,resolved:true,allowed:true};
   f.algebra={
@@ -182,3 +182,44 @@ def test_blocked_page_does_not_offer_an_alternative_presentation():
 const f=fixture();f.algebra.blockedFromPage=3;
 console.log(JSON.stringify(f.create()));
 """) is None
+
+
+@pytest.mark.parametrize("adapted", [False, True])
+def test_dependent_alias_does_not_draw_a_second_copy_of_a_shared_j_tail(adapted):
+    result = run(r"""
+const f=fixture(['0:0','0:1'],['0:0']);
+if (!ADAPTED) f.edges=[];
+const view=f.create(), grade=f.targetGrade;
+const app=require('node:fs').readFileSync('backend/static/app.js','utf8');
+eval(app.slice(app.indexOf('function uniqueClassDisplaySlots('),app.indexOf('function quotientRepresentativeLabel(')));
+const candidates=[f.p,f.q,f.target].map(n=>({item:n,instanceKey:n.id,grade,
+  algebraSlots:view.displaySlots(n,grade),modulePorts:[...view.ports(n,grade)],
+  displayBasisPriority:Number(n===f.target && ADAPTED)})).filter(r=>r.modulePorts.length);
+const allocated=uniqueClassDisplaySlots(candidates);
+console.log(JSON.stringify({
+  target:summary(view.endpoint(f.target,grade)),
+  pPorts:allocated.find(r=>r.item===f.p)?.modulePorts || [],
+  qPorts:allocated.find(r=>r.item===f.q)?.modulePorts || [],
+  targetPorts:allocated.find(r=>r.item===f.target)?.modulePorts || [],
+  slots:allocated.flatMap(r=>r.algebraSlots),
+  stable:JSON.stringify(allocated.map(r=>r.algebraSlots).sort())===JSON.stringify(uniqueClassDisplaySlots([...candidates].reverse()).map(r=>r.algebraSlots).sort()),
+  representatives:view.representatives(bounds).map(r=>r.slot),
+  rawTargetPorts:[...f.vectors.ports(f.target,grade)],
+  rawTargetLive:f.vectors.endpoint(f.target,grade).live
+}));
+""".replace("ADAPTED", json.dumps(adapted)))
+    assert result["target"]["live"] and result["rawTargetLive"]
+    assert result["stable"]
+    assert result["rawTargetPorts"] == ["0:1"]  # the shared j-tail remains nonzero in the algebra
+    assert len(result["slots"]) == len(set(result["slots"])) == 3
+    assert set(result["slots"]) == set(result["representatives"])
+    if adapted:
+        assert result["targetPorts"] == ["0:0", "0:1"]
+        assert result["qPorts"] == []
+        assert result["pPorts"] == ["0:0"]
+        assert len(result["target"]["entries"]) == 1
+    else:
+        assert result["targetPorts"] == []
+        assert result["pPorts"] == ["0:0", "0:1"]
+        assert result["qPorts"] == ["0:0"]
+        assert len(result["target"]["entries"]) == 2

@@ -19,7 +19,7 @@
         return root.katex.renderToString(text, {throwOnError: false, trust: false, displayMode: false});
       } catch (_) { /* fall back to escaped source text */ }
     }
-    return escape(text);
+    return `<span data-math-source="${encodeURIComponent(text)}">${escape(text)}</span>`;
   }
 
   function rowsForWorkspace(workspace, algebra = null) {
@@ -179,20 +179,26 @@
     return `<div class="table-ledger-scroll" role="region" aria-label="Formal, derived and manual differential records" tabindex="0"><table class="table-ledger-table"><caption>Formal, other derived and manual records · ${selected.length}</caption>${tableHeader()}<tbody>${selected.map(rowMarkup).join("")}</tbody></table></div>`;
   }
 
-  function markup(workspace, algebra = null) {
-    const rows = rowsForWorkspace(workspace, algebra);
+  function summaryForRows(rows) {
     const published = rows.filter(row => row.original).length;
     const derived = rows.filter(row => row.tableRecord && !row.original).length;
     const other = rows.filter(row => !row.tableRecord).length;
+    return {
+      count: rows.length,
+      summary: rows.length ? `${published} published · ${derived} derived${other ? ` · ${other} other records` : ""}`
+        : "No differential records in this workspace",
+    };
+  }
+
+  function markup(workspace, algebra = null, rows = rowsForWorkspace(workspace, algebra)) {
+    const summary = summaryForRows(rows);
     if (!rows.length) return {
-      count: 0,
-      summary: "No differential records in this workspace",
+      ...summary,
       html: '<p class="hint">This workspace has no recorded differentials.</p>',
     };
     const current = rows.filter(row => row.current).length;
     return {
-      count: rows.length,
-      summary: `${published} published · ${derived} derived${other ? ` · ${other} other records` : ""}`,
+      ...summary,
       html: `<p class="hint">All recorded pages; ${current} ${current === 1 ? "family" : "families"} on E${escape(workspace.page)}. Original table rows and their derived families are counted separately.</p>`
         + [8, 9].map(table => tableMarkup(rows, table, true) + tableMarkup(rows, table, false)).join("")
         + otherRecordsMarkup(rows)
@@ -203,16 +209,38 @@
   function renderPublishedTableLedger(workspace, mount, algebra = null) {
     const disclosure = mount || root.document?.getElementById("published-table-ledger");
     if (!disclosure) return;
-    if (algebra && disclosure._coefficientAlgebra === algebra) return;
+    if (algebra && disclosure._coefficientAlgebra === algebra
+        && disclosure._ledgerState?.workspace === workspace) {
+      renderDisclosedLedger(disclosure);
+      return;
+    }
     disclosure._coefficientAlgebra = algebra;
     const content = disclosure.querySelector("[data-table-ledger-content]");
     const count = disclosure.querySelector("[data-table-ledger-count]");
     const total = disclosure.querySelector("#shown-differential-count");
-    const result = markup(workspace, algebra);
+    const rows = rowsForWorkspace(workspace, algebra);
+    const result = summaryForRows(rows);
     if (count) count.textContent = result.summary;
     if (total) total.textContent = String(result.count);
-    if (content) content.innerHTML = result.html;
+    disclosure._ledgerState = {workspace, algebra, rows, rendered: false};
+    if (!disclosure._ledgerToggleBound) {
+      disclosure.addEventListener?.("toggle", () => renderDisclosedLedger(disclosure));
+      disclosure._ledgerToggleBound = true;
+    }
+    // Keep the exact record count immediately; defer table DOM and KaTeX work
+    // until the user opens the disclosure. A later page supplies fresh rows.
+    if (content && !disclosure.open) content.innerHTML = "";
+    renderDisclosedLedger(disclosure);
     // Updating only the contents preserves the user's disclosure open state.
+  }
+
+  function renderDisclosedLedger(disclosure) {
+    const state = disclosure._ledgerState;
+    if (!disclosure.open || !state || state.rendered) return;
+    const content = disclosure.querySelector("[data-table-ledger-content]");
+    if (!content) return;
+    content.innerHTML = markup(state.workspace, state.algebra, state.rows).html;
+    state.rendered = true;
   }
 
   function claimAuditMarkup(claim) {

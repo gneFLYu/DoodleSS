@@ -38,6 +38,9 @@ let chartRenderFrame = 0;
 let pageRenderFrame = 0;
 let pageRenderRequest = null;
 let chartPagePresentation = null;
+let projectLoadSequence = 0;
+let historyLoadSequence = 0;
+let catalogManifestRequest = null;
 
 const CURRENT_CATALOG_BY_SECTOR = {
   "q8-ro-a2-b0": "2sigma-dec30",
@@ -190,7 +193,17 @@ function mathMarkup(value) {
     try { return window.katex.renderToString(source, {throwOnError: false, trust: false, displayMode: false}); }
     catch (_) { /* Keep source labels readable when a renderer is unavailable. */ }
   }
-  return escapeHtml(source);
+  // Retain the source for hydration if the optional renderer arrives later.
+  return `<span data-math-source="${encodeURIComponent(source)}">${escapeHtml(source)}</span>`;
+}
+
+function hydrateMathLabels() {
+  if (!window.katex?.renderToString) return;
+  document.querySelectorAll("[data-math-source]").forEach(node => {
+    node.outerHTML = mathMarkup(decodeURIComponent(node.dataset.mathSource));
+  });
+  if (PAGE_MODE === "researching" && workspace()) renderMathInChart();
+  syncLayoutHeight();
 }
 
 function mathTextMarkup(value) {
@@ -244,15 +257,17 @@ function allPropositions() {
 }
 
 async function loadProject() {
+  const sequence = ++projectLoadSequence;
   const previousWorkspaceId = state.workspaceId;
   const previousPage = previousWorkspaceId
     ? (state.pageByWorkspace.get(previousWorkspaceId) ?? workspace()?.page)
     : null;
-  const [project, history] = await Promise.all([api("/api/project"), api("/api/history")]);
+  const project = await api("/api/project");
+  if (sequence !== projectLoadSequence) return;
   state.project = project;
   state.catalogMode = false;
   state.savedProject = null;
-  state.history = history;
+  state.history = {undo_depth: 0, redo_depth: 0};
   if (!state.project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   if (previousWorkspaceId === state.workspaceId && previousPage != null) {
     workspace().page = clamp(Number(previousPage) || 2, 2, pageLimit(workspace()));
@@ -264,6 +279,23 @@ async function loadProject() {
   }
   refreshSelectedOccurrence();
   render();
+  // History is not needed to paint or inspect the chart. A failed/stale
+  // history request must neither blank the chart nor enable obsolete Undo.
+  void refreshHistory(project, sequence);
+}
+
+async function refreshHistory(project, sequence) {
+  const historySequence = ++historyLoadSequence;
+  try {
+    const history = await api("/api/history");
+    if (sequence !== projectLoadSequence || historySequence !== historyLoadSequence || state.project !== project) return;
+    state.history = history;
+    renderHistoryControls();
+  } catch (error) {
+    if (sequence === projectLoadSequence && historySequence === historyLoadSequence && state.project === project) {
+      toast(`Chart loaded; history unavailable: ${error.message}`);
+    }
+  }
 }
 
 function refreshSelectedOccurrence() {
@@ -284,7 +316,14 @@ function refreshSelectedOccurrence() {
 }
 
 async function loadLegacyCatalogManifest() {
-  const data = await api("/api/v2/legacy-catalog");
+  // The archive is optional and collapsed on startup. Share concurrent opens
+  // and retain the loaded manifest, but allow a failed request to be retried.
+  if (!catalogManifestRequest) catalogManifestRequest = api("/api/v2/legacy-catalog").catch(error => {
+    catalogManifestRequest = null;
+    throw error;
+  });
+  const data = await catalogManifestRequest;
+  if (state.catalogEntries === data.entries) return;
   state.catalogEntries = data.entries || [];
   const selector = $("#legacy-catalog-select");
   selector.innerHTML = state.catalogEntries.map((entry) => (
@@ -308,6 +347,7 @@ function catalogProject(project, ws) {
 }
 
 async function openLegacyCatalog() {
+  await loadLegacyCatalogManifest();
   const entryId = $("#legacy-catalog-select").value;
   if (!entryId) return;
   return openLegacyCatalogEntry(entryId);
@@ -448,7 +488,6 @@ function render() {
   renderPersistentPeriodicityTool();
   renderProductControls();
   renderSuggestions();
-  renderLegacyCatalogState(ws);
   constrainView();
   renderChart();
   syncLayoutHeight();
@@ -1769,15 +1808,19 @@ function shiftPeriodFactor(label, symbol, delta) {
 function periodicDisplayLabel(record) {
   if (record.presentationLabel) return record.presentationLabel;
   const survivingLabel = (label) => {
-    // A single finite quotient port names its actual surviving multiple,
-    // not the E2 module generator chosen first by display-slot deduplication.
+    // Name the lowest surviving CONSTANT 2-adic layer, including a Witt
+    // tower. Positive-j ideals have independent fates and do not lower this
+    // representative's coefficient. The compressed 3:0 tail starts at 8W.
     // Already scaled endpoint aliases include their own two-valuation.
     const style = record.item.style || {};
     if (record.readOnlyRepresentative || record.uncertain || !style.e2_pattern
-        || !Array.isArray(record.modulePorts) || record.modulePorts.length !== 1) return label;
-    const port = String(record.modulePorts[0]).match(/^([012]):0$/);
+        || !Array.isArray(record.modulePorts)) return label;
+    const constants = record.modulePorts.flatMap(port => {
+      const match = String(port).match(/^([0-3]):0$/);
+      return match ? [Number(match[1])] : [];
+    });
     const originalTwo = Number(style.two_valuation || 0);
-    const delta = port ? Number(port[1]) - originalTwo : 0;
+    const delta = constants.length ? Math.min(...constants) - originalTwo : 0;
     if (!Number.isInteger(originalTwo) || originalTwo < 0 || delta <= 0) return label;
     const factor = 2 ** delta;
     const clean = String(label).trim();
@@ -1893,11 +1936,10 @@ function deadE2OccurrenceKeys(ws, bounds, page = ws.page) {
   return keys;
 }
 
-function periodicClassInstances(ws, bounds, presentation = null) {
+function periodicClassInstances(ws, bounds, presentation = null, algebra = pageAlgebra(ws, bounds)) {
   const rendered = [];
   const seen = new Set();
   const occupiedSlots = new Set();
-  const algebra = pageAlgebra(ws, bounds);
   for (const item of liveClassesAt(ws).filter((node) => !node.cell_id || node.style?.e2_pattern || node.style?.e2_components)) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = latticeCopies(item.grade, periods, bounds);
@@ -1922,12 +1964,20 @@ function periodicClassInstances(ws, bounds, presentation = null) {
         algebraSlots,
         modulePorts: modulePorts ? [...modulePorts] : null,
         uncertain: algebra?.blockedFromPage != null,
+        displayBasisPriority: Number(Boolean(displayLine?.adapted
+          && displayLine.entries?.length === 1 && Object.keys(item.style?.e2_components || {}).length > 1)),
         instanceKey: key,
         occurrenceState: visualStateFor(ws, item),
         ...copy,
       });
     }
   }
+  // Different named vectors may share only a j/2 tail, so comparing entire
+  // slot sets does not deduplicate them. Allocate each displayed direction
+  // once, preferring the adapted differential target over its complement.
+  rendered.splice(0, rendered.length, ...uniqueClassDisplaySlots(rendered));
+  occupiedSlots.clear();
+  for (const record of rendered) for (const slot of record.algebraSlots) occupiedSlots.add(slot);
   // A quotient basis can be a combination absent from the saved drawing.
   // These viewport-only objects have their own namespace and never replace
   // (or mutate) the researcher's original generators.
@@ -1955,6 +2005,28 @@ function periodicClassInstances(ws, bounds, presentation = null) {
     occupiedSlots.add(representative.slot);
   }
   return rendered;
+}
+
+function uniqueClassDisplaySlots(records) {
+  const occupied = new Set(), allocated = new Map();
+  const priority = record => Number(record.displayBasisPriority || 0);
+  const ordered = [...records].sort((a, b) => priority(b) - priority(a)
+    || (b.algebraSlots?.length || 0) - (a.algebraSlots?.length || 0)
+    || String(a.instanceKey).localeCompare(String(b.instanceKey)));
+  for (const record of ordered) {
+    const slots = record.algebraSlots || [];
+    if (!slots.length) { allocated.set(record, record); continue; }
+    const indices = slots.map((slot, index) => occupied.has(slot) ? -1 : index).filter(index => index >= 0);
+    if (!indices.length) continue;
+    for (const index of indices) occupied.add(slots[index]);
+    if (indices.length === slots.length) { allocated.set(record, record); continue; }
+    const algebraSlots = indices.map(index => slots[index]);
+    const sharedModulePorts = (record.modulePorts || []).filter((_, index) => !indices.includes(index));
+    allocated.set(record, {...record, algebraSlots, sharedModulePorts,
+      modulePorts: record.modulePorts ? indices.map(index => record.modulePorts[index]) : null,
+      instanceKey: `${algebraSlots.join("|")}:${record.grade.stem}:${record.grade.filtration}`});
+  }
+  return records.flatMap(record => allocated.has(record) ? [allocated.get(record)] : []);
 }
 
 function quotientRepresentativeLabel(ws, representative, patterns) {
@@ -2021,8 +2093,8 @@ function drawingPeriodicityPreviewInstances(bounds) {
   });
 }
 
-function packedClassInstances(ws, bounds, metrics, extraInstances = [], presentation = null) {
-  const instances = periodicClassInstances(ws, bounds, presentation).map((record) => ({
+function packedClassInstances(ws, bounds, metrics, extraInstances = [], presentation = null, algebra = undefined) {
+  const instances = periodicClassInstances(ws, bounds, presentation, algebra).map((record) => ({
     ...record,
     key: record.instanceKey,
     cellKey: `${record.grade.stem}:${record.grade.filtration}`,
@@ -2069,7 +2141,9 @@ function quotientDescription(record) {
     const scalar = two === 0 ? "" : two === 3 ? "8W · " : `${2 ** two} · `;
     return `${scalar}${j ? "positive-j ideal" : "constant component"}`;
   });
-  return `${record.uncertain ? "Provisional (quotient unresolved)" : "Surviving coefficient components"}: ${components.join("; ")}. The label names the E2 module, not every surviving generator.`;
+  const shared = record.sharedModulePorts?.length
+    ? ` Shared coefficient ports [${record.sharedModulePorts.join(", ")}] are represented by other displayed basis points, not zero.` : "";
+  return `${record.uncertain ? "Provisional (quotient unresolved)" : "Displayed coefficient components"}: ${components.join("; ")}. The label names the lowest displayed constant representative when present; positive-j ideals are listed separately and are not rescaled by that label.${shared}`;
 }
 
 function packedPoint(record, metrics) {
@@ -2149,12 +2223,11 @@ function classLabelMarkup(record, point, metrics, visible) {
   return `<foreignObject class="label-host${exact ? " selected-occurrence-label" : ""}" data-label-point-x="${point.x}" data-label-point-y="${point.y}" data-label-gap="${labelGap}" x="${labelX}" y="${point.y - 10}" width="280" height="38"><div xmlns="http://www.w3.org/1999/xhtml" class="selected-class-label"><span class="latex-label" data-latex="${escapeHtml(name)}"></span>${degree}</div></foreignObject>`;
 }
 
-function periodicDifferentials(ws, bounds, candidateDiagnostics = null) {
+function periodicDifferentials(ws, bounds, candidateDiagnostics = null, algebra = pageAlgebra(ws, bounds)) {
   const byId = new Map(ws.classes.map((item) => [item.id, item]));
   const liveIds = new Set(liveClassesAt(ws).map((item) => item.id));
   const results = [];
   const seen = new Set();
-  const algebra = pageAlgebra(ws, bounds);
   for (const diff of ws.differentials.filter((item) => item.page === ws.page)) {
     if (algebra?.isZero(diff)) continue;
     const source = algebra?.endpoints(diff).source || byId.get(diff.source_id);
@@ -2227,6 +2300,7 @@ function periodicDifferentials(ws, bounds, candidateDiagnostics = null) {
 function visibleRelations(ws, liveIds) {
   return ws.propositions.filter((proposition) => {
     if (proposition.kind !== "relation") return false;
+    if (proposition.status === "superseded" || proposition.conclusion?.source_schema_retirement) return false;
     const sourceId = proposition.conclusion?.source_id;
     const targetId = proposition.conclusion?.target_id;
     const page = Number(proposition.conclusion?.page || 2);
@@ -2234,11 +2308,10 @@ function visibleRelations(ws, liveIds) {
   });
 }
 
-function periodicRelations(ws, liveIds, bounds) {
+function periodicRelations(ws, liveIds, bounds, algebra = pageAlgebra(ws, bounds)) {
   const classes = new Map(ws.classes.map((item) => [item.id, item]));
   const periods = workspaceRenderPeriods(ws);
   const results = [];
-  const algebra = pageAlgebra(ws, bounds);
   for (const proposition of visibleRelations(ws, liveIds)) {
     const source = classes.get(proposition.conclusion.source_id);
     const target = classes.get(proposition.conclusion.target_id);
@@ -2303,7 +2376,10 @@ function fitClassLabelsToViewport(svg, metrics) {
 
 function renderMathInChart(metrics = chartMetrics()) {
   const svg = $("#chart");
-  if (window.katex) svg.querySelectorAll(".latex-label[data-latex]").forEach((node) => katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false }));
+  svg.querySelectorAll(".latex-label[data-latex]").forEach((node) => {
+    if (window.katex) katex.render(node.dataset.latex, node, { throwOnError: false, displayMode: false, trust: false });
+    else node.textContent = node.dataset.latex;
+  });
   fitClassLabelsToViewport(svg, metrics);
 }
 
@@ -2699,10 +2775,10 @@ function renderChart() {
 
   const algebra = pageAlgebra(ws, buffered);
   const candidateDiagnostics = [];
-  const differentialOccurrences = periodicDifferentials(ws, buffered, candidateDiagnostics);
+  const differentialOccurrences = periodicDifferentials(ws, buffered, candidateDiagnostics, algebra);
   const presentation = window.HFPSSChartPresentation?.create(algebra, differentialOccurrences, buffered);
   const previewInstances = drawingPeriodicityPreviewInstances(buffered);
-  const allPackedInstances = packedClassInstances(ws, buffered, m, previewInstances, presentation);
+  const allPackedInstances = packedClassInstances(ws, buffered, m, previewInstances, presentation, algebra);
   const packedInstances = allPackedInstances.filter((record) => !record.preview);
   window.renderPublishedTableLedger?.(ws, undefined, algebra);
   updateChartPageStatus(ws, pageStatusText(ws, algebra));
@@ -2751,7 +2827,7 @@ function renderChart() {
   const vectorCellLayout = cellChartLayout(ws, m, buffered);
   markup += cellMapSvg(ws, vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "connections");
-  for (const item of periodicRelations(ws, liveIds, buffered)) {
+  for (const item of periodicRelations(ws, liveIds, buffered, algebra)) {
     const relation = item.proposition;
     const source = item.source;
     const target = item.target;
@@ -2938,8 +3014,7 @@ async function extendPageLimit() {
   try {
     const data = await api(`/api/workspaces/${ws.id}/settings`, { method: "PATCH", body: JSON.stringify({ page_limit: next }) });
     ws.settings = data.settings;
-    state.history = await api("/api/history");
-    renderHistoryControls();
+    await refreshHistory(state.project, projectLoadSequence);
     setPage(next);
     toast(`Added E${next} to this workspace.`);
   } catch (error) {
@@ -3441,7 +3516,12 @@ function handleHotkey(event) {
 }
 
 function bindEvents() {
-  $("#open-legacy-catalog").addEventListener("click", openLegacyCatalog);
+  $("#legacy-catalog-reference").addEventListener("toggle", (event) => {
+    if (event.currentTarget.open) void loadLegacyCatalogManifest().catch(error => toast(error.message));
+  });
+  $("#open-legacy-catalog").addEventListener("click", () => {
+    void openLegacyCatalog().catch(error => toast(error.message));
+  });
   $("#close-legacy-catalog").addEventListener("click", closeLegacyCatalog);
   $("#workspace-select").addEventListener("change", (event) => {
     state.workspaceId = event.target.value;
@@ -3724,7 +3804,8 @@ function downloadTex(kind) {
 
 if (PAGE_MODE === "reviewing") bindReviewEvents();
 else bindEvents();
+window.addEventListener("math-renderer-ready", hydrateMathLabels);
 
-(PAGE_MODE === "reviewing" ? loadReviewPage() : Promise.all([loadProject(), loadLegacyCatalogManifest()])).catch((error) => {
+(PAGE_MODE === "reviewing" ? loadReviewPage() : loadProject()).catch((error) => {
   document.body.innerHTML = `<pre>Unable to load HFPSS Studio: ${escapeHtml(error.message)}</pre>`;
 });

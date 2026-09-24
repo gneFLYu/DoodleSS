@@ -2,6 +2,8 @@ import sys
 import re
 from pathlib import Path
 import unittest
+from copy import deepcopy
+from dataclasses import asdict
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
@@ -112,6 +114,68 @@ class LegacyReviewTest(unittest.TestCase):
 
 
 class MaterializationTest(unittest.TestCase):
+    def test_exact_catalogue_match_restores_only_missing_source_quarantine(self):
+        reason = "Archived during source audit: active local display point had no source locator or notes."
+        restored = [ClassNode(f"local-h1-{power}", "h_1" if power == 1 else f"h_1^{power}",
+                              Grade(power, power), archived=True, archived_reason=reason,
+                              notes="Keep my observation.") for power in (1, 2, 3)]
+        incorrect = ClassNode("old-wrong-degree", "v_1^4D^{-1}", Grade(4, 0),
+                              archived=True, archived_reason=reason)
+        manual = ClassNode("manual-hidden", "h_1D", Grade(9, 1),
+                           archived=True, archived_reason="Archived by researcher.")
+        workspace = Workspace(id="ws_integer", name="integer", classes=[*restored, incorrect, manual])
+        first = materialize_verified_e2_records(workspace, "integer")
+        self.assertEqual(set(first["restored_classes"]), {node.id for node in restored})
+        for node in restored:
+            self.assertFalse(node.archived)
+            self.assertEqual(node.notes, "Keep my observation.")
+            self.assertEqual(node.style["source_audit_restoration"]["archived_reason"], reason)
+            self.assertIn("Table 2", node.style["source_audit_restoration"]["source_ref"])
+        self.assertTrue(incorrect.archived)
+        self.assertTrue(manual.archived)
+        edges = {(p.conclusion.get("source_id"), p.conclusion.get("target_id"))
+                 for p in workspace.propositions if p.kind == "relation"}
+        self.assertIn((restored[0].id, restored[1].id), edges)
+        self.assertIn((restored[1].id, restored[2].id), edges)
+        before = deepcopy(asdict(workspace))
+        self.assertFalse(materialize_verified_e2_records(workspace, "integer")["restored_classes"])
+        self.assertEqual(asdict(workspace), before)
+
+    def test_current_generated_edges_rebind_retired_targets_without_changing_manual_edges(self):
+        workspace = Workspace(id="ws_integer", name="integer")
+        materialize_verified_e2_records(workspace, "integer")
+        originals = {p.id: deepcopy(p) for p in workspace.propositions
+                     if p.id in {"source_e2_edge_e2_integer_h1_h1", "source_e2_edge_e2_integer_xh1_h1",
+                                 "source_e2_edge_e2_integer_h2_h2"}}
+        self.assertEqual(len(originals), 3)
+        old_target = ClassNode("e2_integer_cell_s2_f2_dp0", r"\{x^2,y^2,h_1^2\}", Grade(2, 2))
+        workspace.classes.append(old_target)
+        for edge in workspace.propositions:
+            if edge.id not in originals:
+                continue
+            edge.conclusion["target_id"] = old_target.id
+            edge.conclusion["researcher_note"] = "Retain this note."
+            edge.notes = "Original observation."
+        manual = Proposition("manual-relation", "relation", "My conjecture", status="review",
+                             conclusion={"source_id": "e2_integer_h1", "target_id": old_target.id})
+        workspace.propositions.append(manual)
+        manual_before = asdict(manual)
+        materialize_verified_e2_records(workspace, "integer")
+        self.assertTrue(old_target.archived)
+        for edge in workspace.propositions:
+            if edge.id not in originals:
+                continue
+            self.assertEqual(edge.status, "established")
+            self.assertEqual(edge.conclusion["target_id"], originals[edge.id].conclusion["target_id"])
+            self.assertNotIn("source_schema_retirement", edge.conclusion)
+            self.assertEqual(edge.conclusion["source_schema_rebinding"]["previous_target_id"], old_target.id)
+            self.assertEqual(edge.conclusion["researcher_note"], "Retain this note.")
+            self.assertEqual(edge.notes, "Original observation.")
+        self.assertEqual(asdict(manual), manual_before)
+        before = deepcopy(asdict(workspace))
+        materialize_verified_e2_records(workspace, "integer")
+        self.assertEqual(asdict(workspace), before)
+
     def test_materialization_adds_only_catalogue_records_and_is_idempotent(self):
         workspace = Workspace(
             id="ws_integer",
