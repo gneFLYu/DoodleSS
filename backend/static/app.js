@@ -3520,6 +3520,7 @@ function isTypingTarget(target) {
 }
 
 function handleHotkey(event) {
+  if (event.target?.dataset?.sidebarResizer) return;
   const dialog = document.querySelector("dialog[open]");
   if (dialog?.open) {
     if (event.code === "Escape") {
@@ -3861,7 +3862,12 @@ async function downloadTex(kind) {
 }
 
 if (PAGE_MODE === "reviewing") bindReviewEvents();
-else bindEvents();
+else {
+  bindEvents();
+  window.HFPSSSidebarLayout?.mount($(".layout"), () => {
+    if (state.project) { constrainView(); scheduleChartRender(); }
+  });
+}
 window.addEventListener("math-renderer-ready", hydrateMathLabels);
 
 (PAGE_MODE === "reviewing" ? loadReviewPage() : loadProject()).catch((error) => {

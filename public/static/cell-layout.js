@@ -29,6 +29,47 @@
     ].join("\u0000");
   }
 
+  function alignSeriesGlyph(packed, cell, edgeInset, collisionGap, options) {
+    const seriesShapes = new Set(["j-series", "j-positive-series", "witt-j-series"]);
+    const anchors = packed.filter(record => seriesShapes.has(record.shape));
+    // A circle-dot h1 chain should not zigzag merely because one bidegree
+    // also contains a finite F4 summand. Keep its unique series generator
+    // at the same cell-relative origin as singleton series generators.
+    // This is only a layout preference: finite 2-towers and cells with
+    // multiple series directions retain their general packing and ports.
+    if (anchors.length !== 1 || packed.length < 2 || packed.length > 3) return packed;
+    const anchor = anchors[0];
+    const companions = packed.filter(record => record !== anchor);
+    if (companions.some(record => record.shape !== "dot")) return packed;
+    const envelope = options.uniformSize ? Math.max(1, Number(options.glyphEnvelope) || 1) : 1;
+    const visibleRadius = record => record.size / envelope * (
+      record.shape === "j-series" ? 1.3 : record.shape === "j-positive-series" ? 0.92
+        : record.shape === "witt-j-series" ? Math.SQRT2 * 1.18 : 0.72);
+    const anchorRadius = visibleRadius(anchor);
+    const companionRadius = Math.max(...companions.map(visibleRadius));
+    const minimumOffset = (anchorRadius + companionRadius + collisionGap) / Math.SQRT2;
+    const maximumOffset = cell / 2 - edgeInset - companionRadius;
+    if (anchorRadius > cell / 2 - edgeInset || minimumOffset > maximumOffset) return packed;
+    const offset = Math.min(maximumOffset, Math.max(cell * 0.18, minimumOffset));
+    const positions = new Map([[anchor, {dx: 0, dy: 0}]]);
+    // In screen coordinates this diagonal is perpendicular to h1's
+    // (stem, filtration) = (1, 1) direction, leaving the chain unobstructed.
+    companions.forEach((record, index) => {
+      const displacement = (index === 0 ? 1 : -1) * offset;
+      positions.set(record, {dx: displacement, dy: displacement});
+    });
+    return packed.map(record => {
+      const point = positions.get(record);
+      const separation = Math.min(...packed.filter(other => other !== record).map(other => {
+        const target = positions.get(other);
+        return Math.hypot(point.dx - target.dx, point.dy - target.dy);
+      }));
+      const radius = visibleRadius(record);
+      const hitRadius = Math.min(Math.max(radius + 1.5, 5), Math.max(radius, (separation - 0.4) / 2));
+      return {...record, ...point, hitRadius};
+    });
+  }
+
   function packCell(records, cellSize, options = {}) {
     if (!Array.isArray(records) || !records.length) return [];
     const cell = Math.max(1, Number(cellSize) || 1);
@@ -61,7 +102,7 @@
       : 0;
     const neighborDistance = Math.min(...[stepX, stepY].filter((value) => value > 0), Number.POSITIVE_INFINITY);
 
-    return ordered.map((record, index) => {
+    const packed = ordered.map((record, index) => {
       const row = Math.floor(index / columns);
       const itemsBeforeRow = row * columns;
       const itemsInRow = Math.min(columns, count - itemsBeforeRow);
@@ -84,6 +125,7 @@
         packCount: count,
       };
     });
+    return alignSeriesGlyph(packed, cell, edgeInset, collisionGap, options);
   }
 
   function packInstances(records, cellSize, options = {}) {

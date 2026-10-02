@@ -111,6 +111,26 @@ def test_shared_e2_layout_does_not_copy_later_differentials(actual_atlas_e2):
     assert rows["ws_integer"]["differentialPages"] != rows["ws_2sigma_i"]["differentialPages"]
 
 
+def test_all_atlas_circle_dot_h1_relations_follow_straight_diagonals(actual_atlas_e2):
+    series_shapes = {"j-series", "j-positive-series", "witt-j-series"}
+    for row in actual_atlas_e2:
+        checked = 0
+        for encoded in row["edges"]:
+            edge = json.loads(encoded)
+            if (edge[2] - edge[0], edge[3] - edge[1]) != (1, 1):
+                continue
+            for source in edge[7]:
+                for target in edge[8]:
+                    if source[4] not in series_shapes or target[4] not in series_shapes:
+                        continue
+                    # Screen y is negative filtration. Equal dx+dy means
+                    # the endpoints lie on the same slope-minus-one line,
+                    # even when either cell has additional finite summands.
+                    assert source[5] + source[6] == pytest.approx(target[5] + target[6]), (row["id"], edge)
+                    checked += 1
+        assert checked > 0, row["id"]
+
+
 def test_initial_packing_ignores_transported_names_and_anchor_status():
     script = r"""
 const layout = require('./backend/static/cell-layout.js');

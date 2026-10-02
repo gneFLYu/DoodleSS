@@ -69,7 +69,7 @@
   </nav>
 
   <main class="layout">
-    <aside class="left-panel">
+    <aside class="left-panel" id="left-sidebar">
       <section class="panel-section">
         <div class="eyebrow">RESEARCHING MODE</div>
         <h1 id="workspace-title">Loading</h1>
@@ -138,6 +138,7 @@
 
     </aside>
 
+    <div class="sidebar-resizer" data-sidebar-resizer="left" role="separator" tabindex="0" aria-label="Resize left sidebar" aria-orientation="vertical" aria-controls="left-sidebar" title="Drag to resize left sidebar; double-click to reset. Arrow keys also adjust width."></div>
     <section class="workspace">
       <div class="canvas-header">
         <div><span class="eyebrow">CHART</span><strong id="chart-caption">E2</strong></div>
@@ -150,7 +151,8 @@
       <div class="bottom-strip"><span>Stem</span><span id="viewport-readout">Upper half-plane · buffer: 6 cells</span><span id="zoom-readout">100%</span><span>Filtration &ge; 0</span></div>
     </section>
 
-    <aside class="right-panel">
+    <div class="sidebar-resizer" data-sidebar-resizer="right" role="separator" tabindex="0" aria-label="Resize right sidebar" aria-orientation="vertical" aria-controls="right-sidebar" title="Drag to resize right sidebar; double-click to reset. Arrow keys also adjust width."></div>
+    <aside class="right-panel" id="right-sidebar">
       <section class="panel-section">
         <div class="section-head"><div><div class="eyebrow">CLASS FATE</div><h2>HFPSS / Tate timeline</h2></div><span id="fate-status" class="pill">none</span></div>
         <div id="fate-inspector" class="fate-inspector" aria-live="polite"><p class="empty">Select a class to inspect its data and two-track fate record.</p></div>
@@ -351,6 +353,7 @@
   <script src="{{ url_for('static', filename='page-algebra.js') }}"></script>
   <script src="{{ url_for('static', filename='table-ledger.js') }}"></script>
   <script src="{{ url_for('static', filename='tex-export.js') }}"></script>
+  <script src="{{ url_for('static', filename='sidebar-layout.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
