@@ -12,8 +12,16 @@
 
   function stableRecordKey(record) {
     const explicitOrder = Number.isFinite(Number(record.order)) ? Number(record.order) : 0;
+    // E2 has exactly two Thom patterns. A transported label (or whether this
+    // occurrence happens to be a saved anchor) must not permute their basis
+    // columns inside a bidegree. Later pages may use adapted quotient bases,
+    // so only the initial-page caller opts into this ordering.
+    const pattern = record.e2CanonicalOrder ? record.item?.style?.e2_pattern : null;
+    const canonical = pattern
+      ? `${pattern}\u0000${(record.modulePorts || []).join(",")}` : "";
     return [
       String(explicitOrder).padStart(12, "0"),
+      canonical,
       record.periodic ? "1" : "0",
       record.shape === "square" ? "0" : "1",
       String(record.label || ""),

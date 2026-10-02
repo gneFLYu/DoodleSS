@@ -61,7 +61,7 @@ def test_sum_labels_collect_equal_monomials_over_f4():
         {"coefficient": 1, "label": r"xh_1v_1+yh_2"},
         {"coefficient": 1, "label": r"xh_1v_1+h_1^2"},
     ])
-    assert result["supported"] and result["label"] == r"yh_2+h_1^{2}"
+    assert result["supported"] and result["label"] == r"\{yh_2+h_1^{2}\}"
     assert len(result["terms"]) == 2
 
 
@@ -83,7 +83,7 @@ def test_common_k_d_thom_suffix_survives_sum_collection():
         {"coefficient": 1, "label": r"(xh_1v_1+h_1^2)k^2D^{-3}u_{3\sigma_i}"},
     ])
     assert result["supported"]
-    assert result["label"] == r"\left(yh_2+h_1^{2}\right)k^{2}D^{-3}u_{3\sigma_i}"
+    assert result["label"] == r"\{yh_2+h_1^{2}\}k^{2}D^{-3}u_{3\sigma_i}"
 
 
 def test_legacy_escaped_brace_sums_collect_with_their_common_thom_suffix():
@@ -92,11 +92,11 @@ def test_legacy_escaped_brace_sums_collect_with_their_common_thom_suffix():
         {"coefficient": 1, "label": r"\{xh_1v_1+h_1^2\}kDu_{3\sigma_i}"},
     ])
     assert result["supported"]
-    assert result["label"] == r"\left(yh_2+h_1^{2}\right)kDu_{3\sigma_i}"
+    assert result["label"] == r"\{yh_2+h_1^{2}\}kDu_{3\sigma_i}"
 
 
 def test_parentheses_distribute_and_factor_powers_combine_without_a_rewrite_system():
-    assert combine([{"coefficient": 1, "label": r"(x+y)^2"}])["label"] == r"x^{2}+y^{2}"
+    assert combine([{"coefficient": 1, "label": r"(x+y)^2"}])["label"] == r"\{x^{2}+y^{2}\}"
     assert combine([{"coefficient": 1, "label": r"D^{-2}D^3"}])["label"] == "D"
     # No theorem or generator relation x²+y²=0 is inferred.
     assert combine([{"coefficient": 1, "label": r"x^2+y^2"}])["label"] != "0"

@@ -200,7 +200,7 @@ def test_relative_parameter_is_not_misrepresented_as_an_overall_arrow_scalar(ren
 
 def test_legacy_equal_coefficient_target_cancels_repeated_monomials_in_real_svg(rendered):
     case = rendered[1]
-    expected = r"\left(yh_2+h_1^{2}\right)kDu_{3\sigma_i}"
+    expected = r"\{yh_2+h_1^{2}\}kDu_{3\sigma_i}"
     assert case["targetLabel"] == expected
     target = by_attribute(svg(case), "data-class-instance", case["targetKey"])
     assert expected in target.get("aria-label")
@@ -243,9 +243,11 @@ def test_nontrivial_one_hot_relation_scalar_is_retained_at_arrow_midpoint(render
 def test_render_and_combination_inspection_do_not_mutate_saved_equations_or_quotient(rendered):
     for case in rendered.values():
         assert case["projectUnchanged"] and case["quotientUnchanged"]
-        assert case["ordinaryClicks"] == 0
+        # Exact computed endpoints are selectable by the connection tools;
+        # inspect/delete/rename still cannot mutate a computed representative.
+        assert case["ordinaryClicks"] == (2 if case["targetReadOnly"] else 0)
     assert rendered[2]["targetReadOnly"]
-    assert len([message for message in rendered[2]["messages"] if "Read-only" in message]) == 6
+    assert len([message for message in rendered[2]["messages"] if "Read-only" in message]) == 4
 
 
 @pytest.mark.parametrize("mode,branch", [("positive-j", [0, 1]), ("higher-two", [1, 0])])
@@ -261,7 +263,7 @@ def test_actual_surviving_two_or_j_branch_connects_both_rendered_endpoints(rende
     assert case["targetCoordinates"] == [1, 0]
     assert case["targetDots"] == case["dimension"] == 2
     assert case["projectUnchanged"] and case["quotientUnchanged"]
-    assert case["ordinaryClicks"] == 0 and case["targetReadOnly"]
+    assert case["ordinaryClicks"] == 2 and case["targetReadOnly"]
     assert not any(element.get("data-coefficient-for") == "incoming" for element in tree.iter())
 
 
@@ -270,7 +272,7 @@ def test_named_point_owned_only_by_two_layer_keeps_integer_multiple_exactly_once
     q = next(record for record in case["records"] if record["id"] == "q")
     assert q["ports"] == ["1:0"]
     assert q["storedLabel"] == r"\{xh_1v_1+h_1^2\}kDu_{3\sigma_i}"
-    assert q["label"] == r"2\left(\{xh_1v_1+h_1^2\}kDu_{3\sigma_i}\right)"
+    assert q["label"] == r"2\{xh_1v_1+h_1^{2}\}kDu_{3\sigma_i}"
     target = by_attribute(svg(case), "data-class-instance", q["key"])
     assert target.get("aria-label").startswith(q["label"] + " at ")
     assert case["dimension"] == 4  # Two F4 residue ports for each of P and Q.

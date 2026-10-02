@@ -789,7 +789,7 @@ body.catalog-mode #find-differential-candidates {
   margin-top: 10px;
 }
 
-.class-row span:first-child {
+.class-row > span:first-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1815,10 +1815,18 @@ dialog.e2-presentation-dialog {
   font-size: 1em;
 }
 
-.class-formula { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.class-formula { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 0.2em; }
 .class-formula .katex { font-size: 1em; }
 .class-row > span:first-child { display: flex; align-items: center; gap: 5px; }
 .class-row .class-formula { display: inline-block; }
+/* Scalar dots are distinct selectable ports, not decoration behind the
+   central group hit target. Keep their coefficient identity on clicks. */
+.class-point [data-coefficient-port] { pointer-events: all; cursor: inherit; }
+.tex-export-dialog { width: min(600px, calc(100vw - 36px)); }
+.tex-export-dialog fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; padding: 14px; border: 1px solid #d1d5db; border-radius: 8px; }
+.tex-export-dialog label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.tex-export-dialog input { min-width: 0; }
+.tex-export-error { color: #b91c1c; min-height: 1.2em; }
 .toolbar-more { position: relative; }
 .toolbar-more > summary { cursor: pointer; padding: 7px 12px; border: 1px solid var(--border, #d1d5db); border-radius: 6px; background: white; }
 .toolbar-more-actions { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; display: grid; gap: 6px; padding: 10px; width: 230px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-shadow: 0 4px 16px #0f172a18; }

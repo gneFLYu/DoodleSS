@@ -153,7 +153,7 @@ vm.runInContext(input.functions.map(extract).join('\n'), context);
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """, {"path": str(root / "backend/static/app.js"), "functions": [
         *HELPERS, "escapeHtml", "gradeText", "inBounds", "classLabelMarkup",
-        "inspectQuotientRepresentative", "onClassClick",
+        "inspectQuotientRepresentative", "rawPeriodicDisplayLabel", "selectedPortLabel", "onClassClick",
     ]})
 
     assert result["unchanged"] is True

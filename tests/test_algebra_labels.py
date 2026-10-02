@@ -19,7 +19,7 @@ class AlgebraLabelTest(unittest.TestCase):
     def test_label_is_the_expression_and_registers_basic_generators(self):
         parsed = parse_algebra_label(r"1\,v_1 h_1D^3")
 
-        self.assertEqual(parsed.label, r"v_1h_1D^{3}")
+        self.assertEqual(parsed.label, r"h_1v_1D^{3}")
         self.assertEqual(
             [item.label for item in parsed.registered_generators],
             ["v_1", "h_1", "D"],
@@ -31,7 +31,7 @@ class AlgebraLabelTest(unittest.TestCase):
         product = multiply_algebra_labels("2xD^2", "3Dk")
         translated = multiply_label_by_period("x", "kD^3", 2)
 
-        self.assertEqual(product.label, r"6xD^{3}k")
+        self.assertEqual(product.label, r"6xkD^{3}")
         self.assertEqual(translated.label, r"xk^{2}D^{6}")
 
     def test_rejects_non_monomials_calls_and_bad_separators(self):
@@ -53,7 +53,7 @@ class AlgebraLabelTest(unittest.TestCase):
 
         self.assertEqual(edited.page, 7)
         self.assertEqual(edited.label, edited.expression)
-        self.assertEqual(edited.label, r"u_{\sigma_i}h_1")
+        self.assertEqual(edited.label, r"h_1u_{\sigma_i}")
         self.assertEqual(node.page, 2)
 
 

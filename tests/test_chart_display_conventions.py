@@ -23,6 +23,9 @@ def run_node(script, payload):
 
 
 def app_helper(functions, expression, **values):
+    functions = list(functions)
+    if "periodicDisplayLabel" in functions and "rawPeriodicDisplayLabel" not in functions:
+        functions.append("rawPeriodicDisplayLabel")
     return run_node(r"""
 const fs = require('fs'), vm = require('vm');
 const input = JSON.parse(fs.readFileSync(0, 'utf8'));

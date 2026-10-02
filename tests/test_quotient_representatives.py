@@ -49,9 +49,9 @@ dimensions=()=>({width:640,height:480}); viewportBounds=()=>bounds;
 escapeHtml=value=>String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
 cellChartLayout=()=>new Map(); cellMapSvg=()=>""; cellGlyphSvg=()=>"";
 drawingPeriodicityPreviewSvg=()=>""; renderMathInChart=()=>{};
-let markup="", messages=[], ordinaryClicks=0;
+let markup="", messages=[], ordinaryClicks=0, ordinaryTools=[];
 replaceSvgMarkup=(_svg,text)=>{markup=text;}; toast=message=>messages.push(message);
-onClassClick=()=>{ordinaryClicks++;};
+onClassClick=()=>{ordinaryClicks++;ordinaryTools.push(state.tool);};
 periodicDifferentials=()=>[{diff:{id:"probe",source_id:"a",target_id:"c",page:4,status:"review"},
   sourceNode:kernel,targetNode:ws.classes[4],sourceGrade:{stem:0,filtration:0},targetGrade:{stem:-1,filtration:4}}];
 renderChart();
@@ -73,7 +73,7 @@ const seriesLabel=quotientRepresentativeLabel(ws,{grade:{stem:64,filtration:0},t
   computed:computed.map(p=>({label:p.item.label,id:p.item.id,slot:p.algebraSlots[0],grade:p.grade,terms:p.representativeTerms})),
   actualSlots,slotVisible:computed.some(p=>p.algebraSlots.includes(actualSlots[0])),
   edgeStart:edge&&[Number(edge[1]),Number(edge[2])],expectedPoint:[expectedPoint.x,expectedPoint.y],
-  ordinaryClicks,messages,unchanged:before===JSON.stringify(state.project),connectionStart:state.connectionStart,
+  ordinaryClicks,ordinaryTools,messages,unchanged:before===JSON.stringify(state.project),connectionStart:state.connectionStart,
   readOnlyMarkup:markup.includes('data-readonly-representative="true"'),partial,
   uncertainGlyph:classGlyphMarkup(unknown,{x:0,y:0},"unknown"),seriesLabel,
   classClickGuard:${JSON.stringify(source.includes('state.drag || event.target.closest?.("[data-readonly-representative]")'))}})
@@ -96,11 +96,14 @@ def test_missing_kernel_line_gets_its_own_read_only_representative(quotient_ui):
     assert result["edgeStart"] == result["expectedPoint"]
 
 
-def test_computed_points_cannot_mutate_or_connect_saved_classes(quotient_ui):
+def test_computed_points_are_read_only_but_can_supply_explicit_connection_coordinates(quotient_ui):
     assert quotient_ui["unchanged"]
-    assert quotient_ui["ordinaryClicks"] == 0
+    # Differential/relation tools now accept a read-only representative's
+    # exact coordinates. Merely selecting it still never rewrites a basis.
+    assert quotient_ui["ordinaryClicks"] == 2
+    assert quotient_ui["ordinaryTools"] == ["differential", "relation"]
     assert quotient_ui["connectionStart"] == "a"
-    assert len(quotient_ui["messages"]) == 7
+    assert len(quotient_ui["messages"]) == 5
     assert all("Read-only" in message for message in quotient_ui["messages"])
     assert quotient_ui["classClickGuard"]
 

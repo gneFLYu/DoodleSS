@@ -293,6 +293,14 @@ def _format_label(coefficient: int, factors: tuple[AlgebraLabelFactor, ...]) -> 
     pieces: list[str] = []
     if coefficient != 1 or not factors:
         pieces.append(str(coefficient))
-    for factor in factors:
+    # This is display order only: it does not alter generator registration,
+    # coefficient context, torsion, or any relation in the actual algebra.
+    ranks = {r"\zeta": -2, "j": -1, "x": 0, "y": 1,
+             "h_1": 2, "h_2": 3, "v_1": 4, "k": 5, "D": 6}
+    def display_order(factor: AlgebraLabelFactor) -> tuple[float, str]:
+        name = factor.label
+        return ranks.get(name, 8 if name.startswith("u_") else 1.5), name
+
+    for factor in sorted(factors, key=display_order):
         pieces.append(factor.label if factor.power == 1 else f"{factor.label}^{{{factor.power}}}")
     return "".join(pieces) or "1"

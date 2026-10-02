@@ -35,6 +35,6 @@ def test_renderer_collects_provenance_and_uses_a_surviving_conditional_endpoint(
     source = (root / "backend/static/app.js").read_text(encoding="utf-8")
     assert "candidate = algebra.candidateState(diff, sourceGrade, targetGrade)" in source
     assert "targetNode: pair?.target || target" in source
-    assert "periodicDifferentials(ws, buffered, candidateDiagnostics)" in source
+    assert "periodicDifferentials(ws, buffered, candidateDiagnostics, algebra)" in source
     assert "differentialCandidateSummary(candidateDiagnostics)" in source
     assert (root / "backend/static/app.js").read_bytes() == (root / "public/static/app.js").read_bytes()

@@ -26,7 +26,7 @@ const state = {
   drag: null,
   suppressClick: false,
   connectionPointer: null,
-  pendingRenameId: null,
+  connectionOccurrence: null,
   pendingRelation: null,
   view: { zoom: 1, panX: 0, panY: 0 },
 };
@@ -188,7 +188,9 @@ function escapeHtml(value) {
 }
 
 function mathMarkup(value) {
-  const source = String(value ?? "");
+  const raw = String(value ?? "");
+  const normalized = window.HFPSSDisplayBasis?.normalizeLabel(raw);
+  const source = normalized?.supported ? normalized.label : raw;
   if (window.katex?.renderToString) {
     try { return window.katex.renderToString(source, {throwOnError: false, trust: false, displayMode: false}); }
     catch (_) { /* Keep source labels readable when a renderer is unavailable. */ }
@@ -391,7 +393,6 @@ function toolHint() {
     differential: "Click a source class, preview the arrow, then click its target.",
     relation: "Click two classes to draw and record a candidate relation in the proposition tree.",
     delete: "Click a class to archive its chart display while retaining proof history.",
-    rename: "Click a class to rename it.",
   };
   return hints[state.tool] || hints.inspect;
 }
@@ -1748,6 +1749,8 @@ function shiftKExponent(label, delta) {
 }
 
 function shiftPeriodFactor(label, symbol, delta) {
+  const normalized = window.HFPSSDisplayBasis?.shiftPeriodFactor(label, symbol, delta);
+  if (normalized?.supported) return normalized.label;
   if (!delta) return label;
   const clean = String(label || "").split("=")[0].trim();
   if (clean === "0") return "0";
@@ -1806,7 +1809,20 @@ function shiftPeriodFactor(label, symbol, delta) {
 }
 
 function periodicDisplayLabel(record) {
+  const label = rawPeriodicDisplayLabel(record);
+  const normalized = window.HFPSSDisplayBasis?.normalizeLabel(label);
+  return normalized?.supported ? normalized.label : label;
+}
+
+function rawPeriodicDisplayLabel(record) {
   if (record.presentationLabel) return record.presentationLabel;
+  const residueLabel = label => {
+    const style = record.item.style || {};
+    if (!style.e2_components || Number(style.two_valuation || 0)
+        || String(record.item.coefficient_context_id || "").toLowerCase().includes("witt")) return label;
+    const collected = window.HFPSSDisplayBasis?.combineLabels([{coefficient: 1, label}], {coefficientContext: "F4"});
+    return collected?.supported ? collected.label : label;
+  };
   const survivingLabel = (label) => {
     // Name the lowest surviving CONSTANT 2-adic layer, including a Witt
     // tower. Positive-j ideals have independent fates and do not lower this
@@ -1834,12 +1850,12 @@ function periodicDisplayLabel(record) {
     const value = factor * Number(scalar[2] || 1) * (scalar[1] === "-" ? -1 : 1);
     return `${value}${unit}${scalar[3]}`;
   };
-  if (!record.periodic) return survivingLabel(record.item.label);
+  if (!record.periodic) return survivingLabel(residueLabel(record.item.label));
   const kPower = Number(record.verticalExponent || 0);
   const horizontalDPower = Number(record.horizontalExponent || 0) * Number(record.horizontalStem || 0) / 8;
   const dShift = 3 * kPower + horizontalDPower;
   const basis = record.item.style?.atlas_display_basis;
-  const label = basis?.status === "exact" ? basis.expression : record.item.label;
+  const label = residueLabel(basis?.status === "exact" ? basis.expression : record.item.label);
   const shifted = shiftKExponent(shiftDExponent(label, dShift), kPower);
   if (basis?.status !== "exact" || ![1, 2, 3].includes(basis.unit)) return survivingLabel(shifted);
   const omega = Number(record.item.style.atlas_transport?.omega_power || 0);
@@ -1857,6 +1873,7 @@ function f4DisplayLatex(unit) {
 }
 
 function periodsForClassOnPage(ws, item) {
+  if (item.style?.chart_occurrence_only) return [];
   const periods = [...workspaceRenderPeriods(ws)];
   const add = (period) => {
     if (!period || periods.some((known) => known.stem === period.stem && known.filtration === period.filtration)) return;
@@ -1879,6 +1896,7 @@ function periodsForClassOnPage(ws, item) {
 }
 
 function periodsForDifferential(ws, differential) {
+  if (differential.unperiodic_reason === "manual-chart-occurrence") return [];
   const periods = [...workspaceRenderPeriods(ws)].filter(p => p.filtration !== 0 || !differential.period_stem);
   // Repetition belongs to a row: d7(D^4) has period 64, not 32.
   if (differential.period_stem || differential.period_filtration) {
@@ -2100,6 +2118,7 @@ function packedClassInstances(ws, bounds, metrics, extraInstances = [], presenta
     cellKey: `${record.grade.stem}:${record.grade.filtration}`,
     label: record.item.label,
     shape: quotientGlyph(record) || glyphShapeFor(ws, record.item),
+    e2CanonicalOrder: ws.page === 2,
     size: clamp(metrics.cell * 0.105, 0.55, 7),
   }));
   if (ws.settings?.read_only_catalog) {
@@ -2151,6 +2170,18 @@ function packedPoint(record, metrics) {
   return { x: base.x + record.dx, y: base.y + record.dy };
 }
 
+// A finite 2-tower is ordered bottom to top: a, 2a, 4a. Each algebra
+// slot has its own endpoint; the glyph centre is not a coefficient port.
+function coefficientPortPoint(record, metrics, port = null) {
+  const point = packedPoint(record, metrics);
+  if (record.shape !== "finite-two-tower") return point;
+  const levels = [...new Set(record.modulePorts.map(p => Number(p.split(":")[0])))].sort((a,b) => a-b);
+  const level = port == null ? levels[0] : Number(String(port).split(":")[0]);
+  const index = levels.indexOf(level);
+  if (index < 0) return point;
+  return {...point, y: point.y + ((levels.length - 1) / 2 - index) * record.size * 1.6};
+}
+
 function classInstanceKey(classId, grade) {
   return `${classId}:${grade.stem}:${grade.filtration}`;
 }
@@ -2163,7 +2194,7 @@ function classGlyphMarkup(record, point, classNames) {
     const levels = [...new Set(record.modulePorts.map(port => Number(port.split(":")[0])))].sort((a,b) => a-b);
     const step = record.size * 1.6;
     const ys = levels.map((level, index) => point.y + ((levels.length - 1) / 2 - index) * step);
-    return `<g class="class-point finite-two-tower ${classNames}"><line x1="${point.x}" y1="${ys[0]}" x2="${point.x}" y2="${ys[ys.length - 1]}"/>${ys.map(y => `<circle cx="${point.x}" cy="${y}" r="${record.size * 0.72}"/>`).join("")}</g>`;
+    return `<g class="class-point finite-two-tower ${classNames}"><line x1="${point.x}" y1="${ys[0]}" x2="${point.x}" y2="${ys[ys.length - 1]}"/>${ys.map((y,i) => `<circle data-coefficient-port="${levels[i]}:0" cx="${point.x}" cy="${y}" r="${record.size * 0.72}"/>`).join("")}</g>`;
   }
   if (record.shape === "witt-j-series") {
     const outer = record.size * 1.18;
@@ -2218,7 +2249,7 @@ function classLabelMarkup(record, point, metrics, visible) {
   if ((!exact && !selectedAnchor && !persistentUnit && !selectedQuotient) || !inBounds(record.grade, visible)) return "";
   const labelGap = Math.max(9, Math.min(18, metrics.cell * 0.45));
   const labelX = point.x + labelGap;
-  const name = periodicDisplayLabel(record);
+  const name = exact && selected.label ? selected.label : periodicDisplayLabel(record);
   const degree = exact || selectedAnchor || selectedQuotient ? `<small class="selected-bidegree">(${record.grade.stem}, ${record.grade.filtration})</small>` : "";
   return `<foreignObject class="label-host${exact ? " selected-occurrence-label" : ""}" data-label-point-x="${point.x}" data-label-point-y="${point.y}" data-label-gap="${labelGap}" x="${labelX}" y="${point.y - 10}" width="280" height="38"><div xmlns="http://www.w3.org/1999/xhtml" class="selected-class-label"><span class="latex-label" data-latex="${escapeHtml(name)}"></span>${degree}</div></foreignObject>`;
 }
@@ -2318,7 +2349,7 @@ function periodicRelations(ws, liveIds, bounds, algebra = pageAlgebra(ws, bounds
     if (!source || !target) continue;
     const stemDelta = target.grade.stem - source.grade.stem;
     const filtrationDelta = target.grade.filtration - source.grade.filtration;
-    for (const copy of latticeCopies(source.grade, periods, bounds)) {
+    for (const copy of latticeCopies(source.grade, proposition.conclusion?.chart_occurrence_only ? [] : periods, bounds)) {
       const targetGrade = {
         ...target.grade,
         stem: copy.grade.stem + stemDelta,
@@ -2433,6 +2464,7 @@ function updateChartPageStatus(ws, text, append = false) {
   }
   const status = $("#page-status");
   status.textContent = append ? `${status.textContent} ${text}` : text;
+  status.hidden = !append && !/unknown|unresolved|Unable|failed/.test(text);
 }
 
 function markChartPageCommitted(svg, ws) {
@@ -2445,6 +2477,7 @@ function markChartPageCommitted(svg, ws) {
   if (chartPagePresentation?.workspaceId === ws.id && chartPagePresentation.page === ws.page) {
     $("#chart-caption").textContent = chartPagePresentation.caption;
     $("#page-status").textContent = chartPagePresentation.status;
+    $("#page-status").hidden = !/unknown|unresolved|Unable|failed/.test(chartPagePresentation.status);
     chartPagePresentation = null;
   }
 }
@@ -2783,12 +2816,15 @@ function renderChart() {
   window.renderPublishedTableLedger?.(ws, undefined, algebra);
   updateChartPageStatus(ws, pageStatusText(ws, algebra));
   const packedPreviewInstances = allPackedInstances.filter((record) => record.preview);
-  const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, packedPoint(record, m)]));
+  const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, coefficientPortPoint(record, m)]));
   for (const record of packedInstances) {
-    instancePoints.set(classInstanceKey(record.item.id, record.grade), packedPoint(record, m));
+    instancePoints.set(classInstanceKey(record.item.id, record.grade), coefficientPortPoint(record, m));
     const slot = e2DisplaySlot(record.item, record.grade);
-    if (slot) instancePoints.set(slot, packedPoint(record, m));
-    for (const slot of record.algebraSlots || (presentation || algebra)?.displaySlots(record.item, record.grade) || []) instancePoints.set(slot, packedPoint(record, m));
+    if (slot) instancePoints.set(slot, coefficientPortPoint(record, m));
+    if (slot) for (const port of record.modulePorts || [])
+      instancePoints.set(`${slot}:port:${port}`, coefficientPortPoint(record, m, port));
+    (record.algebraSlots || (presentation || algebra)?.displaySlots(record.item, record.grade) || []).forEach((slot,index) =>
+      instancePoints.set(slot, coefficientPortPoint(record, m, record.modulePorts?.[index])));
   }
   const classesById = new Map(ws.classes.map((item) => [item.id, item]));
   const combinationPorts = new Map(), patternLabels = new Map();
@@ -2818,6 +2854,9 @@ function renderChart() {
         return combinationPorts.get(display.key);
       }
     }
+    const port = `${Number(node?.style?.two_valuation || 0) + Number(branch?.two || 0)}:${Number(node?.style?.j_order || 0) + Number(branch?.j || 0) > 0 ? 1 : 0}`;
+    const scalarPoint = instancePoints.get(`${e2DisplaySlot(node, grade)}:port:${port}`);
+    if (scalarPoint) return scalarPoint;
     const vectorPoints = (algebra?.endpointSlots(node, grade) || []).map(slot => instancePoints.get(slot)).filter(Boolean);
     if (vectorPoints.length) return {x: vectorPoints.reduce((sum, p) => sum + p.x, 0) / vectorPoints.length,
       y: vectorPoints.reduce((sum, p) => sum + p.y, 0) / vectorPoints.length};
@@ -2831,7 +2870,7 @@ function renderChart() {
     const relation = item.proposition;
     const source = item.source;
     const target = item.target;
-    const branch = presentation && algebra.maps(source, target, item.sourceGrade, item.targetGrade)[0];
+    const branch = algebra?.maps(source, target, item.sourceGrade, item.targetGrade)[0];
     const from = endpointPoint(source.id, item.sourceGrade, source, branch);
     const to = endpointPoint(target.id, item.targetGrade, target, branch);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
@@ -2849,7 +2888,7 @@ function renderChart() {
   for (const item of differentialRenderGroups(ws, differentialOccurrences, algebra)) {
     // Use one actual common surviving 2/j branch at both ends. The constant
     // term may already be a boundary while its positive-j tail still maps.
-    const branch = presentation && algebra.maps(item.sourceNode, item.targetNode, item.sourceGrade, item.targetGrade)
+    const branch = algebra?.maps(item.sourceNode, item.targetNode, item.sourceGrade, item.targetGrade)
       .find(value => window.HFPSSPageAlgebra.allowsConstraintBranch(item.diff, value.two || 0, value.j || 0));
     const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode, branch);
     const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode, branch);
@@ -2872,7 +2911,7 @@ function renderChart() {
   }
   if (state.connectionStart && ["differential", "relation"].includes(state.tool)) {
     const source = classesById.get(state.connectionStart);
-    const from = source && (instancePoints.get(classInstanceKey(source.id, source.grade)) || pointFor(source.grade, m));
+    const from = state.connectionOccurrence?.point || (source && (instancePoints.get(classInstanceKey(source.id, source.grade)) || pointFor(source.grade, m)));
     if (from) {
       const to = state.connectionPointer || from;
       markup += `<line id="connection-preview" class="connection-preview ${state.tool}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"/>`;
@@ -2909,13 +2948,21 @@ function renderChart() {
       state.suppressClick = false;
       return;
     }
-    if (node.dataset.readonlyRepresentative) {
+    if (node.dataset.readonlyRepresentative && !["differential", "relation"].includes(state.tool)) {
       const record = packedInstances.find(item => item.instanceKey === node.dataset.classInstance);
       if (record) { inspectQuotientRepresentative(record); renderChart(); }
       return;
     }
-    if (node.dataset.periodicCopy && state.tool !== "inspect") return;
-    const occurrence = packedInstances.find(item => item.instanceKey === node.dataset.classInstance);
+    if (node.dataset.periodicCopy && !["inspect", "differential", "relation"].includes(state.tool)) {
+      toast("A virtual period copy cannot be deleted. Select its stored anchor instead.");
+      return;
+    }
+    let occurrence = packedInstances.find(item => item.instanceKey === node.dataset.classInstance);
+    if (occurrence) {
+      const port = event.target.closest?.("[data-coefficient-port]")?.dataset.coefficientPort;
+      occurrence = {...occurrence, selectedPort: port || occurrence.modulePorts?.[0] || "0:0",
+        point: coefficientPortPoint(occurrence, m, port)};
+    }
     onClassClick(node.dataset.point, occurrence);
   };
   svg.onclick = (event) => {
@@ -3032,27 +3079,30 @@ function setTool(tool) {
 }
 
 async function onClassClick(id, occurrence = null) {
-  const item = workspace().classes.find((point) => point.id === id);
+  const item = occurrence?.item || workspace().classes.find((point) => point.id === id);
   if (!item) return;
   state.selectedQuotientInstance = null;
   state.selectedOccurrence = occurrence && state.tool === "inspect"
     ? {workspaceId: state.workspaceId, page: workspace().page, classId: id, instanceKey: occurrence.instanceKey,
-      grade: {...occurrence.grade}, label: periodicDisplayLabel(occurrence)} : null;
+      grade: {...occurrence.grade}, label: selectedPortLabel(occurrence)} : null;
   if (readOnlyCatalog() && state.tool !== "inspect") state.tool = "inspect";
   if (state.tool === "differential" || state.tool === "relation") {
     if (!state.connectionStart) {
       state.connectionStart = id;
+      state.connectionOccurrence = occurrence || {item, grade: item.grade};
       state.connectionPointer = null;
-      toast(`Source: ${item.label}. Click the ${state.tool === "relation" ? "related" : "target"} class.`);
+      toast(`Source: ${selectedPortLabel(state.connectionOccurrence)}. Click the ${state.tool === "relation" ? "related" : "target"} class.`);
       renderChart();
-    } else if (state.connectionStart === id) {
+    } else if (state.connectionStart === id && state.connectionOccurrence?.instanceKey === occurrence?.instanceKey
+        && state.connectionOccurrence?.selectedPort === occurrence?.selectedPort) {
       state.connectionStart = null;
+      state.connectionOccurrence = null;
       state.connectionPointer = null;
       renderChart();
     } else if (state.tool === "differential") {
-      await createDifferential(state.connectionStart, id);
+      await createDifferential(state.connectionOccurrence, occurrence || {item, grade: item.grade});
     } else {
-      await createRelation(state.connectionStart, id);
+      await createRelation(state.connectionOccurrence, occurrence || {item, grade: item.grade});
     }
     return;
   }
@@ -3063,13 +3113,6 @@ async function onClassClick(id, occurrence = null) {
       state.selectedClassId = null;
       toast("Class archived; proof history retained.");
     } catch (error) { toast(error.message); }
-    return;
-  }
-  if (state.tool === "rename") {
-    state.pendingRenameId = id;
-    $("#rename-form [name=label]").value = item.label;
-    $("#rename-dialog").showModal();
-    $("#rename-form [name=label]").focus();
     return;
   }
   state.selectedClassId = item.id;
@@ -3112,21 +3155,37 @@ async function clearCurrentCanvas() {
   }
 }
 
-async function createDifferential(source_id, target_id) {
+function selectedPortLabel(record) {
+  return periodicDisplayLabel(record.selectedPort ? {...record, modulePorts: [record.selectedPort]} : record);
+}
+
+function chartEndpointPayload(record) {
+  const [two, j] = String(record.selectedPort || record.modulePorts?.[0]
+    || `${record.item.style?.two_valuation || 0}:${record.item.style?.j_order ? 1 : 0}`).split(":").map(Number);
+  return {classId: record.item.id, grade: record.grade, label: selectedPortLabel(record), two, j,
+    ...(record.representativeTerms ? {terms: record.representativeTerms} : {})};
+}
+
+async function createDifferential(source, target) {
+  const page = workspace().page;
+  if (target.grade.stem !== source.grade.stem - 1 || target.grade.filtration !== source.grade.filtration + page) {
+    toast(`d${page} requires target (${source.grade.stem - 1}, ${source.grade.filtration + page}). The source is still selected; choose that target or press Escape.`);
+    return;
+  }
   try {
-    await api(`/api/workspaces/${state.workspaceId}/differentials`, { method: "POST", body: JSON.stringify({ source_id, target_id, page: workspace().page }) });
+    await api(`/api/workspaces/${state.workspaceId}/chart-connections`, {method: "POST", body: JSON.stringify({
+      kind: "differential", source: chartEndpointPayload(source), target: chartEndpointPayload(target), page})});
     state.connectionStart = null;
+    state.connectionOccurrence = null;
     state.connectionPointer = null;
     await loadProject();
-    toast("Differential added with a provenance proposition.");
+    toast("Candidate differential added at the selected coefficient ports. Use Undo to revert; no proof or periodic family was inferred.");
   } catch (error) { toast(error.message); }
 }
 
-async function createRelation(sourceId, targetId) {
-  const source = workspace().classes.find((item) => item.id === sourceId);
-  const target = workspace().classes.find((item) => item.id === targetId);
-  state.pendingRelation = { sourceId, targetId };
-  $("#relation-endpoints").innerHTML = `${mathMarkup(source.label)} → ${mathMarkup(target.label)} on E${Number(workspace().page)}`;
+async function createRelation(source, target) {
+  state.pendingRelation = {source, target};
+  $("#relation-endpoints").innerHTML = `${mathMarkup(selectedPortLabel(source))} → ${mathMarkup(selectedPortLabel(target))} on E${Number(workspace().page)}`;
   $("#relation-form [name=chart_connection_kind]").value = (
     source.grade.stem === target.grade.stem && source.grade.filtration === target.grade.filtration
       ? "vertical-two" : ""
@@ -3139,33 +3198,20 @@ async function savePendingRelation(event) {
   event.preventDefault();
   const pending = state.pendingRelation;
   if (!pending) return;
-  const source = workspace().classes.find((item) => item.id === pending.sourceId);
-  const target = workspace().classes.find((item) => item.id === pending.targetId);
   const form = new FormData(event.currentTarget);
   const chartConnectionKind = String(form.get("chart_connection_kind") || "");
   const sourceRef = String(form.get("source_ref") || "");
   try {
-    await api(`/api/workspaces/${state.workspaceId}/propositions`, { method: "POST", body: JSON.stringify({ kind: "relation", statement: chartConnectionKind ? `${chartConnectionKind} multiplication: ${source.label} to ${target.label}` : `Relation: ${source.label} ~ ${target.label}`, status: "candidate", conclusion: { source_id: pending.sourceId, target_id: pending.targetId, page: workspace().page }, chart_connection_kind: chartConnectionKind, source_ref: sourceRef, rule: "manual", confidence: 0.5, notes: "Added from the chart relation tool; evidence remains to be supplied." }) });
+    await api(`/api/workspaces/${state.workspaceId}/chart-connections`, {method: "POST", body: JSON.stringify({
+      kind: "relation", source: chartEndpointPayload(pending.source), target: chartEndpointPayload(pending.target),
+      page: workspace().page, chart_connection_kind: chartConnectionKind, source_ref: sourceRef})});
     $("#relation-dialog").close();
     state.pendingRelation = null;
     state.connectionStart = null;
+    state.connectionOccurrence = null;
     state.connectionPointer = null;
     await loadProject();
     toast("Relation recorded in the proposition tree.");
-  } catch (error) { toast(error.message); }
-}
-
-async function savePendingRename(event) {
-  event.preventDefault();
-  const id = state.pendingRenameId;
-  const label = String(new FormData(event.currentTarget).get("label") || "").trim();
-  if (!id || !label) return;
-  try {
-    await api(`/api/workspaces/${state.workspaceId}/classes/${id}`, { method: "PATCH", body: JSON.stringify({ label }) });
-    $("#rename-dialog").close();
-    state.pendingRenameId = null;
-    await loadProject();
-    toast("Class renamed.");
   } catch (error) { toast(error.message); }
 }
 
@@ -3498,7 +3544,7 @@ function handleHotkey(event) {
   }
   if (event.defaultPrevented || event.isComposing || event.repeat || commandKey || event.altKey || typing) return;
 
-  const toolKeys = { KeyV: "inspect", KeyG: "class", KeyD: "differential", KeyR: "relation", KeyX: "delete", KeyN: "rename" };
+  const toolKeys = { KeyV: "inspect", KeyG: "class", KeyD: "differential", KeyR: "relation", KeyX: "delete" };
   if (toolKeys[event.code]) {
     event.preventDefault();
     setTool(toolKeys[event.code]);
@@ -3706,9 +3752,9 @@ function bindEvents() {
   $("#class-form [name=label]").addEventListener("input", renderClassLabelPreview);
   $("#cancel-class").addEventListener("click", () => $("#class-dialog").close("cancel"));
   $("#open-cell-editor").addEventListener("click", () => openCellDialog());
-  $("#new-cell-from-panel").addEventListener("click", () => openCellDialog());
-  $("#edit-selected-cell").addEventListener("click", () => state.selectedCellId ? openCellDialog(state.selectedCellId) : openCellDialog());
-  $("#cell-select").addEventListener("change", (event) => {
+  $("#new-cell-from-panel")?.addEventListener("click", () => openCellDialog());
+  $("#edit-selected-cell")?.addEventListener("click", () => state.selectedCellId ? openCellDialog(state.selectedCellId) : openCellDialog());
+  $("#cell-select")?.addEventListener("change", (event) => {
     state.selectedCellId = event.target.value || null;
     state.lastVectorResult = null;
     renderCellInspector();
@@ -3727,7 +3773,7 @@ function bindEvents() {
       toast("Cell and incident matrix displays archived; history retained.");
     } catch (error) { $("#cell-form-result").textContent = error.message; }
   });
-  $("#open-matrix-editor").addEventListener("click", () => openMatrixDialog());
+  $("#open-matrix-editor")?.addEventListener("click", () => openMatrixDialog());
   $("#matrix-form").addEventListener("submit", saveMatrix);
   $("#cancel-matrix").addEventListener("click", () => $("#matrix-dialog").close("cancel"));
   $("#archive-matrix").addEventListener("click", async () => {
@@ -3740,14 +3786,9 @@ function bindEvents() {
       toast("Differential matrix archived; proposition retained.");
     } catch (error) { $("#matrix-form-result").textContent = error.message; }
   });
-  $("#evaluate-cell-vector").addEventListener("click", evaluateCellVector);
-  $("#pin-cell-vector").addEventListener("click", pinCellVector);
-  $("#preview-cell-transition").addEventListener("click", previewCellTransition);
-  $("#rename-form").addEventListener("submit", savePendingRename);
-  $("#cancel-rename").addEventListener("click", () => {
-    state.pendingRenameId = null;
-    $("#rename-dialog").close("cancel");
-  });
+  $("#evaluate-cell-vector")?.addEventListener("click", evaluateCellVector);
+  $("#pin-cell-vector")?.addEventListener("click", pinCellVector);
+  $("#preview-cell-transition")?.addEventListener("click", previewCellTransition);
   $("#relation-form").addEventListener("submit", savePendingRelation);
   $("#cancel-relation").addEventListener("click", () => {
     state.pendingRelation = null;
@@ -3796,8 +3837,25 @@ function bindEvents() {
   window.addEventListener("resize", () => { syncLayoutHeight(); constrainView(); scheduleChartRender(); });
 }
 
-function downloadTex(kind) {
+async function downloadTex(kind) {
   if (!state.workspaceId) return;
+  if (kind === "chart") {
+    try {
+      const ws = workspace();
+      const options = await window.HFPSSChartTex.requestOptions({pageStart: ws.page, pageEnd: ws.page,
+        bounds: viewportBounds(chartMetrics())});
+      if (!options) return;
+      const snapshot = window.HFPSSChartTex.buildSnapshot(ws, options, {
+        pageAlgebra, periodicDifferentials, periodicRelations, packedClassInstances,
+        differentialRenderGroups, liveClassesAt, pointFor, packedPoint, coefficientPortPoint,
+        classInstanceKey, e2DisplaySlot, periodicDisplayLabel, quotientRepresentativeLabel,
+        differentialDisplayCoefficient, differentialVisualState, f4DisplayMultiply, f4DisplayLatex,
+      });
+      window.HFPSSChartTex.download(snapshot);
+      toast(`Exported E${options.pageStart}–E${options.pageEnd}: lowest-page dots and relations, with all differentials in range.`);
+    } catch (error) { toast(error.message); }
+    return;
+  }
   const page = workspace().page;
   window.location.assign(`/api/v2/render/workspaces/${encodeURIComponent(state.workspaceId)}/${kind}.tex?page=${encodeURIComponent(page)}`);
 }

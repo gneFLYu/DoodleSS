@@ -15,6 +15,7 @@ from flask import Flask, jsonify, render_template, request
 
 from domain.fate import class_is_live_on_page, sync_workspace_fates, workspace_sequence_kind
 from domain.actions import c3_transport_preview
+from domain.chart_editing import prepare_connection
 from domain.candidate_enumeration import (
     CandidateEnumerationError,
     enumerate_comparison_transport_candidates,
@@ -684,9 +685,18 @@ def periodicity_rules():
 def render_tex(workspace_id: str, kind: str):
     """Return a deterministic, provenance-preserving TeX snapshot.
 
-    Supported kinds are ``chart`` (a standalone custom-TikZ chart) and
-    ``article`` (a compact review-safe report containing that chart).
+    Compatibility endpoint for a stored-anchor chart/article. The interactive
+    chart exporter uses tex-export.js and the actual page/viewport runtime,
+    including virtual periods and coefficient ports. Do not silently accept
+    range options here and return a smaller, anchor-only picture.
     """
+    range_keys = {"pageStart", "pageEnd", "page_start", "page_end", "stemMin", "stemMax",
+                  "filtrationMin", "filtrationMax", "stem_low", "stem_high",
+                  "filtration_low", "filtration_high"}
+    if range_keys.intersection(request.args):
+        return jsonify({"error": "Use Export chart TeX in the browser for a page/view range. "
+                       "This compatibility endpoint exports stored anchors only; it cannot "
+                       "reproduce viewport periods or coefficient-port geometry."}), 400
     project = load_project()
     workspace = find_workspace(project, workspace_id)
     try:
@@ -702,6 +712,7 @@ def render_tex(workspace_id: str, kind: str):
     else:
         return jsonify({"error": "kind must be chart or article."}), 404
     response = app.response_class(tex, mimetype="application/x-tex")
+    response.headers["X-HFPSS-Export-Scope"] = "stored-anchors; use browser Export chart TeX for viewport ranges"
     response.headers["Content-Disposition"] = f'attachment; filename="{workspace.id}-E{page}-{kind}.tex"'
     return response
 
@@ -1326,6 +1337,38 @@ def create_differential(workspace_id: str):
         sync_workspace_fates(workspace, project=project)
         save_project(project)
     return jsonify({"differential": differential.__dict__, "revision": project.revision}), 201
+
+
+@app.post("/api/workspaces/<workspace_id>/chart-connections")
+def create_chart_connection(workspace_id: str):
+    """Store one manual candidate at exact displayed ports in one undo step."""
+    try:
+        body = request.get_json(force=True)
+        if not isinstance(body, dict):
+            raise ValueError("Connection input must be an object.")
+        with LOCK:
+            project = load_project()
+            workspace = find_workspace(project, workspace_id)
+            nodes, proposition, differential = prepare_connection(workspace, body)
+            kind = body.get("chart_connection_kind")
+            if kind and proposition.kind == "relation":
+                classes = {item.id: item for item in [*workspace.classes, *nodes]}
+                semantic = annotate_connection(kind=kind,
+                    source_grade=classes[proposition.conclusion["source_id"]].grade,
+                    target_grade=classes[proposition.conclusion["target_id"]].grade,
+                    spectral_sequence=workspace.spectral_sequence,
+                    claim_source_ref=body.get("source_ref", ""))
+                proposition.conclusion["chart_connection"] = semantic.to_dict()
+            checkpoint(project, f"Add chart {proposition.kind}: {proposition.statement}")
+            workspace.classes.extend(nodes)
+            workspace.propositions.append(proposition)
+            if differential:
+                workspace.differentials.append(differential)
+            sync_workspace_fates(workspace, project=project)
+            save_project(project)
+        return jsonify({"proposition": asdict(proposition), "revision": project.revision}), 201
+    except (ValueError, TypeError, KeyError, ChartSemanticError) as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.post("/api/v2/workspaces/<workspace_id>/differential-candidates")
