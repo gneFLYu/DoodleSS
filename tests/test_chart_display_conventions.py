@@ -456,7 +456,7 @@ def test_finite_two_tower_uses_ordinary_dot_radius_and_fits_its_envelope(levels)
 
 @pytest.mark.parametrize("shape,envelope", [("dot", 1.35), ("finite-two-tower", 2.4)])
 def test_chart_packer_reserves_the_finite_tower_envelope_without_changing_uniform_size(shape, envelope):
-    result = app_helper(["packedClassInstances"], """(() => {
+    result = app_helper(["c4Sector", "c4CoefficientPorts", "packedClassInstances"], """(() => {
       globalThis.clamp = (value, low, high) => Math.max(low, Math.min(high, value));
       globalThis.periodicClassInstances = () => [{instanceKey: 'a:0:0',
         item: {id: 'a', label: 'a'}, grade: {stem: 0, filtration: 0}, shape: input.shape}];

@@ -37,7 +37,7 @@ vm.runInContext(input.functions.map(extract).join('\n'),ctx);
 Promise.resolve(vm.runInContext(`(async()=>{${input.body}})()`,ctx)).then(result=>process.stdout.write(JSON.stringify(result))).catch(e=>{console.error(e);process.exitCode=1;});
 """
     result = subprocess.run(["node", "-e", script], input=json.dumps({
-        "path": str(APP), "body": body, "functions": functions,
+        "path": str(APP), "body": body, "functions": [*functions, "pageMinimum"],
     }), text=True, encoding="utf-8", capture_output=True, check=True, timeout=20)
     return json.loads(result.stdout)
 

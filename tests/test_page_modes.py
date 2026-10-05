@@ -10,7 +10,7 @@ class PageModeTests(unittest.TestCase):
     def setUp(self):
         self.client = app.test_client()
 
-    def test_researching_page_has_tabs_cell_tools_and_no_logic_graph(self):
+    def test_researching_page_keeps_advanced_editors_without_obsolete_f4_panel(self):
         response = self.client.get("/")
         markup = response.get_data(as_text=True)
 
@@ -18,10 +18,12 @@ class PageModeTests(unittest.TestCase):
         self.assertIn('aria-label="Studio mode"', markup)
         self.assertIn('aria-current="page">Researching', markup)
         self.assertIn('id="chart"', markup)
-        self.assertIn('id="cell-inspector"', markup)
+        self.assertNotIn('id="cell-inspector"', markup)
+        self.assertIn('id="cell-dialog"', markup)
         self.assertIn('id="matrix-dialog"', markup)
         self.assertNotIn('class="tool toolbar-tool" title="Add a matrix differential"', markup)
-        self.assertIn('Advanced matrix editor', markup)
+        self.assertNotIn('Advanced matrix editor', markup)
+        self.assertNotIn('data-tool="rename"', markup)
         self.assertEqual(markup.count('id="legacy-catalog-select"'), 1)
         self.assertNotIn('id="logic-graph"', markup)
 

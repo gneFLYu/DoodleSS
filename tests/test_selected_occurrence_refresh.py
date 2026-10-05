@@ -48,7 +48,7 @@ def test_two_periods_preserve_a_sum_and_transport_its_common_unit():
 
 @pytest.mark.parametrize("change", ["rename", "boundary", "workspace", "page", "selection"])
 def test_refresh_rebuilds_or_discards_the_actual_selected_occurrence(change):
-    result = app_helper(HELPERS + ["refreshSelectedOccurrence"], r"""(() => {
+    result = app_helper(HELPERS + ["selectedPortLabel", "c4CoefficientPorts", "refreshSelectedOccurrence"], r"""(() => {
       const ws = {id: 'ws', page: 9};
       globalThis.workspace = () => ws;
       globalThis.state = {selectedClassId: 'family', selectedOccurrence: {
@@ -153,7 +153,7 @@ vm.runInContext(input.functions.map(extract).join('\n'), context);
 })().catch(error => { console.error(error); process.exitCode = 1; });
 """, {"path": str(root / "backend/static/app.js"), "functions": [
         *HELPERS, "escapeHtml", "gradeText", "inBounds", "classLabelMarkup",
-        "inspectQuotientRepresentative", "rawPeriodicDisplayLabel", "selectedPortLabel", "onClassClick",
+        "inspectQuotientRepresentative", "rawPeriodicDisplayLabel", "selectedPortLabel", "onClassClick", "readOnlyWorkspace", "bssSector",
     ]})
 
     assert result["unchanged"] is True

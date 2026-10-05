@@ -314,16 +314,21 @@ process.stdout.write(JSON.stringify(packed));
         self.assertIn("page <= Number(cycle.declared_page)", self.script)
         self.assertNotIn("Period cycle on E<sub>r</sub>", self.markup)
 
-    def test_workspace_selector_separates_charts_atlas_and_support_spaces(self):
-        self.assertIn('id="support-workspace-select"', self.markup)
-        self.assertIn('id="open-support-workspace"', self.markup)
+    def test_workspace_selector_chooses_family_with_separate_grading_atlas(self):
+        self.assertIn('id="workspace-select"', self.markup)
+        self.assertNotIn('id="support-workspace-select"', self.markup)
+        self.assertNotIn('id="open-support-workspace"', self.markup)
         self.assertIn("function isReferenceSupportWorkspace", self.script)
         self.assertIn("function isEmptyAtlasWorkspace", self.script)
         self.assertIn("item.classes.length === 0", self.script)
         self.assertIn("function ordinaryWorkspaces", self.script)
         self.assertIn("state.workspaceId = defaultWorkspaceId()", self.script)
         self.assertIn("renderWorkspaceNavigation(ws)", self.script)
-        self.assertIn(".support-workspace-control", self.styles)
+        self.assertIn("HFPSSWorkspaceNavigation.renderSelector(selector, state.project, ws)", self.script)
+        self.assertIn("HFPSSWorkspaceNavigation.defaultWorkspaceId(state.project, event.target.value)", self.script)
+        self.assertIn("HFPSSWorkspaceNavigation.atlas(state.project, workspace())", self.script)
+        self.assertIn('id="grading-atlas-title"', self.markup)
+        self.assertIn('id="legacy-catalog-reference"', self.markup)
 
     def test_selected_class_exposes_read_only_differential_candidate_control(self):
         self.assertIn('id="find-differential-candidates"', self.script)

@@ -66,7 +66,7 @@ def test_main_toolbar_keeps_drawing_history_import_export_and_fit(chart_html):
         assert not chart_html.inside(chart_html.by_id(element_id), more)
     tools = [node for node in chart_html.nodes if "data-tool" in node["attrs"]]
     assert {node["attrs"]["data-tool"] for node in tools} == {
-        "inspect", "class", "differential", "relation", "delete", "rename",
+        "inspect", "class", "differential", "relation", "delete",
     }
     assert all(not chart_html.inside(node, more) for node in tools)
 

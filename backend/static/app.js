@@ -28,6 +28,8 @@ const state = {
   connectionPointer: null,
   connectionOccurrence: null,
   pendingRelation: null,
+  bssWindows: {configs: new Map(), cache: new Map(), pending: new Map(), errors: new Map(), catalogs: new WeakMap()},
+  c4Windows: {configs: new Map(), cache: new Map(), pending: new Map(), errors: new Map(), catalogs: new WeakMap()},
   view: { zoom: 1, panX: 0, panY: 0 },
 };
 
@@ -77,6 +79,271 @@ function readOnlyCatalog(ws = workspace()) {
   return Boolean(state.catalogMode && ws?.settings?.read_only_catalog);
 }
 
+function readOnlyWorkspace(ws = workspace()) {
+  return Boolean(ws?.settings?.source_reference) || readOnlyCatalog(ws);
+}
+
+function pageMinimum(ws = workspace()) {
+  const value = Number(ws?.settings?.page_min);
+  return Number.isInteger(value) && value > 0 ? value : ws?.spectral_sequence === "2-bss" ? 1 : 2;
+}
+
+function bssSector(ws) {
+  return ws?.id === "ws_q8_bss_integer" ? "integer" : ws?.id === "ws_q8_bss_sigma" ? "sigma" : null;
+}
+
+function bssProjection(ws) {
+  return ws.settings?.bss_projection === "bockstein" ? "bockstein" : "cohomology";
+}
+
+function bssWindowValues(ws) {
+  const configured = state.bssWindows.configs.get(ws.id) || {h0_max: 2};
+  const bounds = viewportBounds(chartMetrics(), ws.settings.rendering?.buffer_cells ?? 2);
+  // D is a genuine unit on these BSS pages. Panning horizontally only reuses
+  // this seed strip; k rows are computed exactly, never copied across deaths.
+  const pView = bssProjection(ws) === "bockstein";
+  return {page: ws.page, stem_min: 0, stem_max: 7,
+    filtration_min: pView ? 0 : Math.max(0, Math.floor((bounds.filtrationMin - 4) / 8) * 8),
+    filtration_max: pView ? (configured.filtration_max ?? 8) : Math.max(8, Math.ceil((bounds.filtrationMax + 2) / 8) * 8),
+    // Coefficient caps are explicit in either projection. Changing axes must
+    // not silently expand h0 from 2 to 12 and flood the chart with arrows.
+    h0_max: configured.h0_max};
+}
+
+function validateBssWindow(values) {
+  const keys = ["page", "stem_min", "stem_max", "filtration_min", "filtration_max", "h0_max"];
+  if (keys.some(key => !Number.isInteger(values[key]))) throw new Error("All computation bounds must be integers.");
+  if (values.page < 1 || values.page > 4) throw new Error("Choose a 2-BSS page from E1 through E4.");
+  if (values.stem_min > values.stem_max || values.stem_max - values.stem_min > 128)
+    throw new Error("Stem bounds must be ordered and span at most 128 stems.");
+  if (values.filtration_min < 0 || values.filtration_min > values.filtration_max
+      || values.filtration_max - values.filtration_min > 128)
+    throw new Error("Require ordered nonnegative cohomological bounds spanning at most 128 rows.");
+  if (values.h0_max < 0 || values.h0_max > 12)
+    throw new Error("Require 0 ≤ h₀ maximum ≤ 12. Completed j-series have no v₁ display cap.");
+  return values;
+}
+
+function bssWindowKey(ws, values = bssWindowValues(ws)) {
+  return `completed:${bssSector(ws)}:${bssProjection(ws)}:${[values.page, values.stem_min, values.stem_max, values.filtration_min,
+    values.filtration_max, values.h0_max].join(":")}`;
+}
+
+function clearBssWindow(ws) {
+  if (!state.bssWindows.catalogs.has(ws)) state.bssWindows.catalogs.set(ws, {
+    classes: ws.classes, differentials: ws.differentials, propositions: ws.propositions,
+    differential_events: ws.differential_events, fates: ws.fates});
+  // A sparse source equation catalog is not the requested E_r quotient.
+  ws.classes = []; ws.differentials = []; ws.propositions = [];
+  ws.differential_events = []; ws.fates = [];
+  delete ws.settings.bss_computed_window;
+}
+
+function applyBssWindow(ws, payload, key) {
+  if (ws.settings.bss_computed_window?.key === key) return;
+  if (!payload.chart || !Array.isArray(payload.chart.classes) || !Array.isArray(payload.chart.differentials)
+      || !Array.isArray(payload.chart.propositions)) throw new Error("The server did not return a chart-ready 2-BSS window.");
+  if (!state.bssWindows.catalogs.has(ws)) {
+    state.bssWindows.catalogs.set(ws, {classes: ws.classes, differentials: ws.differentials,
+      propositions: ws.propositions, differential_events: ws.differential_events, fates: ws.fates});
+  }
+  ws.classes = payload.chart.classes;
+  ws.differentials = payload.chart.differentials;
+  ws.propositions = payload.chart.propositions;
+  ws.differential_events = [];
+  ws.fates = [];
+  ws.settings.bss_computed_window = {key, window: payload.window, coverage: payload.coverage,
+    completed: Boolean(payload.j_completion || payload.chart.j_completion
+      || payload.chart.classes.some(node => node.style?.bss_j_module)),
+    periodicity: payload.chart.periodicity, projection: payload.projection || "cohomology",
+    warnings: payload.warnings || payload.chart.warnings || [], source_refs: payload.source_refs || []};
+  if (!ws.classes.some(node => node.id === state.selectedClassId)) {
+    state.selectedClassId = null;
+    state.selectedOccurrence = null;
+  }
+}
+
+function prepareBssWindow(ws) {
+  const sector = bssSector(ws);
+  if (!sector) return;
+  const storage = state.bssWindows, values = validateBssWindow(bssWindowValues(ws));
+  const key = bssWindowKey(ws, values);
+  if (storage.cache.has(key)) { applyBssWindow(ws, storage.cache.get(key), key); return; }
+  // Never display E_r engine nodes as if they were the E_(r+1) quotient.
+  if (ws.settings.bss_computed_window?.window.page !== ws.page
+      || ws.settings.bss_computed_window?.projection !== bssProjection(ws)) clearBssWindow(ws);
+  if (storage.pending.has(key) || storage.errors.has(key)) return;
+  const query = new URLSearchParams(Object.entries(values).map(([name, value]) => [name, String(value)]));
+  const request = api(`/api/v2/2-bss/${sector}/completed-chart?${query}&projection=${bssProjection(ws)}`);
+  storage.pending.set(key, request);
+  request.then(payload => {
+    if (!payload.chart || !Array.isArray(payload.chart.classes) || !Array.isArray(payload.chart.differentials)
+        || !Array.isArray(payload.chart.propositions)
+        || payload.chart.periodicity?.stem !== 8 || !payload.chart.periodicity?.permanent
+        || Object.keys(values).some(name => payload.window?.[name] !== values[name]))
+      throw new Error("Unexpected or incomplete 2-BSS window response.");
+    storage.cache.set(key, payload);
+    while (storage.cache.size > 8) storage.cache.delete(storage.cache.keys().next().value);
+  }).catch(error => storage.errors.set(key, error.message)).finally(() => {
+    storage.pending.delete(key);
+    // A slow page request cannot restore a previous page or workspace.
+    const active = workspace();
+    if (bssSector(active) && bssWindowKey(active) === key) render();
+  });
+}
+
+function renderBssWindowControls(ws) {
+  const panel = $("#bss-window-panel");
+  if (!panel) return;
+  panel.hidden = !bssSector(ws);
+  if (panel.hidden) return;
+  const values = bssWindowValues(ws), key = bssWindowKey(ws, values);
+  const form = $("#bss-window-form");
+  for (const [name, value] of Object.entries(values)) if (form.elements[name]) form.elements[name].value = value;
+  $("#bss-projection").value = bssProjection(ws);
+  $("#bss-relations").value = ws.settings.bss_relations || "core";
+  const error = state.bssWindows.errors.get(key), computed = ws.settings.bss_computed_window;
+  const basisCount = ws.classes.filter(node => node.style?.bss_in_window !== false && !node.style?.bss_combination && !node.style?.window_endpoint_only).length;
+  const boundaryCount = ws.classes.filter(node => node.style?.bss_in_window === false && !node.style?.bss_combination && !node.style?.window_endpoint_only).length;
+  const combinationCount = ws.classes.filter(node => node.style?.bss_combination).length;
+  $("#bss-window-status").textContent = error ? `Computation unavailable: ${error}. Use Apply / retry; any retained strip still has its previous display bounds.`
+    : computed?.key === key ? `E${ws.page} · D-periodic (8 stems). ${basisCount} seed module generators; ${boundaryCount} boundary modules; ${combinationCount} dependent Σ vectors. s=${values.filtration_min}…${values.filtration_max}, h₀≤${values.h0_max}. Completed F4[[j]] coefficients have no v₁ cap. Omitted h₀/s levels are not asserted zero.`
+    : `Computing E${ws.page} in the stated bounds${computed ? "; retaining the previous strip until ready" : "; chart left empty until this page is ready"}.`;
+  $("#bss-window-submit").disabled = state.bssWindows.pending.has(key);
+}
+
+function submitBssWindow(event) {
+  event.preventDefault();
+  const ws = workspace();
+  if (!bssSector(ws)) return;
+  try {
+    const form = event.currentTarget;
+    const values = {page: ws.page};
+    Object.assign(values, bssWindowValues(ws));
+    for (const name of ["filtration_max", "h0_max"])
+      values[name] = form.elements[name].value.trim() === "" ? NaN : Number(form.elements[name].value);
+    validateBssWindow(values);
+    state.bssWindows.configs.set(ws.id, values);
+    state.bssWindows.errors.delete(bssWindowKey(ws, values));
+    render();
+  } catch (error) { $("#bss-window-status").textContent = error.message; }
+}
+
+function bssGradingText(ws, grade = null, h0 = null) {
+  const pView = bssProjection(ws) === "bockstein";
+  const projection = grade ? `Projection (stem,${pView ? "p" : "s"})=(${grade.stem},${grade.filtration})${Number.isInteger(h0) ? `; h₀=${h0}` : ""}.`
+    : `Axes: (t−s, ${pView ? "p = Bockstein filtration" : "s = group-cohomology degree"}).`;
+  const actual = bssSector(ws) === "sigma" ? ` Actual RO stem=${grade ? Number(grade.stem) + 1 : "1+stem"}−σᵢ.` : "";
+  return `${projection}${actual} The d_r tridegree is (-1,+1,+r) in (t−s,s,p); plotted degree ${pView ? "(-1,+r)" : "(-1,+1)"}. Pages retain BSS E1 numbering.`;
+}
+
+function c4Sector(ws) {
+  return ws?.id === "ws_c4_bbhs_integer" ? "integer" : ws?.id === "ws_c4_bbhs_1_minus_sigma" ? "1-minus-sigma" : null;
+}
+
+function c4WindowValues(ws) {
+  // Only filtration is loaded lazily. Horizontal panning reuses one certified
+  // Delta_1^4 strip; it never changes the algebra or truncates coefficient tails.
+  const bounds = viewportBounds(chartMetrics(), ws.settings.rendering?.buffer_cells ?? 6);
+  return {page: ws.page, filtration_min: Math.max(0, Math.floor((bounds.filtrationMin - 14) / 16) * 16),
+    filtration_max: Math.max(16, Math.ceil((bounds.filtrationMax + 2) / 16) * 16)};
+}
+
+function validateC4Window(values) {
+  if (Object.values(values).some(value => !Number.isInteger(value))) throw new Error("All computation bounds must be integers.");
+  if (values.page < 2 || values.page > 14) throw new Error("Choose a C4 page from E2 through E14.");
+  if (values.filtration_min < 0 || values.filtration_min > values.filtration_max
+      || values.filtration_max - values.filtration_min > 256)
+    throw new Error("Require ordered nonnegative filtration bounds spanning at most 256 rows.");
+  return values;
+}
+
+function c4WindowKey(ws, values = c4WindowValues(ws)) {
+  return `${c4Sector(ws)}:${[values.page, values.filtration_min, values.filtration_max].join(":")}`;
+}
+
+function applyC4Window(ws, payload, key) {
+  if (ws.settings.c4_computed_window?.key === key) return;
+  if (!state.c4Windows.catalogs.has(ws)) state.c4Windows.catalogs.set(ws, {
+    classes: ws.classes, differentials: ws.differentials, propositions: ws.propositions,
+    differential_events: ws.differential_events, fates: ws.fates});
+  ws.classes = payload.chart.classes;
+  ws.differentials = payload.chart.differentials;
+  ws.propositions = payload.chart.propositions;
+  ws.differential_events = [];
+  ws.fates = [];
+  ws.settings.c4_computed_window = {key, window: payload.window, coverage: payload.coverage,
+    periodicity: payload.chart.periodicity,
+    warnings: payload.warnings || [], source_refs: payload.source_refs || []};
+  if (!ws.classes.some(node => node.id === state.selectedClassId)) {
+    state.selectedClassId = null;
+    state.selectedOccurrence = null;
+  }
+}
+
+function prepareC4Window(ws) {
+  const sector = c4Sector(ws);
+  if (!sector) return;
+  const storage = state.c4Windows, values = validateC4Window(c4WindowValues(ws)), key = c4WindowKey(ws, values);
+  if (storage.cache.has(key)) { applyC4Window(ws, storage.cache.get(key), key); return; }
+  // Keep already computed portions during a vertical pan, but never show an
+  // old E_r as a new page while the new page is loading.
+  if (ws.settings.c4_computed_window?.window.page !== ws.page) {
+    if (!storage.catalogs.has(ws)) storage.catalogs.set(ws, {
+      classes: ws.classes, differentials: ws.differentials, propositions: ws.propositions,
+      differential_events: ws.differential_events, fates: ws.fates});
+    // The source catalog is an E2 motif, not a fallback higher-page quotient.
+    ws.classes = []; ws.differentials = []; ws.propositions = [];
+    ws.differential_events = []; ws.fates = [];
+    delete ws.settings.c4_computed_window;
+  }
+  if (storage.pending.has(key) || storage.errors.has(key)) return;
+  const query = new URLSearchParams(Object.entries(values).map(([name, value]) => [name, String(value)]));
+  const request = api(`/api/v2/c4/${sector}/periodic-chart?${query}`);
+  storage.pending.set(key, request);
+  request.then(payload => {
+    if (!payload.chart || !Array.isArray(payload.chart.classes) || !Array.isArray(payload.chart.differentials)
+        || !Array.isArray(payload.chart.propositions)
+        || payload.chart.periodicity?.stem !== 32 || !payload.chart.periodicity?.permanent
+        || Object.keys(values).some(name => payload.window?.[name] !== values[name]))
+      throw new Error("Unexpected or uncertified C4 periodic chart response.");
+    storage.cache.set(key, payload);
+    while (storage.cache.size > 8) storage.cache.delete(storage.cache.keys().next().value);
+  }).catch(error => storage.errors.set(key, error.message)).finally(() => {
+    storage.pending.delete(key);
+    const active = workspace();
+    if (c4Sector(active) && c4WindowKey(active) === key) render();
+  });
+}
+
+function renderC4WindowControls(ws) {
+  const panel = $("#c4-window-panel");
+  if (!panel) return;
+  panel.hidden = !c4Sector(ws);
+  if (panel.hidden) return;
+  const values = c4WindowValues(ws), key = c4WindowKey(ws, values);
+  const error = state.c4Windows.errors.get(key), computed = ws.settings.c4_computed_window;
+  $("#c4-window-status").textContent = error ? `Periodic chart unavailable: ${error}`
+    : computed?.key === key ? `E${ws.page} · 32-stem periodic view. η and ν lines use surviving coefficient ports; vertical bars denote multiplication by 2. μ-adic tails remain symbolic.`
+    : `Loading E${ws.page} for this filtration range…`;
+}
+
+function selectWorkspace(workspaceId) {
+  if (!state.project.workspaces.some(item => item.id === workspaceId)) return;
+  state.workspaceId = workspaceId;
+  state.selectedClassId = null;
+  state.selectedOccurrence = null;
+  state.classFilter = "";
+  $("#class-filter").value = "";
+  state.suggestions = [];
+  state.candidateResults = null;
+  state.periodicityPreview = null;
+  state.drawingPeriodicityPreview = null;
+  state.view = {zoom: 1, panX: 0, panY: 0};
+  state.connectionStart = null;
+  render();
+}
+
 function isReferenceSupportWorkspace(item) {
   return item.spectral_sequence !== "hfpss"
     || item.group !== "Q8"
@@ -94,7 +361,8 @@ function ordinaryWorkspaces() {
 }
 
 function defaultWorkspaceId() {
-  return ordinaryWorkspaces()[0]?.id || state.project?.workspaces[0]?.id || null;
+  return window.HFPSSWorkspaceNavigation.defaultWorkspaceId(state.project, "q8-hfpss")
+    || state.project?.workspaces[0]?.id || null;
 }
 
 function renderWorkspaceNavigation(ws) {
@@ -103,26 +371,15 @@ function renderWorkspaceNavigation(ws) {
     selector.innerHTML = `<option value="${ws.id}">[read-only archive] ${escapeHtml(ws.name)}</option>`;
     selector.value = ws.id;
     selector.disabled = true;
-    $("#support-workspace-select").innerHTML = "";
-    $("#open-support-workspace").disabled = true;
     return;
   }
   selector.disabled = false;
-  const ordinary = ordinaryWorkspaces();
-  const currentIsOrdinary = ordinary.some((item) => item.id === ws.id);
-  const option = item => `<option value="${item.id}">${escapeHtml(workspaceDisplayName(item))}</option>`;
-  const computed = ordinary.filter(item => !item.settings?.atlas_transport);
-  const transported = ordinary.filter(item => item.settings?.atlas_transport);
-  selector.innerHTML = `${currentIsOrdinary ? "" : option(ws)}<optgroup label="Computed representatives">${computed.map(option).join("")}</optgroup>${transported.length ? `<optgroup label="Isomorphic atlas pages">${transported.map(option).join("")}</optgroup>` : ""}`;
-  selector.value = ws.id;
-
-  const support = state.project.workspaces.filter(isReferenceSupportWorkspace);
-  const supportSelector = $("#support-workspace-select");
-  supportSelector.innerHTML = support.map((item) => `<option value="${item.id}">${escapeHtml(item.name)}</option>`).join("");
-  $("#open-support-workspace").disabled = !support.length;
+  window.HFPSSWorkspaceNavigation.renderSelector(selector, state.project, ws);
 }
 
 function pageLimit(ws = workspace()) {
+  const explicit = Number(ws?.settings?.page_max);
+  if (Number.isInteger(explicit) && explicit >= pageMinimum(ws)) return explicit;
   const inferred = Math.max(2, ...ws.differentials.map((item) => item.page + 1));
   return Math.max(25, inferred, Number(ws.settings.known_page_max || 0), Number(ws.settings.page_limit || 0));
 }
@@ -131,6 +388,11 @@ function liveClassesAt(ws, page = ws.page) {
   const fates = new Map((ws.fates || []).map((item) => [item.class_id, item]));
   return ws.classes.filter((item) => {
     if (item.archived || item.page > page) return false;
+    // Literature charts carry source-scoped lifetimes, not Q8 HFPSS fates.
+    if (ws.settings?.source_reference || ws.spectral_sequence === "2-bss") {
+      const last = item.style?.last_page;
+      return last == null || page <= Number(last);
+    }
     // A coefficient port can die while its cell retains a kernel or j-tail.
     // The occurrence algebra below resolves those subquotients separately.
     if ((item.style?.e2_pattern || item.style?.e2_components) && window.HFPSSPageAlgebra) return true;
@@ -148,6 +410,7 @@ function fateFor(ws, classId) {
 }
 
 function visualStateFor(ws, item) {
+  if (ws.settings?.source_reference || ws.spectral_sequence === "2-bss") return "unknown";
   const conclusion = fateFor(ws, item.id)?.conclusion;
   if (conclusion === "permanent_cycle") return "permanent";
   if (conclusion === "supports_differential") return "killed";
@@ -156,6 +419,7 @@ function visualStateFor(ws, item) {
 }
 
 function glyphShapeFor(ws, item) {
+  if (item.style?.bss_j_module) return item.style.bss_j_module.kind === "free" ? "j-series" : "dot";
   // DKLLW class glyphs describe the coefficient/module pattern. They are
   // independent of the page-fate color supplied by visualStateFor().
   const raw = item.style?.module_pattern
@@ -189,7 +453,8 @@ function escapeHtml(value) {
 
 function mathMarkup(value) {
   const raw = String(value ?? "");
-  const normalized = window.HFPSSDisplayBasis?.normalizeLabel(raw);
+  // h_0 is a separate Bockstein variable, outside the HFPSS label grammar.
+  const normalized = /h_(?:0|\{0\})/.test(raw) ? null : window.HFPSSDisplayBasis?.normalizeLabel(raw);
   const source = normalized?.supported ? normalized.label : raw;
   if (window.katex?.renderToString) {
     try { return window.katex.renderToString(source, {throwOnError: false, trust: false, displayMode: false}); }
@@ -272,11 +537,11 @@ async function loadProject() {
   state.history = {undo_depth: 0, redo_depth: 0};
   if (!state.project.workspaces.some((item) => item.id === state.workspaceId)) state.workspaceId = defaultWorkspaceId();
   if (previousWorkspaceId === state.workspaceId && previousPage != null) {
-    workspace().page = clamp(Number(previousPage) || 2, 2, pageLimit(workspace()));
+    workspace().page = clamp(Number(previousPage) || pageMinimum(), pageMinimum(), pageLimit(workspace()));
     state.pageByWorkspace.set(state.workspaceId, workspace().page);
   } else if (workspace()) {
     const remembered = state.pageByWorkspace.get(state.workspaceId);
-    workspace().page = clamp(Number(remembered ?? workspace().page) || 2, 2, pageLimit(workspace()));
+    workspace().page = clamp(Number(remembered ?? workspace().page) || pageMinimum(), pageMinimum(), pageLimit(workspace()));
     state.pageByWorkspace.set(state.workspaceId, workspace().page);
   }
   refreshSelectedOccurrence();
@@ -313,8 +578,21 @@ function refreshSelectedOccurrence() {
   const record = periodicClassInstances(ws, {
     stemMin: stem, stemMax: stem, filtrationMin: filtration, filtrationMax: filtration,
   }).find(item => item.item.id === selected.classId);
+  const ports = record?.item.style?.c4_coefficient_branch
+    ? c4CoefficientPorts(record.item.style.c4_coefficient_branch) : record?.modulePorts;
+  if (record && selected.selectedPort && Array.isArray(ports) && !ports.includes(selected.selectedPort)) {
+    state.selectedOccurrence = null;
+    return;
+  }
+  const jModule = record?.item.style?.bss_j_module;
+  if (jModule && (!Number.isInteger(selected.selectedJPower ?? 0) || (selected.selectedJPower ?? 0) < 0
+      || jModule.kind === "torsion" && (selected.selectedJPower ?? 0) >= jModule.length)) {
+    state.selectedOccurrence = null;
+    return;
+  }
   state.selectedOccurrence = record ? {...selected, instanceKey: record.instanceKey,
-    grade: {...record.grade}, label: periodicDisplayLabel(record)} : null;
+    grade: {...record.grade}, label: selectedPortLabel({...record, selectedPort: selected.selectedPort,
+      selectedJPower: selected.selectedJPower, selectedJLabel: selected.selectedJLabel})} : null;
 }
 
 async function loadLegacyCatalogManifest() {
@@ -402,13 +680,14 @@ function renderPageSelector() {
   const ws = workspace();
   const current = ws.page;
   const maximum = pageLimit(ws);
-  select.innerHTML = Array.from({ length: maximum - 1 }, (_, index) => {
-    const page = index + 2;
+  const minimum = pageMinimum(ws);
+  select.innerHTML = Array.from({ length: maximum - minimum + 1 }, (_, index) => {
+    const page = index + minimum;
     return `<option value="${page}">E${page}</option>`;
-  }).join("") + (readOnlyCatalog(ws) ? "" : `<option value="__add_page">+ Add E${maximum + 1}</option>`);
+  }).join("") + (readOnlyWorkspace(ws) || ws.settings.page_max ? "" : `<option value="__add_page">+ Add E${maximum + 1}</option>`);
   select.value = current;
-  $("#page-previous").disabled = current <= 2;
-  $("#page-next").disabled = readOnlyCatalog(ws) && current >= maximum;
+  $("#page-previous").disabled = current <= minimum;
+  $("#page-next").disabled = (readOnlyWorkspace(ws) || Boolean(ws.settings.page_max)) && current >= maximum;
 }
 
 function renderLegacyCatalogState(ws) {
@@ -424,13 +703,35 @@ function renderLegacyCatalogState(ws) {
   }
   const blockedIds = [
     "export-json", "export-legacy-json", "import-json", "new-workspace", "export-chart", "export-article",
-    "clear-current-canvas", "reset-demo", "run-rules", "open-cell-editor", "open-matrix-editor",
+    "clear-current-canvas", "reset-demo", "run-rules", "open-cell-editor", "open-matrix-editor", "open-e2-presentation",
   ];
-  blockedIds.forEach((id) => { const node = $(`#${id}`); if (node) node.disabled = Boolean(active); });
-  document.querySelectorAll('[data-tool]:not([data-tool="inspect"])').forEach((button) => { button.disabled = Boolean(active); });
+  const locked = readOnlyWorkspace(ws);
+  blockedIds.forEach((id) => { const node = $(`#${id}`); if (node) node.disabled = locked; });
+  document.querySelectorAll('[data-tool]:not([data-tool="inspect"])').forEach((button) => { button.disabled = locked; });
+  if (locked) state.tool = "inspect";
 }
 
 function pageStatusText(ws, algebra = null) {
+  if (ws.settings?.c4_computed_window) {
+    const result = ws.settings.c4_computed_window, bounds = result.window;
+    if (result.periodicity?.permanent) return `E${ws.page} · C4 periodic coefficient chart. Multiplication and d${ws.page} are shown before taking the next quotient.`;
+    return `E${ws.page} · Computed C4 coefficient modules, stems ${bounds.stem_min}…${bounds.stem_max}, s=${bounds.filtration_min}…${bounds.filtration_max}. ${result.coverage}`;
+  }
+  if (["ws_c4_bbhs_integer", "ws_c4_bbhs_1_minus_sigma"].includes(ws.id))
+    return `E${ws.page} · Waiting for the certified C4 coefficient chart. No E2 source motif is substituted for this page.`;
+  if (ws.settings?.bss_computed_window) {
+    const result = ws.settings.bss_computed_window, bounds = result.window;
+    if (result.periodicity?.permanent) return `E${ws.page} · D-periodic 2-BSS${result.completed ? " over F4[[j]] (circle-dot = free module, not permanence)" : ""}. ${bssGradingText(ws)}`;
+    return `E${ws.page} · Computed additive 2-BSS page, stems ${bounds.stem_min}…${bounds.stem_max}, s=${bounds.filtration_min}…${bounds.filtration_max}, v₁ exponent ≤ ${bounds.v1_max}, h₀ exponent ≤ ${bounds.h0_max}. Boundary endpoints may exceed these display caps. ${bssGradingText(ws)} ${result.coverage}`;
+  }
+  if (bssSector(ws)) return `E${ws.page} · Waiting for this computed 2-BSS page; no source catalog is substituted. ${bssGradingText(ws)}`;
+  if (ws.settings?.literature_review) {
+    const review = ws.settings.literature_review;
+    const convention = ws.spectral_sequence === "2-bss"
+      ? "2-BSS: every plotted d_r has degree (-1,+1); its separate h_0 filtration rises by r."
+      : "Source equations are shown on their recorded pages; a full page quotient is not computed here.";
+    return `E${ws.page} · Source review; complete page quotient not yet computed. ${review.coverage || review.scope || ""} ${convention}`;
+  }
   const conflicts = algebra?.conflicts || [];
   if (conflicts.length) {
     const count = new Set(conflicts.map(item => JSON.stringify([item.page, item.block || item.id, item.reason]))).size;
@@ -462,7 +763,9 @@ function pageStatusText(ws, algebra = null) {
 function render() {
   const ws = workspace();
   if (!ws) return;
-  ws.page = clamp(Number(ws.page) || 2, 2, pageLimit(ws));
+  ws.page = clamp(Number(ws.page) || pageMinimum(ws), pageMinimum(ws), pageLimit(ws));
+  prepareBssWindow(ws);
+  prepareC4Window(ws);
   beginChartPageRender(ws);
   const visibleClasses = liveClassesAt(ws);
   renderWorkspaceNavigation(ws);
@@ -472,8 +775,13 @@ function render() {
   $("#chart").dataset.tool = state.tool;
 
   $("#workspace-title").textContent = workspaceDisplayName(ws);
-  $("#workspace-meta").textContent = `${ws.group} · ${ws.theory} · characteristic ${ws.characteristic} · ${ws.grading_label} · ${e2OrientationPattern(ws)} E2 pattern`;
+  $("#workspace-meta").textContent = ws.settings?.literature_review
+    ? `${ws.group} · ${ws.spectral_sequence === "2-bss" ? "2-BSS" : "HFPSS"} · ${ws.grading_label} · source review`
+    : `${ws.group} · ${ws.theory} · characteristic ${ws.characteristic} · ${ws.grading_label} · ${e2OrientationPattern(ws)} E2 pattern`;
   $("#workspace-summary").textContent = ws.summary || "No research summary has been recorded for this workspace.";
+  renderLiteratureReview(ws);
+  renderBssWindowControls(ws);
+  renderC4WindowControls(ws);
   $("#page-label").textContent = `E${ws.page}`;
   if ($("#vanishing-line")) $("#vanishing-line").value = ws.settings.vanishing_line || 0;
   renderClassList(ws, visibleClasses);
@@ -495,6 +803,7 @@ function render() {
 }
 
 function renderClassList(ws = workspace(), visibleClasses = liveClassesAt(ws)) {
+  visibleClasses = visibleClasses.filter(item => !item.style?.window_endpoint_only);
   const query = String(state.classFilter || "").trim().toLowerCase();
   const matching = query ? visibleClasses.filter((item) => {
     const coordinates = `${item.grade.stem},${item.grade.filtration}`;
@@ -505,7 +814,14 @@ function renderClassList(ws = workspace(), visibleClasses = liveClassesAt(ws)) {
   $("#class-count").textContent = matching.length === visibleClasses.length
     ? `${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`
     : `${matching.length}/${visibleClasses.length}${matching.length > limit ? ` · first ${limit}` : ""}`;
-  $("#class-list").innerHTML = listed.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i><span class="class-formula">${mathMarkup(item.label)}</span></span><span class="coords">${item.grade.stem}, ${item.grade.filtration}</span></button>`).join("") || '<p class="empty">No matching surviving classes on this page.</p>';
+  if (ws.spectral_sequence === "2-bss") {
+    const basis = matching.filter(item => !item.style?.bss_combination && item.style?.bss_in_window !== false).length;
+    const boundary = matching.filter(item => !item.style?.bss_combination && item.style?.bss_in_window === false).length;
+    const combinations = matching.filter(item => item.style?.bss_combination).length;
+    const completed = ws.settings?.bss_computed_window?.completed;
+    $("#class-count").textContent = `${basis} ${completed ? "module generators" : "basis"} · ${boundary} boundary · ${combinations} Σ${matching.length > limit ? ` · first ${limit}` : ""}`;
+  }
+  $("#class-list").innerHTML = listed.map((item) => `<button class="class-row ${state.selectedClassId === item.id ? "active" : ""}" data-class="${item.id}"><span><i class="badge ${visualStateFor(ws, item)}"></i><span class="class-formula">${item.style?.bss_combination ? "Σ · " : ""}${mathMarkup(item.label)}</span></span><span class="coords">${item.grade.stem}, ${item.grade.filtration}${Number.isInteger(item.style?.bockstein_filtration) ? ` · h₀=${item.style.bockstein_filtration}` : ""}</span></button>`).join("") || '<p class="empty">No matching surviving classes on this page.</p>';
   $("#class-list").querySelectorAll("[data-class]").forEach((button) => button.addEventListener("click", () => onClassClick(button.dataset.class)));
 }
 
@@ -519,13 +835,14 @@ function syncLayoutHeight() {
 function renderHistoryControls() {
   const undo = $("#undo-action");
   const redo = $("#redo-action");
-  undo.disabled = readOnlyCatalog() || !state.history.undo_depth;
-  redo.disabled = readOnlyCatalog() || !state.history.redo_depth;
+  undo.disabled = readOnlyWorkspace() || !state.history.undo_depth;
+  redo.disabled = readOnlyWorkspace() || !state.history.redo_depth;
   undo.title = state.history.undo_label ? `Undo: ${state.history.undo_label} (Ctrl+Z)` : "Nothing to undo (Ctrl+Z)";
   redo.title = state.history.redo_label ? `Redo: ${state.history.redo_label} (Ctrl+Y)` : "Nothing to redo (Ctrl+Y)";
 }
 
 async function changeHistory(direction) {
+  if (readOnlyWorkspace()) return toast("Source and archive charts are read-only.");
   if (!state.history[`${direction}_depth`]) return;
   try {
     const result = await api(`/api/history/${direction}`, { method: "POST" });
@@ -544,6 +861,8 @@ function atlasSector(sectorId) {
 function renderAtlasPath(ws) {
   const root = $("#c3-summary");
   if (!root) return;
+  root.title = "";
+  if (window.HFPSSWorkspaceNavigation.familyId(ws) !== "q8-hfpss") { root.textContent = ""; return; }
   const plan = ws.settings?.atlas_transport;
   if (!plan) { root.textContent = ws.settings?.atlas_representative ? "Independent computation · ω: i → j → k → i; ψ: j ↔ k, ζ ↔ ζ²." : ""; return; }
   const source = (state.project.grading_sectors || []).find(s => s.workspace_id === plan.source_workspace_id);
@@ -555,18 +874,14 @@ function renderAtlasPath(ws) {
 
 function renderGradingAtlas() {
   const root = $("#grading-atlas");
-  const sectors = state.project.grading_sectors || [];
-  root.innerHTML = sectors.map((sector) => {
-    const active = sector.workspace_id === state.workspaceId ? "active" : "";
-    const count = sector.class_ids?.length || 0;
-    const catalog = state.catalogEntries.find((entry) => entry.id === CURRENT_CATALOG_BY_SECTOR[sector.id]);
-    const transportInfo = state.project.workspaces.find(w => w.id === sector.workspace_id)?.settings.atlas_transport;
-    const transport = transportInfo ? `${transportInfo.action} · ${Number(transportInfo.stem_shift) >= 0 ? "+" : ""}${transportInfo.stem_shift}` : "";
-    const detail = transport || (count ? `${count} anchors` : "not computed");
-    const archiveHint = catalog ? ` · ${catalog.status} legacy source chart remains in the archive selector` : "";
-    return `<button type="button" class="atlas-cell ${active} ${escapeHtml(sector.status)}" data-sector="${sector.id}" title="${escapeHtml(sector.display_label)} · ${escapeHtml(transport || sector.status)}${escapeHtml(archiveHint)}"><strong>S<sub>${sector.a},${sector.b}</sub></strong><span>${escapeHtml(detail)}</span></button>`;
-  }).join("");
-  root.querySelectorAll("[data-sector]").forEach((button) => button.addEventListener("click", () => selectAtlasSector(button.dataset.sector)));
+  const model = window.HFPSSWorkspaceNavigation.atlas(state.project, workspace());
+  $("#grading-atlas-eyebrow").textContent = model.eyebrow;
+  $("#grading-atlas-title").textContent = model.title;
+  $("#grading-atlas-summary").textContent = model.summary;
+  window.HFPSSWorkspaceNavigation.renderAtlas(root, model, entry => {
+    if (entry.kind === "sector") void selectAtlasSector(entry.sectorId);
+    else selectWorkspace(entry.workspaceId);
+  });
 }
 
 async function selectAtlasSector(sectorId) {
@@ -587,6 +902,7 @@ async function selectAtlasSector(sectorId) {
   }
   try {
     const preview = await api(`/api/v2/c3-actions/omega/orbit/${sectorId}`);
+    if (workspace()?.id !== sector.workspace_id) return;
     const targets = preview.orbit.map((item) => item.result_sector_id ? compactSectorLabel(item.result_sector_id) : item.display_label).join(" → ");
     const period = preview.periodic_transport
       ? ` Picard transport: stem ${preview.periodic_transport.stem_shift}, ${preview.periodic_transport.relation}.`
@@ -594,13 +910,121 @@ async function selectAtlasSector(sectorId) {
     renderAtlasPath(workspace());
     $("#c3-summary").title = `ω orbit: ${targets}.${period} ${$("#c3-summary").title}`;
   } catch (error) {
-    $("#c3-summary").textContent = error.message;
+    if (workspace()?.id === sector.workspace_id) $("#c3-summary").textContent = error.message;
   }
+}
+
+function sourceProseMarkup(value) {
+  // Source prose is escaped first; only explicit inline TeX is typeset.
+  return String(value ?? "").split(/(\\\([\s\S]*?\\\)|\$[^$]+\$)/g).map(part => {
+    if (part.startsWith("\\(") && part.endsWith("\\)")) return mathMarkup(part.slice(2, -2));
+    if (part.startsWith("$") && part.endsWith("$")) return mathMarkup(part.slice(1, -1));
+    return escapeHtml(part);
+  }).join("");
+}
+
+function literatureReviewMarkup(review) {
+  const list = (heading, values, format = escapeHtml) => values?.length
+    ? `<h3>${escapeHtml(heading)}</h3><ul>${values.map(value => `<li>${format(value)}</li>`).join("")}</ul>` : "";
+  const notation = (review.notation || []).map(item => `<tr><td>${mathMarkup(item.symbol)}</td><td>(${escapeHtml(item.stem)}, ${escapeHtml(item.filtration)})</td><td>${escapeHtml(item.meaning || "")}</td></tr>`).join("");
+  const basis = (review.e1_additive_basis || []).map(item => {
+    const exponents = Array.isArray(item.v1_exponents) ? item.v1_exponents.join(", ") : item.v1_exponents;
+    return `<tr><td>${(item.labels || []).map(mathMarkup).join(", ")}</td><td>${escapeHtml(exponents || "not specified")}</td></tr>`;
+  }).join("");
+  return `<p>${escapeHtml(review.scope || "")}</p><p>${escapeHtml(review.coverage || "")}</p>`
+    + (review.e1_algebra ? `<h3>E1 algebra</h3><p><code>${escapeHtml(review.e1_algebra)}</code></p>` : "")
+    + (review.basis_coefficient_ring ? `<p>${escapeHtml(review.basis_coefficient_ring)}</p>` : "")
+    + (basis ? `<h3>E1 additive basis</h3><table><thead><tr><th>Basis family</th><th>v₁ exponents</th></tr></thead><tbody>${basis}</tbody></table>` : "")
+    + (notation ? `<table><thead><tr><th>Symbol</th><th>(stem, s)</th><th>Meaning</th></tr></thead><tbody>${notation}</tbody></table>` : "")
+    + list("Notation dictionary", review.notation_dictionary)
+    + list("Relations", review.relations, mathMarkup) + list("Periods and units", review.periods, sourceProseMarkup)
+    + list("Differential rules", review.differential_rules)
+    + list("Hidden extensions in the abutment", review.hidden_extensions, mathMarkup)
+    + list(review.warning_heading || "Scope and cautions", review.warnings)
+    + (review.catalog_warnings?.length ? `<details><summary>Source-catalog cautions and errata</summary><p>Catalog-coverage statements below describe the fallback source diagram, not the computed window above. Mathematical errata still apply.</p>${list("Source notes", review.catalog_warnings)}</details>` : "")
+    + list("Sources", review.source_refs);
+}
+
+function renderLiteratureReview(ws) {
+  const c4 = ws.group === "C4" && ws.spectral_sequence === "hfpss";
+  const bss = ws.spectral_sequence === "2-bss";
+  if ($("#q8-chart-key")) $("#q8-chart-key").hidden = c4 || bss;
+  if ($("#c4-chart-key")) $("#c4-chart-key").hidden = !c4;
+  if ($("#bss-chart-key")) $("#bss-chart-key").hidden = !bss;
+  const review = ws.settings?.literature_review;
+  const computed = ws.settings?.bss_computed_window || ws.settings?.c4_computed_window;
+  const panel = $("#literature-review-panel");
+  if (panel) {
+    panel.hidden = !review;
+    if (review) {
+      $("#literature-review-title").textContent = review.title || "Source conventions and coverage";
+      $("#literature-review-content").innerHTML = literatureReviewMarkup(computed ? {...review,
+        coverage: computed.coverage, warning_heading: "Computation scope",
+        warnings: computed.warnings || [], catalog_warnings: review.warnings || []} : review);
+      const notice = $("#source-review-notice");
+      if (notice) notice.textContent = ws.settings?.c4_computed_window
+        ? "The chart shows computed C4/C4 coefficient branches in the stated bidegrees, retaining completed μ-adic tails symbolically. Branches are not F4 basis vectors; hidden extensions and the full Mackey functor are not computed here."
+        : computed ? `The chart uses the computed 2-BSS kernel/image page${computed.completed ? " over F4[[j]], j=v₁⁴D⁻¹: a circle-dot is a free module, a dot is annihilated by j. Each h₀ level remains separate. Free does not mean permanent" : ""}, with boundary endpoints shown for its recorded maps. Σ is an exact dependent combination, not an extra module generator. ${bssGradingText(ws)} This does not compute hidden-extension multiplication or HFPSS differentials.`
+        : bssSector(ws) ? "Waiting for the requested 2-BSS page. The chart remains empty rather than substituting the source equation catalog. Source conventions remain available below."
+        : "Source review; complete page quotient not yet computed. The chart records the stated equations, not an exhaustive calculation of every displayed page.";
+    }
+  }
+  document.body.classList.toggle("source-reference-mode", Boolean(ws.settings?.source_reference));
+  const heading = $("#fate-inspector-title");
+  if (heading) heading.textContent = ws.settings?.c4_computed_window ? "Computed C4 coefficient branch" : computed?.completed ? "Completed 2-BSS module / element" : computed ? "Computed 2-BSS class" : review ? "Source class and equations" : "HFPSS / Tate timeline";
+}
+
+function renderSourceClassInspector(ws, node) {
+  const computed = ws.settings.bss_computed_window || ws.settings.c4_computed_window;
+  $("#fate-status").textContent = ws.settings.c4_computed_window?.periodicity ? "periodic coefficient branch"
+    : node?.style?.bss_combination ? "exact combination (Σ)" : node?.style?.bss_boundary ? "boundary context" : computed ? "computed in bounds" : "source review";
+  if (!node) {
+    $("#fate-inspector").innerHTML = '<p class="empty">Select a class to inspect its source grading and recorded equations.</p>';
+    return;
+  }
+  const selected = state.selectedOccurrence;
+  const occurrence = selected?.workspaceId === ws.id && selected.page === ws.page && selected.classId === node.id ? selected : null;
+  const degree = occurrence?.grade || node.grade;
+  const claims = new Map(ws.propositions.map(item => [item.id, item]));
+  const nodes = new Map(ws.classes.map(item => [item.id, item]));
+  const differentialEquations = ws.differentials.filter(item => item.source_id === node.id || item.target_id === node.id).map(item => {
+    const claim = claims.get(item.proposition_id);
+    const formula = `d_{${item.page}}\\!\\left(${nodes.get(item.source_id)?.label || item.source_id}\\right)=${nodes.get(item.target_id)?.label || item.target_id}`;
+    const sources = claim?.source_refs?.length ? claim.source_refs.join("; ") : claim?.source_ref || "Source locator not recorded";
+    return `<li>${mathMarkup(claim?.statement || formula)}<span>${escapeHtml(item.status)} · ${escapeHtml(sources)}</span></li>`;
+  }).join("");
+  const relationEquations = ws.propositions.filter(claim => claim.kind === "relation"
+    && (claim.conclusion?.source_id === node.id || claim.conclusion?.target_id === node.id)).map(claim => {
+    const sources = claim.source_refs?.length ? claim.source_refs.join("; ") : claim.source_ref || "Source locator not recorded";
+    return `<li>${mathMarkup(claim.statement)}<span>Multiplication · ${escapeHtml(sources)}</span></li>`;
+  }).join("");
+  const equations = differentialEquations + relationEquations;
+  const h0 = node.style?.bockstein_filtration;
+  const lifetime = node.style?.last_page == null ? "No last page asserted" : `Through E${node.style.last_page}`;
+  $("#fate-inspector").innerHTML = `<strong>${mathMarkup(occurrence?.label || node.label)}</strong>
+    <dl class="class-inspector-details"><dt>${bssSector(ws) ? `Projected (stem, ${bssProjection(ws) === "bockstein" ? "p" : "s"})` : "(stem, s)"}</dt><dd>(${degree.stem}, ${degree.filtration})</dd>
+    ${Number.isInteger(node.style?.bss_cohomological_filtration) ? `<dt>Group cohomology s</dt><dd>${node.style.bss_cohomological_filtration}</dd>` : ""}
+    ${Number.isInteger(h0) ? `<dt>h₀ / 2-adic filtration</dt><dd>${h0}</dd>` : ""}
+    ${bssSector(ws) === "sigma" ? `<dt>Actual RO stem</dt><dd>${Number(degree.stem) + 1}−σᵢ</dd>` : ""}
+    ${bssSector(ws) ? `<dt>Differential tridegree</dt><dd>(−1, +1, +r) in (stem, s, h₀)</dd>` : ""}
+    ${node.style?.bss_boundary ? `<dt>Display context</dt><dd>${escapeHtml(node.style.bss_boundary)} outside the requested caps; retained as a real map endpoint.</dd>` : ""}
+    ${node.style?.bss_combination ? `<dt>Σ meaning</dt><dd>Exact dependent vector, not an additional basis class.</dd>` : ""}
+    ${node.style?.bss_j_module ? `<dt>Completed coefficient module</dt><dd>${mathMarkup(node.style.bss_j_module.kind === "free" ? "\\mathbb F_4[[j]]" : `\\mathbb F_4[[j]]/(j^{${node.style.bss_j_module.length}})`)} · ${node.style.bss_j_module.kind === "free" ? "circle-dot; not a permanence claim" : "dot; annihilated by j"}</dd><dt>Lowest j-order</dt><dd>${escapeHtml(String(node.style.bss_j_module.j_min))}; already included in the displayed generator</dd><dt>Selected relative j-power</dt><dd>${occurrence?.selectedJPower || 0}; h₀ remains ${h0}</dd>` : ""}
+    ${node.style?.c4_coefficient_branch ? `<dt>Completed coefficient module</dt><dd>${escapeHtml(node.style.reference_coefficient_module || "")}</dd><dt>Lowest μ, 2 valuations</dt><dd>${node.style.c4_coefficient_branch.mu_min}, ${node.style.c4_coefficient_branch.two_min}</dd>` : ""}
+    <dt>${computed ? "Computed page" : "Source lifetime"}</dt><dd>${computed ? `E${node.page}` : `E${node.page} onward · ${escapeHtml(lifetime)}`}</dd>
+    <dt>Coefficient context</dt><dd>${escapeHtml(node.coefficient_context_id || "source convention")}</dd></dl>
+    <p>${escapeHtml(node.notes || "")}</p>
+    <div class="fate-track claims"><span>${ws.settings.c4_computed_window?.periodicity
+      ? "Seed-branch equations (for the written coefficients)" : "Recorded equations"}</span>
+    ${ws.settings.c4_computed_window?.periodicity ? '<p class="hint">These are the 32-stem seed equations, not equations for every 2-port. Other copies require Δ₁⁴ translation; doubling a source can make its differential zero.</p>' : ""}
+    <ul>${equations || '<li class="empty">No differential is asserted for this displayed class.</li>'}</ul></div>
+    <p class="hint">${escapeHtml(computed?.coverage || ws.settings.literature_review.coverage || "Source-scoped review; absence of a record is not a permanence assertion.")}</p>`;
 }
 
 function renderFateInspector() {
   const ws = workspace();
   const node = ws.classes.find((item) => item.id === state.selectedClassId);
+  if (ws.settings?.literature_review) return renderSourceClassInspector(ws, node);
   if (!node) {
     $("#fate-status").textContent = "none";
     $("#fate-inspector").innerHTML = '<p class="empty">Select a class to inspect its two-track fate record.</p>';
@@ -918,7 +1342,7 @@ function parseJsonField(value, fallback = []) {
 }
 
 function openCellDialog(cellId = null) {
-  if (readOnlyCatalog()) return toast("Archived research charts are read-only.");
+  if (readOnlyWorkspace()) return toast("Source and archive charts are read-only.");
   const cell = explicitCells().find((item) => item.id === cellId) || null;
   const form = $("#cell-form");
   form.reset();
@@ -973,7 +1397,7 @@ function matrixOptions(selected = "", allowZero = true) {
 }
 
 function openMatrixDialog(mapId = null) {
-  if (readOnlyCatalog()) return toast("Archived research charts are read-only.");
+  if (readOnlyWorkspace()) return toast("Source and archive charts are read-only.");
   const item = activeDifferentialMaps().find((record) => record.id === mapId) || null;
   const form = $("#matrix-form");
   form.reset();
@@ -1656,6 +2080,10 @@ function pageWithinPeriodFamily(page, family) {
 }
 
 function workspaceRenderPeriods(ws) {
+  if (ws.settings.bss_computed_window?.periodicity?.permanent)
+    return [{stem: 8, filtration: 0, domain: "integer", id: "bss-D-unit"}];
+  if (ws.settings.c4_computed_window?.periodicity?.permanent)
+    return [{stem: 32, filtration: 0, domain: "integer", id: "bbhs-delta1-four"}];
   const enumeratedHorizontal = Number(ws.settings.rendering?.enumerated_horizontal_period || 0);
   const periods = (ws.settings.rendering?.period_lattice || []).map((item) => ({
     stem: Number(item.stem) || 0,
@@ -1749,7 +2177,7 @@ function shiftKExponent(label, delta) {
 }
 
 function shiftPeriodFactor(label, symbol, delta) {
-  const normalized = window.HFPSSDisplayBasis?.shiftPeriodFactor(label, symbol, delta);
+  const normalized = /h_(?:0|\{0\})/.test(String(label)) ? null : window.HFPSSDisplayBasis?.shiftPeriodFactor(label, symbol, delta);
   if (normalized?.supported) return normalized.label;
   if (!delta) return label;
   const clean = String(label || "").split("=")[0].trim();
@@ -1810,12 +2238,38 @@ function shiftPeriodFactor(label, symbol, delta) {
 
 function periodicDisplayLabel(record) {
   const label = rawPeriodicDisplayLabel(record);
+  // The Bockstein engine has already collected its formal h0 powers and
+  // adapted sums. Do not reinterpret them as HFPSS coefficient expressions.
+  if (record.item?.style?.bss_monomial || record.item?.style?.bss_combination || record.item?.style?.bss_j_module) return label;
   const normalized = window.HFPSSDisplayBasis?.normalizeLabel(label);
   return normalized?.supported ? normalized.label : label;
 }
 
 function rawPeriodicDisplayLabel(record) {
   if (record.presentationLabel) return record.presentationLabel;
+  if (record.item.style?.bss_j_module) {
+    // The engine has collected this exact image (e.g. j*x*v1 = 0 in a
+    // twisted sum). It is already transported to this displayed occurrence.
+    if (typeof record.selectedJLabel === "string" && record.selectedJLabel) return record.selectedJLabel;
+    const label = shiftDExponent(record.item.label, Number(record.horizontalExponent || 0));
+    const power = Number(record.selectedJPower || 0);
+    if (!power) return label;
+    const factor = power === 1 ? "j" : `j^{${power}}`;
+    return `${factor}\\{${label}\\}`;
+  }
+  if (record.item.style?.bss_period_generator) {
+    return shiftDExponent(record.item.label, Number(record.horizontalExponent || 0));
+  }
+  const c4Branch = record.item.style?.c4_coefficient_branch;
+  if (c4Branch) {
+    const selected = Number(String(record.selectedPort || record.modulePorts?.[0] || `${c4Branch.two_min}:0`).split(":")[0]);
+    const factor = 2 ** Math.max(0, selected - c4Branch.two_min);
+    const label = shiftC4Delta(c4Branch.representative_tex || record.item.label,
+      4 * Number(record.horizontalExponent || 0));
+    if (factor === 1) return label;
+    const scalar = String(label).match(/^(\d+)(.*)$/);
+    return scalar ? `${Number(scalar[1]) * factor}${scalar[2]}` : `${factor}${label}`;
+  }
   const residueLabel = label => {
     const style = record.item.style || {};
     if (!style.e2_components || Number(style.two_valuation || 0)
@@ -1862,6 +2316,19 @@ function rawPeriodicDisplayLabel(record) {
   const exponent = ((2 * omega * dShift) % 3 + 3) % 3;
   const unit = f4DisplayMultiply(basis.unit, [1, 2, 3][exponent]);
   return survivingLabel(`${unit === 1 ? "" : `{${f4DisplayLatex(unit)}}`}${shifted}`);
+}
+
+function shiftC4Delta(label, delta) {
+  if (!delta) return label;
+  let exponent = delta;
+  const rest = String(label).replace(/\\Delta_1(?:\^\{(-?\d+)\})?/g, (_, power) => {
+    exponent += Number(power ?? 1);
+    return "";
+  }).trim().replace(/\s+/g, " ");
+  const factor = latexPower("\\Delta_1", exponent);
+  const thom = rest.indexOf("\\mathfrak");
+  if (thom >= 0) return `${rest.slice(0, thom).trim()} ${factor} ${rest.slice(thom)}`.trim().replace(/\s+/g, " ");
+  return `${rest === "1" ? "" : rest} ${factor}`.trim() || "1";
 }
 
 function f4DisplayMultiply(a, b) {
@@ -1924,6 +2391,7 @@ function e2OccurrenceKey(item, grade) {
 }
 
 function pageAlgebra(ws, bounds) {
+  if (ws.spectral_sequence === "2-bss" || ws.settings?.source_reference || ws.group && ws.group !== "Q8") return null;
   if (!ws.settings.rendering?.enumerated_e2_pattern || !window.HFPSSPageAlgebra) return null;
   return window.HFPSSPageAlgebra.compute(ws, bounds, {
     coefficientWorkspaces: state.project.workspaces,
@@ -1958,7 +2426,8 @@ function periodicClassInstances(ws, bounds, presentation = null, algebra = pageA
   const rendered = [];
   const seen = new Set();
   const occupiedSlots = new Set();
-  for (const item of liveClassesAt(ws).filter((node) => !node.cell_id || node.style?.e2_pattern || node.style?.e2_components)) {
+  for (const item of liveClassesAt(ws).filter((node) => !node.style?.window_endpoint_only
+      && (!node.cell_id || node.style?.e2_pattern || node.style?.e2_components))) {
     const periods = periodsForClassOnPage(ws, item);
     const copies = latticeCopies(item.grade, periods, bounds);
     for (const copy of copies) {
@@ -1968,7 +2437,8 @@ function periodicClassInstances(ws, bounds, presentation = null, algebra = pageA
         modulePorts: modulePorts ? [...modulePorts] : null, uncertain: algebra?.blockedFromPage != null});
       const algebraSlots = (presentation || algebra)?.displaySlots(item, copy.grade) || [];
       const algebraSlot = algebraSlots.join("|") || e2DisplaySlot(item, copy.grade) || `${displayLabel}:${glyphShapeFor(ws, item)}`;
-      const key = `${algebraSlot}:${copy.grade.stem}:${copy.grade.filtration}`;
+      const sourceSlot = ws.settings?.source_reference || ws.spectral_sequence === "2-bss" ? `${item.id}:` : "";
+      const key = `${sourceSlot}${algebraSlot}:${copy.grade.stem}:${copy.grade.filtration}`;
       if (seen.has(key) || !inBounds(copy.grade, bounds)) continue;
       seen.add(key);
       for (const slot of algebraSlots) occupiedSlots.add(slot);
@@ -2111,16 +2581,97 @@ function drawingPeriodicityPreviewInstances(bounds) {
   });
 }
 
+function showBssRelation(ws, relation) {
+  if (ws.spectral_sequence !== "2-bss") return true;
+  const mode = ws.settings?.bss_relations || "core", conclusion = relation.conclusion || {};
+  if (mode === "all") return true;
+  const selected = ws.classes.find(node => node.id === state.selectedClassId);
+  const family = selected?.style?.bss_periodic_family_key;
+  const incident = [conclusion.source_id, conclusion.target_id].some(id => id === state.selectedClassId
+    || family && ws.classes.some(node => node.id === id && node.style?.bss_periodic_family_key === family));
+  return incident || mode === "core" && ["two", "h1", "h2"].includes(conclusion.chart_connection?.kind);
+}
+
+function packBssInstances(records, metrics) {
+  // h0 is a third grading, not another basis name to sort into a square grid.
+  // Use one column per algebraic tower and one shared vertical scale for h0.
+  const cells = new Map();
+  let highestLevel = 0;
+  for (const record of records) {
+    const level = Number(record.item?.style?.bockstein_filtration || 0);
+    highestLevel = Math.max(highestLevel, level);
+    if (!cells.has(record.cellKey)) cells.set(record.cellKey, new Map());
+    const towers = cells.get(record.cellKey);
+    const key = String(record.item?.style?.bss_tower_key || record.item?.id || record.key);
+    if (!towers.has(key)) towers.set(key, []);
+    towers.get(key).push(record);
+  }
+  const levelStep = Math.min(metrics.cell * 0.18, metrics.cell * 0.6 / Math.max(1, highestLevel));
+  return [...cells.values()].flatMap(towers => {
+    const lane = ([key,items]) => {
+      const m = items[0].item?.style?.bss_monomial;
+      return m ? `${m.basis}:${String(m.v1).padStart(3,'0')}:${m.k}` : key;
+    };
+    const columns = [...towers.entries()].sort((a,b) => lane(a).localeCompare(lane(b)));
+    const columnStep = Math.min(metrics.cell * 0.25, metrics.cell * 0.7 / Math.max(1, columns.length - 1));
+    // One crowded cell must not shrink every other dot in the viewport.
+    const size = Math.max(0.85, Math.min(metrics.cell * 0.075, columnStep * 0.32, levelStep * 0.38));
+    const count = columns.reduce((sum, [, items]) => sum + items.length, 0);
+    return columns.flatMap(([, items], column) => items.map((record, index) => ({
+      ...record,
+      dx: (column - (columns.length - 1) / 2) * columnStep,
+      dy: (highestLevel / 2 - Number(record.item?.style?.bockstein_filtration || 0)) * levelStep,
+      size, hitRadius: Math.max(2, Math.min(columnStep, levelStep) * 0.44),
+      baseYOffset: 0, packIndex: column + index * columns.length, packCount: count,
+    })));
+  });
+}
+
 function packedClassInstances(ws, bounds, metrics, extraInstances = [], presentation = null, algebra = undefined) {
-  const instances = periodicClassInstances(ws, bounds, presentation, algebra).map((record) => ({
-    ...record,
+  const instances = periodicClassInstances(ws, bounds, presentation, algebra).map((record) => {
+    const coefficient = record.item.style?.c4_coefficient_branch;
+    const ports = c4CoefficientPorts(coefficient);
+    return {...record,
+    ...(ports ? {modulePorts: ports} : {}),
     key: record.instanceKey,
     cellKey: `${record.grade.stem}:${record.grade.filtration}`,
     label: record.item.label,
-    shape: quotientGlyph(record) || glyphShapeFor(ws, record.item),
-    e2CanonicalOrder: ws.page === 2,
+    shape: coefficient ? c4CoefficientShape(coefficient)
+      : quotientGlyph(record) || glyphShapeFor(ws, record.item),
+    e2CanonicalOrder: ws.page === 2 && !ws.settings?.source_reference && ws.spectral_sequence !== "2-bss",
     size: clamp(metrics.cell * 0.105, 0.55, 7),
-  }));
+  };});
+  // Legacy endpoint-only records still need exact positions. New BSS
+  // boundary records are ordinary selectable context nodes, not ghosts.
+  if (ws.settings?.bss_computed_window || ws.settings?.c4_computed_window) {
+    for (const item of ws.classes.filter(node => node.style?.window_endpoint_only)) {
+      const coefficient = item.style?.c4_coefficient_branch;
+      const ports = c4CoefficientPorts(coefficient);
+      for (const copy of latticeCopies(item.grade, coefficient ? workspaceRenderPeriods(ws) : [], bounds)) {
+      instances.push({item, ...copy, endpointOnly: true,
+        key: `boundary:${classInstanceKey(item.id, copy.grade)}`, instanceKey: `boundary:${classInstanceKey(item.id, copy.grade)}`,
+        cellKey: `${copy.grade.stem}:${copy.grade.filtration}`, label: item.label,
+        ...(ports ? {modulePorts: ports} : {}),
+        shape: coefficient ? c4CoefficientShape(coefficient) : "dot", e2CanonicalOrder: false, size: clamp(metrics.cell * 0.105, 0.55, 7)});
+      }
+    }
+  }
+  if (ws.spectral_sequence === "2-bss") {
+    const visibleVectors = new Set(ws.propositions.filter(p => p.kind === "relation" && showBssRelation(ws,p))
+      .map(p => p.conclusion?.target_id));
+    ws.differentials.filter(diff => diff.page === ws.page).forEach(diff => visibleVectors.add(diff.target_id));
+    const shown = [...instances, ...extraInstances].filter(record => !record.item?.style?.bss_combination || visibleVectors.has(record.item.id));
+    if (bssProjection(ws) === "bockstein") {
+      const cells = new Map();
+      for (const record of shown) {
+        if (!cells.has(record.cellKey)) cells.set(record.cellKey, []);
+        cells.get(record.cellKey).push(record);
+      }
+      return [...cells.values()].flatMap(records => window.HFPSSCellLayout.packInstances(records, metrics.cell,
+        {uniformSize: true, glyphEnvelope: 1.35}));
+    }
+    return packBssInstances(shown, metrics);
+  }
   if (ws.settings?.read_only_catalog) {
     return [...instances, ...extraInstances].map((record, index) => ({
       ...record,
@@ -2133,10 +2684,38 @@ function packedClassInstances(ws, bounds, metrics, extraInstances = [], presenta
       packCount: 1,
     }));
   }
-  const envelope = instances.some(record => record.shape === "finite-two-tower") ? 2.4 : 1.35;
+  const envelope = instances.some(record => record.shape === "c4-witt-tower") ? 3.2
+    : instances.some(record => record.shape === "finite-two-tower") ? 2.4 : 1.35;
+  if (c4Sector(ws)) {
+    // A Witt tower needs a taller envelope, but must not shrink every isolated
+    // torsion dot in the viewport. Pack each coefficient cell at its own
+    // required envelope; periodic copies of that cell still have identical size.
+    const cells = new Map();
+    for (const record of [...instances, ...extraInstances]) {
+      if (!cells.has(record.cellKey)) cells.set(record.cellKey, []);
+      cells.get(record.cellKey).push(record);
+    }
+    return [...cells.values()].flatMap(records => window.HFPSSCellLayout.packInstances(records, metrics.cell, {
+      baseYOffset: 0.16, uniformSize: true,
+      glyphEnvelope: records.some(r => r.shape === "c4-witt-tower") ? 3.2
+        : records.some(r => r.shape === "finite-two-tower") ? 2.4 : 1.35,
+    }));
+  }
   return window.HFPSSCellLayout.packInstances([...instances, ...extraInstances], metrics.cell, {
     baseYOffset: 0.16, uniformSize: true, glyphEnvelope: envelope,
   });
+}
+
+function c4CoefficientPorts(coefficient) {
+  if (!coefficient) return null;
+  const top = coefficient.two_max ?? coefficient.two_min + 2;
+  return Array.from({length: top - coefficient.two_min + 1}, (_, index) => `${index + coefficient.two_min}:0`);
+}
+
+function c4CoefficientShape(coefficient) {
+  return coefficient.two_max == null ? "c4-witt-tower"
+    : coefficient.two_max > coefficient.two_min ? "finite-two-tower"
+    : coefficient.completed_mu_tail ? "j-positive-series" : "dot";
 }
 
 function quotientGlyph(record) {
@@ -2154,6 +2733,7 @@ function quotientGlyph(record) {
 }
 
 function quotientDescription(record) {
+  if (record.item.style?.c4_coefficient_branch) return record.item.style.reference_coefficient_module || "C4 completed coefficient branch";
   if (!record.modulePorts) return "";
   const components = record.modulePorts.map(port => {
     const [two, j] = port.split(":").map(Number);
@@ -2174,7 +2754,7 @@ function packedPoint(record, metrics) {
 // slot has its own endpoint; the glyph centre is not a coefficient port.
 function coefficientPortPoint(record, metrics, port = null) {
   const point = packedPoint(record, metrics);
-  if (record.shape !== "finite-two-tower") return point;
+  if (!["finite-two-tower", "c4-witt-tower"].includes(record.shape)) return point;
   const levels = [...new Set(record.modulePorts.map(p => Number(p.split(":")[0])))].sort((a,b) => a-b);
   const level = port == null ? levels[0] : Number(String(port).split(":")[0]);
   const index = levels.indexOf(level);
@@ -2186,15 +2766,53 @@ function classInstanceKey(classId, grade) {
   return `${classId}:${grade.stem}:${grade.filtration}`;
 }
 
+function classFamilySelection(ws, record, selected = ws.classes.find(item => item.id === state.selectedClassId)) {
+  if (!selected) return {selected: false, ports: []};
+  const branch = record.item.style?.c4_coefficient_branch;
+  if (branch && selected.style?.c4_coefficient_branch) {
+    const occurrence = state.selectedOccurrence;
+    const port = occurrence?.workspaceId === ws.id && occurrence.page === ws.page
+      && occurrence.classId === selected.id && occurrence.selectedPort
+      ? occurrence.selectedPort : `${selected.style.c4_coefficient_branch.two_min}:0`;
+    const family = selected.style.c4_periodic_family_keys?.[port];
+    const ports = (record.modulePorts || c4CoefficientPorts(branch)).filter(candidate =>
+      family ? record.item.style.c4_periodic_family_keys?.[candidate] === family
+        : record.item.id === selected.id && candidate === port);
+    return {selected: ports.length > 0, ports};
+  }
+  const family = selected.style?.bss_periodic_family_key;
+  // A module glyph's default generator is not its j^n multiple. Selecting an
+  // exact nonconstant image must not highlight other lowest representatives.
+  if (selected.style?.bss_j_module && Number(state.selectedOccurrence?.selectedJPower || 0) > 0)
+    return {selected: record.instanceKey === state.selectedOccurrence?.instanceKey, ports: []};
+  const match = ws.spectral_sequence === "2-bss" && family
+    ? record.item.style?.bss_periodic_family_key === family : record.item.id === selected.id;
+  return {selected: match, ports: []};
+}
+
 function classGlyphMarkup(record, point, classNames) {
+  if (record.item?.style?.bss_combination) {
+    return `<text class="class-point bss-combination ${classNames}" x="${point.x}" y="${point.y}" text-anchor="middle" dominant-baseline="central" font-size="${Math.max(4, record.size * 2.7)}" paint-order="stroke" stroke="white" stroke-width="1.5" fill="#334155">Σ</text>`;
+  }
   if (record.readOnlyRepresentative && record.uncertain) {
     return `<circle class="class-point ${classNames}" style="--point-color:#d97706;fill:white;stroke:#d97706" cx="${point.x}" cy="${point.y}" r="${record.size * 0.72}"/>`;
   }
-  if (record.shape === "finite-two-tower") {
+  if (["finite-two-tower", "c4-witt-tower"].includes(record.shape)) {
     const levels = [...new Set(record.modulePorts.map(port => Number(port.split(":")[0])))].sort((a,b) => a-b);
     const step = record.size * 1.6;
     const ys = levels.map((level, index) => point.y + ((levels.length - 1) / 2 - index) * step);
-    return `<g class="class-point finite-two-tower ${classNames}"><line x1="${point.x}" y1="${ys[0]}" x2="${point.x}" y2="${ys[ys.length - 1]}"/>${ys.map((y,i) => `<circle data-coefficient-port="${levels[i]}:0" cx="${point.x}" cy="${y}" r="${record.size * 0.72}"/>`).join("")}</g>`;
+    const witt = record.shape === "c4-witt-tower", c4 = record.item?.style?.c4_coefficient_branch;
+    const continuation = witt ? `<line class="c4-tower-continuation" x1="${point.x}" y1="${ys.at(-1)}" x2="${point.x}" y2="${ys.at(-1) - step * 1.3}" stroke-dasharray="1 2"/>` : "";
+    const marks = ys.map((y,i) => {
+      const port = `${levels[i]}:0`, selected = Boolean(record.selectedFamilyPorts?.includes(port));
+      const attributes = c4 ? `class="coefficient-port${selected ? " coefficient-port-selected" : ""}" data-coefficient-port="${port}"${selected ? ' data-selected-coefficient-port="true"' : ""} role="button" tabindex="0" aria-label="2-adic coefficient port ${levels[i]}, mu exponent ${c4.mu_min || 0}" aria-pressed="${selected}" style="pointer-events:all;${selected ? "color:var(--blue);" : ""}${c4.completed_mu_tail ? "fill:white;" : ""}"`
+        : `data-coefficient-port="${port}"`;
+      return witt && i === 0
+        ? `<rect ${attributes} x="${point.x - record.size * .72}" y="${y - record.size * .72}" width="${record.size * 1.44}" height="${record.size * 1.44}"/>`
+        : `<circle ${attributes} cx="${point.x}" cy="${y}" r="${record.size * 0.72}"/>`;
+    }).join("");
+    const two = c4 ? `<text class="c4-two-label" x="${point.x + record.size * 1.4}" y="${(ys[0] + ys[1]) / 2 + 2}" font-size="${Math.max(7, record.size * 1.7)}">2</text>` : "";
+    return `<g class="class-point finite-two-tower ${witt ? "c4-witt-tower" : ""} ${classNames}"><title>${witt ? "Unbounded Witt 2-tower; dots continue upward" : "Finite 2-tower"}</title><line x1="${point.x}" y1="${ys[0]}" x2="${point.x}" y2="${ys.at(-1)}"/>${continuation}${marks}${two}</g>`;
   }
   if (record.shape === "witt-j-series") {
     const outer = record.size * 1.18;
@@ -2250,7 +2868,8 @@ function classLabelMarkup(record, point, metrics, visible) {
   const labelGap = Math.max(9, Math.min(18, metrics.cell * 0.45));
   const labelX = point.x + labelGap;
   const name = exact && selected.label ? selected.label : periodicDisplayLabel(record);
-  const degree = exact || selectedAnchor || selectedQuotient ? `<small class="selected-bidegree">(${record.grade.stem}, ${record.grade.filtration})</small>` : "";
+  const h0 = record.item.style?.bockstein_filtration;
+  const degree = exact || selectedAnchor || selectedQuotient ? `<small class="selected-bidegree">${Number.isInteger(h0) ? "Projected " : ""}(${record.grade.stem}, ${record.grade.filtration})${Number.isInteger(h0) ? ` · h₀=${h0}` : ""}</small>` : "";
   return `<foreignObject class="label-host${exact ? " selected-occurrence-label" : ""}" data-label-point-x="${point.x}" data-label-point-y="${point.y}" data-label-gap="${labelGap}" x="${labelX}" y="${point.y - 10}" width="280" height="38"><div xmlns="http://www.w3.org/1999/xhtml" class="selected-class-label"><span class="latex-label" data-latex="${escapeHtml(name)}"></span>${degree}</div></foreignObject>`;
 }
 
@@ -2266,7 +2885,9 @@ function periodicDifferentials(ws, bounds, candidateDiagnostics = null, algebra 
     if (diff.linear_map_id && !(source?.style?.e2_pattern || source?.style?.e2_components)) continue;
     if (!source || !target || !liveIds.has(source.id) || !liveIds.has(target.id)) continue;
     const periods = periodsForDifferential(ws, diff);
-    const stemDelta = target.grade.stem - source.grade.stem;
+    const conclusion = ws.propositions.find(claim => claim.id === diff.proposition_id)?.conclusion;
+    const stemDelta = target.grade.stem - source.grade.stem + 32 * (conclusion?.c4_target_period_offset || 0)
+      + 8 * (conclusion?.bss_target_period_offset || 0);
     const filtrationDelta = target.grade.filtration - source.grade.filtration;
     // The source of a visible d_r can lie r rows below the viewport (and
     // one column to its right). Search the swept source box, not just the
@@ -2347,9 +2968,12 @@ function periodicRelations(ws, liveIds, bounds, algebra = pageAlgebra(ws, bounds
     const source = classes.get(proposition.conclusion.source_id);
     const target = classes.get(proposition.conclusion.target_id);
     if (!source || !target) continue;
-    const stemDelta = target.grade.stem - source.grade.stem;
+    const stemDelta = target.grade.stem - source.grade.stem + 32 * (proposition.conclusion?.c4_target_period_offset || 0)
+      + 8 * (proposition.conclusion?.bss_target_period_offset || 0);
     const filtrationDelta = target.grade.filtration - source.grade.filtration;
-    for (const copy of latticeCopies(source.grade, proposition.conclusion?.chart_occurrence_only ? [] : periods, bounds)) {
+    const sourceBounds = {...bounds, stemMin: bounds.stemMin - Math.max(0, stemDelta), stemMax: bounds.stemMax - Math.min(0, stemDelta),
+      filtrationMin: bounds.filtrationMin - Math.max(0, filtrationDelta), filtrationMax: bounds.filtrationMax - Math.min(0, filtrationDelta)};
+    for (const copy of latticeCopies(source.grade, proposition.conclusion?.chart_occurrence_only ? [] : periods, sourceBounds)) {
       const targetGrade = {
         ...target.grade,
         stem: copy.grade.stem + stemDelta,
@@ -2357,7 +2981,7 @@ function periodicRelations(ws, liveIds, bounds, algebra = pageAlgebra(ws, bounds
       };
       if (algebra && source.style?.e2_pattern && target.style?.e2_pattern
           && !algebra.maps(source, target, copy.grade, targetGrade).length) continue;
-      if (inBounds(copy.grade, bounds) || inBounds(targetGrade, bounds)) {
+      if (segmentIntersectsBounds(copy.grade, targetGrade, bounds)) {
         results.push({ proposition, source, target, sourceGrade: copy.grade, targetGrade, periodic: copy.periodic });
       }
     }
@@ -2426,7 +3050,7 @@ function beginChartPageRender(ws) {
   const svg = $("#chart");
   const baselineNote = $("#document-baseline-note");
   if (baselineNote) {
-    const documentBaseline = state.project?.research_brief?.document_baseline === true;
+    const documentBaseline = !ws.settings?.source_reference && state.project?.research_brief?.document_baseline === true;
     baselineNote.hidden = !documentBaseline;
     baselineNote.textContent = documentBaseline
       ? "Document baseline: unresolved items follow the documented chart; verified corrections are retained, but this does not represent independent verification of every claim."
@@ -2464,7 +3088,7 @@ function updateChartPageStatus(ws, text, append = false) {
   }
   const status = $("#page-status");
   status.textContent = append ? `${status.textContent} ${text}` : text;
-  status.hidden = !append && !/unknown|unresolved|Unable|failed/.test(text);
+  status.hidden = ws.spectral_sequence !== "2-bss" && !append && !/unknown|unresolved|Unable|failed/.test(text);
 }
 
 function markChartPageCommitted(svg, ws) {
@@ -2477,7 +3101,7 @@ function markChartPageCommitted(svg, ws) {
   if (chartPagePresentation?.workspaceId === ws.id && chartPagePresentation.page === ws.page) {
     $("#chart-caption").textContent = chartPagePresentation.caption;
     $("#page-status").textContent = chartPagePresentation.status;
-    $("#page-status").hidden = !/unknown|unresolved|Unable|failed/.test(chartPagePresentation.status);
+    $("#page-status").hidden = ws.spectral_sequence !== "2-bss" && !/unknown|unresolved|Unable|failed/.test(chartPagePresentation.status);
     chartPagePresentation = null;
   }
 }
@@ -2742,6 +3366,25 @@ function differentialDisplayCoefficient(ws, diff, algebra) {
 
 function differentialCoefficientMarkup(ws, item, algebra, from, to) {
   const metadata = (ws.propositions || []).find(p => p.id === item.diff.proposition_id)?.conclusion || {};
+  if (ws.spectral_sequence === "2-bss" && metadata.bss_j_coefficient_tex !== undefined) {
+    const latex = String(metadata.bss_j_coefficient_tex);
+    if (latex === "1") return "";
+    const power = Number(metadata.bss_j_target_power || 0);
+    const target = item.targetNode;
+    const selectable = target?.style?.bss_j_module && Number.isInteger(power) && power >= 0;
+    const instance = selectable ? classInstanceKey(target.id, item.targetGrade) : "";
+    const transport = (Number(item.targetGrade?.stem) - Number(metadata.bss_seed_target_grade?.stem)) / 8;
+    const collectedLabel = selectable && typeof metadata.bss_j_target_label_tex === "string" && Number.isInteger(transport)
+      ? shiftDExponent(metadata.bss_j_target_label_tex, transport) : "";
+    const attrs = selectable ? ` data-bss-j-target="${escapeHtml(instance)}" data-bss-j-power="${power}"${collectedLabel ? ` data-bss-j-label="${escapeHtml(collectedLabel).replaceAll('"', "&quot;")}"` : ""} role="button" tabindex="0"` : "";
+    return `<foreignObject class="differential-coefficient bss-j-coefficient" data-coefficient-for="${escapeHtml(item.diff.id)}" data-coefficient-kind="bss-j-adic" x="${(from.x + to.x) / 2}" y="${(from.y + to.y) / 2}" width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${escapeHtml(latex).replaceAll('"', "&quot;")}"${attrs} title="Exact j-adic factor, not an F4 scalar or h₀/2 power. ${selectable ? "Select the actual target multiple; the circle-dot represents its whole coefficient module." : "The recorded equation retains the exact target combination."}"></div></foreignObject>`;
+  }
+  if (ws.group === "C4" && ws.settings?.source_reference && item.diff.display_coefficient?.kind === "c4-coefficient") {
+    const coefficient = item.diff.display_coefficient;
+    if (!coefficient.resolved || !coefficient.latex || coefficient.latex === "1") return "";
+    const latex = escapeHtml(coefficient.latex).replaceAll('"', "&quot;");
+    return `<foreignObject class="differential-coefficient" data-coefficient-for="${escapeHtml(item.diff.id)}" data-coefficient-kind="c4-coefficient" x="${(from.x + to.x) / 2}" y="${(from.y + to.y) / 2}" width="1" height="1"><div xmlns="http://www.w3.org/1999/xhtml" class="latex-label" data-latex="${latex}" title="Completed C4 coefficient-ring factor, not an F4 unit."></div></foreignObject>`;
+  }
   if (item.displayBasisCoefficient !== undefined) {
     const value = item.displayBasisCoefficient;
     if (value === 1) return "";
@@ -2772,6 +3415,8 @@ function renderChart() {
   const buffer = ws.settings.rendering?.buffer_cells ?? 6;
   const visible = viewportBounds(m);
   const buffered = viewportBounds(m, buffer);
+  if (c4Sector(ws)) { prepareC4Window(ws); renderC4WindowControls(ws); }
+  if (bssSector(ws)) { prepareBssWindow(ws); renderBssWindowControls(ws); }
   $("#zoom-readout").textContent = `${Math.round(state.view.zoom * 100)}%`;
   $("#viewport-readout").textContent = `Upper half-plane · buffer: ${buffer} cells`;
   svg.setAttribute("viewBox", `0 0 ${m.width} ${m.height}`);
@@ -2819,6 +3464,8 @@ function renderChart() {
   const instancePoints = new Map(packedInstances.map((record) => [record.instanceKey, coefficientPortPoint(record, m)]));
   for (const record of packedInstances) {
     instancePoints.set(classInstanceKey(record.item.id, record.grade), coefficientPortPoint(record, m));
+    if (record.item.style?.c4_coefficient_branch) for (const port of record.modulePorts || [])
+      instancePoints.set(`${classInstanceKey(record.item.id, record.grade)}:c4port:${Number(port.split(":")[0])}`, coefficientPortPoint(record, m, port));
     const slot = e2DisplaySlot(record.item, record.grade);
     if (slot) instancePoints.set(slot, coefficientPortPoint(record, m));
     if (slot) for (const port of record.modulePorts || [])
@@ -2834,8 +3481,14 @@ function renderChart() {
     if (!patternLabels.has(pattern)) patternLabels.set(pattern, []);
     patternLabels.get(pattern).push(node);
   }
-  const endpointPoint = (id, grade, effectiveNode, branch) => {
+  const endpointPoint = (id, grade, effectiveNode, branch, c4Two = null) => {
+    const c4Key = `${classInstanceKey(id, grade)}:c4port:${c4Two}`;
+    if (Number.isInteger(c4Two) && instancePoints.has(c4Key)) return instancePoints.get(c4Key);
     const node = effectiveNode || classesById.get(id);
+    // Completed BSS module endpoints are symbolic module generators. The
+    // exact relative j-power lives on the map, never in a Boolean Q8 j-port.
+    if (node?.style?.bss_j_module || node?.style?.bss_combination)
+      return instancePoints.get(classInstanceKey(id, grade)) || pointFor(grade, m);
     const display = presentation?.endpoint(node, grade, branch?.two || 0, branch?.j || 0);
     if (display?.live) {
       if (display.entries.length === 1) {
@@ -2868,15 +3521,20 @@ function renderChart() {
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "connections");
   for (const item of periodicRelations(ws, liveIds, buffered, algebra)) {
     const relation = item.proposition;
+    if (!showBssRelation(ws, relation)) continue;
     const source = item.source;
     const target = item.target;
     const branch = algebra?.maps(source, target, item.sourceGrade, item.targetGrade)[0];
-    const from = endpointPoint(source.id, item.sourceGrade, source, branch);
-    const to = endpointPoint(target.id, item.targetGrade, target, branch);
+    const from = endpointPoint(source.id, item.sourceGrade, source, branch, relation.conclusion?.c4_source_two);
+    const to = endpointPoint(target.id, item.targetGrade, target, branch, relation.conclusion?.c4_target_two);
     const manualDrawing = relation.conclusion?.manual_periodicity_id ? "manual-drawing-periodic" : "";
     const chartConnection = relation.conclusion?.chart_connection;
-    const chartClass = chartConnection?.kind ? `dkllw-${chartConnection.kind}` : "";
-    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass} ${item.periodic ? "periodic" : ""}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement)}</title></line>`;
+    const chartClass = chartConnection?.kind ? `${ws.spectral_sequence === "2-bss" ? "bss" : "dkllw"}-${chartConnection.kind}` : "";
+    const relationScope = c4Sector(ws) && item.periodic ? ` · Seed equation; this Δ₁⁴-translated occurrence is (${item.sourceGrade.stem},${item.sourceGrade.filtration}) → (${item.targetGrade.stem},${item.targetGrade.filtration})` : "";
+    markup += `<line class="relation-line ${relationVisualState(relation)} ${manualDrawing} ${chartClass} ${item.periodic ? "periodic" : ""}" data-relation="${escapeHtml(relation.id)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml((chartConnection ? `${chartConnection.multiplier} multiplication · ${relation.statement}` : relation.statement) + relationScope)}</title></line>`;
+    if (relation.conclusion?.display_coefficient || relation.conclusion?.bss_j_coefficient_tex !== undefined)
+      markup += differentialCoefficientMarkup(ws, {targetNode: target, targetGrade: item.targetGrade,
+        diff: {id: relation.id, proposition_id: relation.id, display_coefficient: relation.conclusion.display_coefficient}}, null, from, to);
     if (from.basisEndpoint?.adapted || to.basisEndpoint?.adapted) {
       const unit = point => point.basisEndpoint?.entries.length === 1 ? point.basisEndpoint.entries[0].coefficient : 1;
       const value = f4DisplayMultiply(unit(to), f4DisplayMultiply(unit(from), unit(from)));
@@ -2890,8 +3548,10 @@ function renderChart() {
     // term may already be a boundary while its positive-j tail still maps.
     const branch = algebra?.maps(item.sourceNode, item.targetNode, item.sourceGrade, item.targetGrade)
       .find(value => window.HFPSSPageAlgebra.allowsConstraintBranch(item.diff, value.two || 0, value.j || 0));
-    const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode, branch);
-    const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode, branch);
+    const c4Map = item.sourceNode?.style?.c4_coefficient_branch
+      ? ws.propositions.find(claim => claim.id === item.diff.proposition_id)?.conclusion : null;
+    const from = endpointPoint(item.diff.source_id, item.sourceGrade, item.sourceNode, branch, c4Map?.c4_source_two);
+    const to = endpointPoint(item.diff.target_id, item.targetGrade, item.targetNode, branch, c4Map?.c4_target_two);
     const coefficient = algebra?.coefficientState(item.diff);
     if ((from.basisEndpoint?.adapted || to.basisEndpoint?.adapted) && coefficient?.resolved) {
       const unit = point => point.basisEndpoint?.entries.length === 1 ? point.basisEndpoint.entries[0].coefficient : 1;
@@ -2901,7 +3561,13 @@ function renderChart() {
     const manualDrawing = item.diff.manual_periodicity_id ? "manual-drawing-periodic" : "";
     // escapeHtml is a text-node escape; JSON quotes also need attribute escaping.
     const aliasIds = escapeHtml(JSON.stringify(item.renderAliases.map(alias => alias.id))).replaceAll('"', "&quot;");
-    markup += `<line class="differential ${item.periodic ? "periodic" : ""} ${differentialVisualState(item.diff)} ${manualDrawing}" data-differential="${escapeHtml(item.diff.id)}" data-differential-aliases="${aliasIds}" data-pattern-period="${Number(item.diff.period_stem || 0)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(differentialRenderTitle(item))}</title></line>`;
+    const outsideTarget = item.targetNode?.style?.window_endpoint_only || item.targetNode?.style?.bss_boundary;
+    const bssMap = ws.spectral_sequence === "2-bss" ? ws.propositions.find(claim => claim.id === item.diff.proposition_id) : null;
+    const endpointNote = (bssMap?.statement ? ` · Exact module equation: ${bssMap.statement}` : "")
+      + (item.targetNode?.style?.bss_boundary ? " · Target outside the requested caps, shown as a selectable boundary endpoint."
+      : outsideTarget ? " · Target outside the loaded filtration range/caps; no target generator dot is drawn." : "")
+      + (c4Sector(ws) && item.periodic ? ` · Seed equation; Δ₁⁴-translated occurrence (${item.sourceGrade.stem},${item.sourceGrade.filtration}) → (${item.targetGrade.stem},${item.targetGrade.filtration}).` : "");
+    markup += `<line class="differential ${item.periodic ? "periodic" : ""} ${differentialVisualState(item.diff)} ${manualDrawing}" data-differential="${escapeHtml(item.diff.id)}" data-differential-aliases="${aliasIds}" data-pattern-period="${Number(item.diff.period_stem || 0)}"${outsideTarget ? ' data-target-outside-window="true"' : ""} x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}"><title>${escapeHtml(differentialRenderTitle(item) + endpointNote)}</title></line>`;
     markup += differentialCoefficientMarkup(ws, item, algebra, from, to);
   }
   for (const [key, point] of combinationPorts) {
@@ -2918,24 +3584,39 @@ function renderChart() {
     }
   }
   for (const record of packedInstances) {
+    if (record.endpointOnly) continue;
     const point = packedPoint(record, m);
-    const selected = state.connectionStart === record.item.id || state.selectedClassId === record.item.id || state.selectedQuotientInstance === record.instanceKey ? "selected" : "";
+    const familySelection = classFamilySelection(ws, record, classesById.get(state.selectedClassId));
+    const c4Tower = record.item.style?.c4_coefficient_branch && ["finite-two-tower", "c4-witt-tower"].includes(record.shape);
+    const selected = state.connectionStart === record.item.id || (!c4Tower && familySelection.selected) || state.selectedQuotientInstance === record.instanceKey ? "selected" : "";
     const manualDrawing = record.item.manual_periodicity_id ? "manual-drawing-periodic" : "";
     const classes = `${record.occurrenceState || visualStateFor(ws, record.item)} ${selected} ${record.periodic ? "periodic" : ""} ${manualDrawing}`;
-    const label = classLabelMarkup(record, point, m, visible);
+    const exactPort = state.selectedOccurrence?.instanceKey === record.instanceKey ? state.selectedOccurrence.selectedPort : null;
+    const label = classLabelMarkup(record, exactPort ? coefficientPortPoint(record, m, exactPort) : point, m, visible);
     const periodicAttribute = record.periodic ? ' data-periodic-copy="true"' : "";
     const truncation = seriesTruncation(record);
     const seriesText = truncation ? `, ${truncation.text}` : "";
     const displayLabel = periodicDisplayLabel(record);
     const representativeText = record.readOnlyRepresentative ? (record.uncertain ? " · Potential representative; outgoing map incomplete · read-only" : record.displayBasis?.adapted ? " · Adapted display basis · read-only" : " · Computed quotient representative · read-only") : "";
-    const aria = `${displayLabel} at ${gradeText(record.grade)}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}${seriesText}${representativeText}`;
+    const bssLevel = record.item.style?.bockstein_filtration;
+    const bssDescription = Number.isInteger(bssLevel) ? ` · ${bssGradingText(ws, record.grade, bssLevel)}`
+      + (record.item.style?.bss_boundary ? ` Boundary context: ${record.item.style.bss_boundary}.` : "")
+      + (record.item.style?.bss_combination ? " Σ denotes an exact dependent combination, not an extra basis class." : "")
+      + (record.item.style?.bss_j_module ? ` ${record.item.style.bss_j_module.kind === "free" ? "Free F4[[j]] module (circle-dot); this is not a permanence assertion." : "F4[[j]]/(j) module (dot)."} j=v₁⁴D⁻¹, lowest j-order ${record.item.style.bss_j_module.j_min}; label is the lowest generator. j is not h₀ or 2.` : "") : "";
+    const displayedGrade = Number.isInteger(bssLevel) ? `(${record.grade.stem}, ${record.grade.filtration})` : gradeText(record.grade);
+    const aria = `${displayLabel} at ${displayedGrade}${record.periodic ? ", virtual period copy" : ""}${manualDrawing ? ", manual periodic drawing record" : ""}${seriesText}${representativeText}${bssDescription}`;
     const unitPeriodText = record.item.style?.multiplicative_unit && !record.periodic
       ? " · W(F4)[[j]] 2-adic unit tower; virtual copies use forward g and D^8"
       : "";
-    const tooltip = `${displayLabel} · ${gradeText(record.grade)}${record.periodic ? ` · ${record.item.label} translated by the shared D^m/g lattice` : ""}${unitPeriodText}${truncation ? ` · ${truncation.text}` : ""}${record.modulePorts ? ` · ${quotientDescription(record)}` : ""}${representativeText}`;
+    const translationName = c4Sector(ws) ? "Δ₁⁴ (32 stems)" : bssSector(ws) ? "D (8 stems)" : "the shared D^m/g lattice";
+    const tooltip = `${displayLabel} · ${displayedGrade}${record.periodic ? ` · ${record.item.label} translated by ${translationName}` : ""}${unitPeriodText}${truncation ? ` · ${truncation.text}` : ""}${record.modulePorts ? ` · ${quotientDescription(record)}` : ""}${representativeText}${bssDescription}`;
     const seriesAttribute = truncation ? ` data-series-bottom-order="${truncation.order}"` : "";
     const readOnlyAttribute = record.readOnlyRepresentative ? ' data-readonly-representative="true"' : "";
-    markup += `<g class="class-instance" data-point="${escapeHtml(record.item.id)}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute}${seriesAttribute}${readOnlyAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup(record, point, classes)}${label}</g>`;
+    const bssAttribute = Number.isInteger(bssLevel) ? ` data-bockstein-filtration="${bssLevel}"`
+      + (record.item.style?.bss_boundary ? ` data-bss-boundary="${escapeHtml(record.item.style.bss_boundary)}"` : "")
+      + (record.item.style?.bss_j_module ? ` data-bss-j-module="${escapeHtml(record.item.style.bss_j_module.kind)}" data-bss-j-min="${record.item.style.bss_j_module.j_min}"` : "")
+      + (record.item.style?.bss_combination ? ' data-bss-combination="true"' : "") : "";
+    markup += `<g class="class-instance" data-point="${escapeHtml(record.item.id)}" data-class-instance="${escapeHtml(record.instanceKey)}"${periodicAttribute}${seriesAttribute}${readOnlyAttribute}${bssAttribute} role="button" tabindex="0" aria-label="${escapeHtml(aria)}"><title>${escapeHtml(tooltip)}</title><circle class="class-hit-target" cx="${point.x}" cy="${point.y}" r="${record.hitRadius}"/>${classGlyphMarkup({...record, selectedFamilyPorts: familySelection.ports}, point, classes)}${label}</g>`;
   }
   markup += cellGlyphSvg(vectorCellLayout);
   markup += drawingPeriodicityPreviewSvg(m, buffered, packedPreviewInstances, instancePoints, "cycles");
@@ -2961,11 +3642,21 @@ function renderChart() {
     if (occurrence) {
       const port = event.target.closest?.("[data-coefficient-port]")?.dataset.coefficientPort;
       occurrence = {...occurrence, selectedPort: port || occurrence.modulePorts?.[0] || "0:0",
+        ...(occurrence.item.style?.bss_j_module ? {selectedJPower: 0} : {}),
         point: coefficientPortPoint(occurrence, m, port)};
     }
     onClassClick(node.dataset.point, occurrence);
   };
   svg.onclick = (event) => {
+    const jTarget = event.target.closest?.("[data-bss-j-target]");
+    if (jTarget) {
+      event.stopPropagation();
+      const record = packedInstances.find(item => classInstanceKey(item.item.id, item.grade) === jTarget.dataset.bssJTarget);
+      const power = Number(jTarget.dataset.bssJPower), module = record?.item.style?.bss_j_module;
+      if (module && Number.isInteger(power) && power >= 0 && (module.kind === "free" || power < module.length))
+        onClassClick(record.item.id, {...record, selectedJPower: power, selectedJLabel: jTarget.dataset.bssJLabel});
+      return;
+    }
     const combination = event.target.closest?.("[data-combination-endpoint]");
     if (combination) {
       event.stopPropagation();
@@ -2991,6 +3682,7 @@ function renderChart() {
   };
   svg.onkeydown = (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
+    if (event.target.closest?.("[data-bss-j-target]")) { event.preventDefault(); svg.onclick(event); return; }
     const combination = event.target.closest?.("[data-combination-endpoint]");
     if (combination) { event.preventDefault(); svg.onclick(event); return; }
     const cellNode = event.target.closest?.("[data-cell]");
@@ -3044,7 +3736,7 @@ function schedulePageRender() {
 }
 
 function setPage(page) {
-  workspace().page = clamp(Number(page), 2, pageLimit());
+  workspace().page = clamp(Number(page), pageMinimum(), pageLimit());
   state.pageByWorkspace.set(state.workspaceId, workspace().page);
   state.connectionStart = null;
   state.candidateResults = null;
@@ -3056,7 +3748,7 @@ function setPage(page) {
 
 async function extendPageLimit() {
   const ws = workspace();
-  if (readOnlyCatalog(ws)) return toast("Archived research charts are read-only.");
+  if (readOnlyWorkspace(ws)) return toast("Source and archive charts are read-only.");
   const next = pageLimit(ws) + 1;
   try {
     const data = await api(`/api/workspaces/${ws.id}/settings`, { method: "PATCH", body: JSON.stringify({ page_limit: next }) });
@@ -3071,7 +3763,7 @@ async function extendPageLimit() {
 }
 
 function setTool(tool) {
-  if (readOnlyCatalog() && tool !== "inspect") return toast("Archived research charts are read-only.");
+  if (readOnlyWorkspace() && tool !== "inspect") return toast("Source and archive charts are read-only.");
   state.tool = tool;
   state.connectionStart = null;
   state.connectionPointer = null;
@@ -3084,8 +3776,12 @@ async function onClassClick(id, occurrence = null) {
   state.selectedQuotientInstance = null;
   state.selectedOccurrence = occurrence && state.tool === "inspect"
     ? {workspaceId: state.workspaceId, page: workspace().page, classId: id, instanceKey: occurrence.instanceKey,
-      grade: {...occurrence.grade}, label: selectedPortLabel(occurrence)} : null;
-  if (readOnlyCatalog() && state.tool !== "inspect") state.tool = "inspect";
+      grade: {...occurrence.grade}, selectedPort: occurrence.selectedPort,
+      ...(item.style?.bss_j_module ? {selectedJPower: Number(occurrence.selectedJPower || 0),
+        ...(typeof occurrence.selectedJLabel === "string" ? {selectedJLabel: occurrence.selectedJLabel} : {})} : {}),
+      ...(item.style?.c4_coefficient_branch ? {c4MuExponent: item.style.c4_coefficient_branch.mu_min} : {}),
+      label: selectedPortLabel(occurrence)} : null;
+  if (readOnlyWorkspace() && state.tool !== "inspect") state.tool = "inspect";
   if (state.tool === "differential" || state.tool === "relation") {
     if (!state.connectionStart) {
       state.connectionStart = id;
@@ -3122,10 +3818,15 @@ async function onClassClick(id, occurrence = null) {
   renderPersistentPeriodicityTool();
   renderChart();
   const selected = state.selectedOccurrence;
-  toast(`${selected?.label || item.label} at ${gradeText(selected?.grade || item.grade)} · ${fateFor(workspace(), item.id)?.conclusion || "unresolved"}`);
+  if (bssSector(workspace())) {
+    toast(`${selected?.label || item.label} · E${workspace().page} · ${bssGradingText(workspace(), selected?.grade || item.grade, item.style?.bockstein_filtration)}`);
+  } else {
+    toast(`${selected?.label || item.label} at ${gradeText(selected?.grade || item.grade)} · ${fateFor(workspace(), item.id)?.conclusion || "unresolved"}`);
+  }
 }
 
 async function clearCurrentCanvas() {
+  if (readOnlyWorkspace()) return toast("Source and archive charts are read-only.");
   const ws = workspace();
   const activeCount = ws.classes.filter((item) => !item.archived).length;
   if (!activeCount) return toast("The current workspace canvas is already empty.");
@@ -3324,6 +4025,7 @@ async function materializeE2Presentation(event) {
 }
 
 async function runRules() {
+  if (readOnlyWorkspace()) return toast("Source and archive charts are read-only.");
   try {
     if ($("#vanishing-line")) workspace().settings.vanishing_line = Number($("#vanishing-line").value);
     const data = await api(`/api/workspaces/${state.workspaceId}/suggestions`, { method: "POST", body: JSON.stringify({ rules: ["LeibnizRule", "VanishingLine"] }) });
@@ -3563,6 +4265,22 @@ function handleHotkey(event) {
 }
 
 function bindEvents() {
+  $("#bss-window-form")?.addEventListener("submit", submitBssWindow);
+  $("#bss-projection")?.addEventListener("change", event => {
+    const ws = workspace(); if (!bssSector(ws)) return;
+    ws.settings.bss_projection = event.target.value;
+    state.selectedOccurrence = null;
+    state.view = {zoom: 1, panX: 0, panY: 0};
+    render();
+  });
+  $("#bss-relations")?.addEventListener("change", event => {
+    workspace().settings.bss_relations = event.target.value;
+    renderChart();
+  });
+  $("#c4-window-retry")?.addEventListener("click", () => {
+    state.c4Windows.errors.delete(c4WindowKey(workspace()));
+    render();
+  });
   $("#legacy-catalog-reference").addEventListener("toggle", (event) => {
     if (event.currentTarget.open) void loadLegacyCatalogManifest().catch(error => toast(error.message));
   });
@@ -3571,34 +4289,11 @@ function bindEvents() {
   });
   $("#close-legacy-catalog").addEventListener("click", closeLegacyCatalog);
   $("#workspace-select").addEventListener("change", (event) => {
-    state.workspaceId = event.target.value;
-    state.selectedClassId = null;
-    state.classFilter = "";
-    $("#class-filter").value = "";
-    state.suggestions = [];
-    state.candidateResults = null;
-    state.periodicityPreview = null;
-    state.drawingPeriodicityPreview = null;
-    state.view = { zoom: 1, panX: 0, panY: 0 };
-    state.connectionStart = null;
-    render();
+    selectWorkspace(window.HFPSSWorkspaceNavigation.defaultWorkspaceId(state.project, event.target.value));
   });
   $("#class-filter").addEventListener("input", (event) => {
     state.classFilter = event.target.value;
     renderClassList();
-  });
-  $("#open-support-workspace").addEventListener("click", () => {
-    const workspaceId = $("#support-workspace-select").value;
-    if (!workspaceId) return;
-    state.workspaceId = workspaceId;
-    state.selectedClassId = null;
-    state.suggestions = [];
-    state.candidateResults = null;
-    state.periodicityPreview = null;
-    state.drawingPeriodicityPreview = null;
-    state.view = { zoom: 1, panX: 0, panY: 0 };
-    state.connectionStart = null;
-    render();
   });
   $("#page-select").addEventListener("change", (event) => {
     if (event.target.value === "__add_page") extendPageLimit();
@@ -3688,7 +4383,8 @@ function bindEvents() {
   chart.addEventListener("wheel", onWheel, { passive: false });
   chart.addEventListener("pointerdown", (event) => {
     const altDrag = event.button === 0 && event.altKey;
-    if (!altDrag && event.button === 0 && state.tool === "inspect" && event.target.closest("[data-point]")) return;
+    if (!altDrag && event.button === 0 && state.tool === "inspect"
+        && event.target.closest("[data-point], [data-bss-j-target]")) return;
     const selectDrag = state.tool === "inspect" && event.button === 0;
     const middleDrag = event.button === 1;
     if (!selectDrag && !middleDrag && !altDrag) return;
@@ -3840,6 +4536,7 @@ function bindEvents() {
 
 async function downloadTex(kind) {
   if (!state.workspaceId) return;
+  if (readOnlyWorkspace()) return toast("TeX export is not enabled for source-review or archive charts.");
   if (kind === "chart") {
     try {
       const ws = workspace();

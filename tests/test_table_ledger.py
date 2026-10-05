@@ -346,6 +346,20 @@ def test_empty_workspace_has_an_explicit_empty_ledger():
     assert "no recorded differentials" in result["html"]
 
 
+def test_source_review_ledger_does_not_assign_q8_d8_period():
+    workspace = {
+        "page": 3, "settings": {"source_reference": True},
+        "classes": [{"id": "s", "label": "T_2"}, {"id": "t", "label": r"\eta^3"}],
+        "propositions": [{"id": "p", "source_ref": "BBHS20 Prop. 5.21", "rule": "published-equation",
+                          "conclusion": {"proof_category": "Naturality"}}],
+        "differentials": [{"id": "d", "page": 3, "source_id": "s", "target_id": "t", "proposition_id": "p"}],
+    }
+    result = run_ledger(workspace, "markup")
+    assert "Literal source equations only" in result["html"]
+    assert "permanent 64-stem" not in result["html"]
+    assert run_ledger(workspace)[0]["printedProof"] == "Naturality"
+
+
 def test_every_workspace_record_is_listed_with_neutral_total_and_provenance_groups():
     claims = [
         {"id": "published", "conclusion": {"table_number": 8, "table_row": 1}},

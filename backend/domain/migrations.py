@@ -592,5 +592,9 @@ def migrate_project(project: Project) -> Project:
     ensure_q8_atlas_transports(project)
     ensure_q8_atlas(project)
     migrate_legacy_period_families(project)
+    # These use their own notation, coefficient rings and page conventions.
+    # Install only after the Q8-specific mathematical migrations.
+    from .literature_references import ensure_literature_references
+    ensure_literature_references(project)
     sync_project_fates(project)
     return project

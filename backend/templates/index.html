@@ -88,17 +88,41 @@
         </details>
       </section>
 
+      <section id="bss-window-panel" class="panel-section bss-window-panel" hidden>
+        <div class="eyebrow">2-BSS COMPLETED MODULES</div>
+        <h2>F4[[j]] · D / k families</h2>
+        <p class="hint">j = v₁⁴D⁻¹ has degree zero. A circle-dot represents a free F4[[j]] module; a dot represents F4[[j]]/(j). The displayed name is its actual lowest generator. Every h₀ level stays separate. D translates by 8 stems; k only transports nonzero forward products.</p>
+        <label>Vertical coordinate<select id="bss-projection"><option value="cohomology">Group cohomology s · dᵣ: (−1, 1)</option><option value="bockstein">Bockstein p · dᵣ: (−1, r)</option></select></label>
+        <label>Relations<select id="bss-relations"><option value="core">Core h₀, h₁, h₂ + selected products</option><option value="selected">Selected products only</option><option value="all">All products</option></select></label>
+        <details><summary>Advanced display bounds</summary>
+        <p class="hint">Horizontal panning reuses D-periodic seeds. Group-cohomology rows load automatically in the s view. These bounds limit h₀ and s only; completed j-series have no v₁ cap.</p>
+        <form id="bss-window-form">
+          <div class="bss-window-grid">
+            <label>s maximum (p view)<input name="filtration_max" type="number" step="1" min="0" max="128" required></label>
+            <label>h₀ exponent maximum<input name="h0_max" type="number" step="1" min="0" max="12" required></label>
+          </div>
+          <button id="bss-window-submit" type="submit" class="wide">Apply / retry</button>
+        </form>
+        </details>
+        <p id="bss-window-status" class="hint" aria-live="polite"></p>
+      </section>
+
       <section class="panel-section atlas-section">
-        <div class="section-head"><div><div class="eyebrow">RO(Q8) ATLAS</div><h2>16 stored representatives</h2></div></div>
+        <div class="section-head"><div><div id="grading-atlas-eyebrow" class="eyebrow">GRADING ATLAS</div><h2 id="grading-atlas-title">Stored representatives</h2></div></div>
         <div id="grading-atlas" class="grading-atlas" aria-label="Q8 grading sector atlas"></div>
+        <p id="grading-atlas-summary" class="hint"></p>
         <p id="c3-summary" class="hint">Select a sector to inspect its stored workspace and cyclic orbit.</p>
       </section>
 
+      <section id="c4-window-panel" class="panel-section c4-window-panel" hidden>
+        <div class="eyebrow">C4 PERIODICITY</div>
+        <h2>Δ₁⁴ / κ̄ families</h2>
+        <p id="c4-period-info" class="hint">Δ₁⁴ is invertible, with shift (32,0). The permanent κ̄ = ϖ²Δ₁ has shift (20,4); only surviving forward products are identified, not a vertical isomorphism. Highlighting preserves the chosen 2-adic coefficient and μ branch.</p>
+        <p id="c4-window-status" class="hint" aria-live="polite"></p>
+        <button id="c4-window-retry" type="button" class="wide">Retry loading</button>
+      </section>
+
       <section class="panel-section support-workspaces">
-        <div class="eyebrow">REFERENCE / SUPPORT</div>
-        <h2>Supporting workspaces</h2>
-        <p class="hint">Kept outside the ordinary chart selector. Opening one does not delete or merge its stored data.</p>
-        <div class="support-workspace-control"><select id="support-workspace-select" aria-label="Reference or support workspace"></select><button type="button" id="open-support-workspace">Open</button></div>
         <details id="legacy-catalog-reference" class="legacy-catalog-panel">
           <summary>Legacy archive (21 source canvases)</summary>
           <p class="hint">Open any preserved REU canvas without changing the saved Studio project. Source status comes from <code>formal_notes.tex</code> first, then <code>record/note.tex</code>.</p>
@@ -114,7 +138,28 @@
         <div id="class-list" class="class-list"></div>
       </section>
 
-      <section class="panel-section chart-key">
+      <section id="literature-review-panel" class="panel-section literature-review" hidden>
+        <details open>
+          <summary id="literature-review-title">Source conventions and coverage</summary>
+          <p id="source-review-notice" class="source-review-notice">Source review; complete page quotient not yet computed. The chart records the stated equations, not an exhaustive calculation of every displayed page.</p>
+          <div id="literature-review-content"></div>
+        </details>
+      </section>
+
+      <section id="c4-chart-key" class="panel-section chart-key" hidden>
+        <div class="eyebrow">C4 CHART KEY</div>
+        <h2>Coefficient branches and products</h2>
+        <p class="hint">A vertical bar means multiplication by 2, bottom to top. A square with a dotted continuation is an unbounded Witt tower; a finite stack stops at its actual last nonzero 2-power. Hollow points retain a completed μ-adic tail, not an extra F4 basis vector.</p>
+        <p class="hint">Short lines represent η (degree (1,1)) and ν (degree (3,1)). A μ label is a coefficient factor on the product. These are associated-graded products, not hidden extensions.</p>
+      </section>
+      <section id="bss-chart-key" class="panel-section bss-chart-key" hidden>
+        <div class="eyebrow">2-BSS CHART KEY</div>
+        <h2>Three gradings and page products</h2>
+        <p class="hint"><span class="bss-key-circle-dot" aria-hidden="true">⊙</span> Free F4[[j]] module; <span aria-hidden="true">●</span> j-annihilated module. Here j = v₁⁴D⁻¹ is neither h₀ nor 2. Free does not mean every differential is zero. Arrows specify the image of the displayed generator; a jⁿ badge specifies an exact target multiple, not the whole target module. Click that badge to inspect the target element.</p>
+        <p class="hint">Choose (t−s,s) or (t−s,p), where s is group cohomology and p is Bockstein filtration. Every d<sub>r</sub> has tridegree (−1, +1, +r). In the s view h<sub>0</sub> forms a small in-cell tower; in the p view h<sub>0</sub> has degree (0,1), and d₂ has degree (−1,2). Page labels always use the E1-start BSS convention, not an Adams reindexing.</p>
+        <p class="hint">Short lines use Beaudry/Henn associated-graded products. Core mode shows h<sub>0</sub>, h<sub>1</sub>, h<sub>2</sub> and products incident to the selected family; All products also shows the current v<sub>1</sub> power and normalized x,y on E1. Beaudry's x=Dx<sub>normalized</sub>, y=D²y<sub>normalized</sub>. Σ is an exact dependent vector, not an extra basis class. These lines do not assert hidden extensions. Boundary-context dots are real map endpoints.</p>
+      </section>
+      <section id="q8-chart-key" class="panel-section chart-key">
         <div class="eyebrow">CHART KEY</div>
         <h2>Published glyph and line semantics</h2>
         <p class="hint">The canvas follows DKLLW Tables 10–11. Page fate controls visibility and arrows; it does not recolor a module glyph, and colours do not encode algebraic order. E2 has exactly two presentation families: oriented (the integer pattern) and non-oriented (the sigma<sub>i</sub> pattern); I/S codes are internal module slots, not additional E2 patterns.</p>
@@ -154,7 +199,7 @@
     <div class="sidebar-resizer" data-sidebar-resizer="right" role="separator" tabindex="0" aria-label="Resize right sidebar" aria-orientation="vertical" aria-controls="right-sidebar" title="Drag to resize right sidebar; double-click to reset. Arrow keys also adjust width."></div>
     <aside class="right-panel" id="right-sidebar">
       <section class="panel-section">
-        <div class="section-head"><div><div class="eyebrow">CLASS FATE</div><h2>HFPSS / Tate timeline</h2></div><span id="fate-status" class="pill">none</span></div>
+        <div class="section-head"><div><div class="eyebrow">CLASS FATE</div><h2 id="fate-inspector-title">HFPSS / Tate timeline</h2></div><span id="fate-status" class="pill">none</span></div>
         <div id="fate-inspector" class="fate-inspector" aria-live="polite"><p class="empty">Select a class to inspect its data and two-track fate record.</p></div>
       </section>
 
@@ -354,6 +399,7 @@
   <script src="{{ url_for('static', filename='table-ledger.js') }}"></script>
   <script src="{{ url_for('static', filename='tex-export.js') }}"></script>
   <script src="{{ url_for('static', filename='sidebar-layout.js') }}"></script>
+  <script src="{{ url_for('static', filename='workspace-navigation.js') }}"></script>
   <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@ import pytest
 from test_chart_display_conventions import app_helper
 
 
-HELPERS = ["schedulePageRender", "setPage", "beginChartPageRender",
+HELPERS = ["schedulePageRender", "setPage", "pageMinimum", "beginChartPageRender",
            "updateChartPageStatus", "markChartPageCommitted"]
 SETUP = r"""
   const frames = [], renders = [];

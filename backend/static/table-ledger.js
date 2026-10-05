@@ -59,7 +59,8 @@
         target: target?.label || differential.target_id || "Missing target",
         sourceBidegree: bidegree(source),
         targetBidegree: bidegree(target),
-        printedProof: original ? String(metadata.printed_proof || "") : "",
+        printedProof: original ? String(metadata.printed_proof || "")
+          : workspace?.settings?.source_reference ? String(metadata.proof_category || "") : "",
         transported: Boolean(transport),
         transportProvenance,
         periodStem: Number(metadata.period_stem || differential.period_stem || 0),
@@ -202,7 +203,9 @@
       html: `<p class="hint">All recorded pages; ${current} ${current === 1 ? "family" : "families"} on E${escape(workspace.page)}. Original table rows and their derived families are counted separately.</p>`
         + [8, 9].map(table => tableMarkup(rows, table, true) + tableMarkup(rows, table, false)).join("")
         + otherRecordsMarkup(rows)
-        + '<p class="hint table-ledger-period-note">Derived repeat (stem) is application metadata, not a printed table column. Below 64, it denotes an up-to-unit repeated differential pattern, not an invertible permanent cycle. D⁸ gives the permanent 64-stem translation.</p>',
+        + (workspace?.settings?.source_reference
+          ? '<p class="hint table-ledger-period-note">Literal source equations only. Sequence-specific periodicity and module-linearity are recorded in Source conventions; no Q8 HFPSS period or complete higher-page quotient is inferred.</p>'
+          : '<p class="hint table-ledger-period-note">Derived repeat (stem) is application metadata, not a printed table column. Below 64, it denotes an up-to-unit repeated differential pattern, not an invertible permanent cycle. D⁸ gives the permanent 64-stem translation.</p>'),
     };
   }
 

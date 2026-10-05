@@ -250,7 +250,7 @@ class Workspace:
     theory: str = "E_2"
     characteristic: int = 2
     grading_label: str = "integer"
-    spectral_sequence: str = "hfpss"  # hfpss | tate
+    spectral_sequence: str = "hfpss"  # hfpss | tate | 2-bss
     page: int = 2
     representation_basis: list[str] = field(default_factory=lambda: ["1", "sigma_i", "sigma_j", "sigma_k", "H"])
     classes: list[ClassNode] = field(default_factory=list)

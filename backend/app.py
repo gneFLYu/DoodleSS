@@ -278,6 +278,21 @@ def find_workspace(project: Project, workspace_id: str) -> Workspace:
     return workspace
 
 
+@app.before_request
+def protect_source_review_workspace():
+    """Do not run HFPSS mutation/export algorithms on a literature snapshot."""
+    workspace_id = (request.view_args or {}).get("workspace_id")
+    incompatible_export = request.endpoint in {"render_tex", "export_legacy_canvas"}
+    if not workspace_id or (request.method in {"GET", "HEAD", "OPTIONS"} and not incompatible_export):
+        return None
+    workspace = find_workspace(load_project(), workspace_id)
+    if workspace.settings.get("source_reference"):
+        return jsonify({"error": "This is a read-only source review workspace. "
+                        "Its sequence-specific page quotient and editable/export adapters "
+                        "are not yet implemented; HFPSS algorithms cannot be applied to it."}), 409
+    return None
+
+
 def body_integer(body: dict, key: str, default: int) -> int:
     """Parse a JSON integer while preserving an explicit numeric zero."""
     value = body[key] if key in body else default
@@ -726,6 +741,135 @@ def workspace_fates(workspace_id: str):
         "fates": [asdict(item) for item in workspace.fates],
         "events": [asdict(item) for item in workspace.differential_events],
     })
+
+
+@app.get("/api/v2/2-bss/<sector>/window")
+def exact_bss_window(sector: str):
+    """Read-only exact additive pages, with explicit display truncations."""
+    from domain.bss_chart import build_bss_window
+
+    if sector not in ("integer", "sigma"):
+        return jsonify({"error": "Choose the integer or sigma auxiliary 2-BSS sector."}), 404
+
+    defaults = {"page": 1, "stem_min": -8, "stem_max": 32,
+                "filtration_min": 0, "filtration_max": 8, "v1_max": 8, "h0_max": 3}
+    try:
+        values = {key: int(request.args.get(key, default)) for key, default in defaults.items()}
+        if not 1 <= values["page"] <= 4:
+            raise ValueError("The auxiliary 2-BSS has review pages E1 through E4; E4 is stable.")
+        if not 0 <= values["v1_max"] <= 48 or not 0 <= values["h0_max"] <= 12:
+            raise ValueError("Require 0 <= v1_max <= 48 and 0 <= h0_max <= 12.")
+        if values["filtration_max"] > 64 or values["stem_max"] - values["stem_min"] > 128:
+            raise ValueError("Use at most 128 stems and cohomological filtration at most 64.")
+        result = build_bss_window(sector=sector, **values, limit=10_000,
+                                  include_records=request.args.get("format") != "chart")
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    return _computed_window_response(result)
+
+
+@app.get("/api/v2/2-bss/<sector>/periodic-chart")
+def periodic_bss_chart(sector: str):
+    """D-periodic chart seeds, with explicit projection and coefficient caps."""
+    from domain.bss_periodic import build_bss_periodic_window
+
+    if sector not in ("integer", "sigma"):
+        return jsonify({"error": "Choose the integer or sigma auxiliary 2-BSS sector."}), 404
+    defaults = {"page": 1, "filtration_min": 0, "filtration_max": 8,
+                "v1_max": 4, "h0_max": 2}
+    try:
+        values = {key: int(request.args.get(key, default)) for key, default in defaults.items()}
+        if not 1 <= values["page"] <= 4:
+            raise ValueError("BSS pages use E1-E4 numbering, independent of the plotted projection.")
+        if not 0 <= values["v1_max"] <= 48 or not 0 <= values["h0_max"] <= 12:
+            raise ValueError("Require 0 <= v1_max <= 48 and 0 <= h0_max <= 12.")
+        if not 0 <= values["filtration_min"] <= values["filtration_max"] or values["filtration_max"] - values["filtration_min"] > 128:
+            raise ValueError("Require ordered nonnegative cohomology bounds spanning at most 128 rows.")
+        result = build_bss_periodic_window(sector, **values,
+            projection=request.args.get("projection", "cohomology"), include_records=False)
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    return _computed_window_response(result)
+
+
+@app.get("/api/v2/2-bss/<sector>/completed-chart")
+def completed_bss_chart(sector: str):
+    """Exact j-completed module generators, not a finite v1 sample."""
+    from domain.bss_completed import build_bss_completed_chart
+
+    if sector not in ("integer", "sigma"):
+        return jsonify({"error": "Choose the integer or sigma auxiliary 2-BSS sector."}), 404
+    defaults = {"page": 1, "filtration_min": 0, "filtration_max": 8, "h0_max": 2}
+    try:
+        values = {key: int(request.args.get(key, default)) for key, default in defaults.items()}
+        if not 1 <= values["page"] <= 4:
+            raise ValueError("BSS pages use E1-E4 numbering, independent of the plotted projection.")
+        if not 0 <= values["h0_max"] <= 12:
+            raise ValueError("Require 0 <= h0_max <= 12; the j-series are not truncated.")
+        if not 0 <= values["filtration_min"] <= values["filtration_max"] or values["filtration_max"] - values["filtration_min"] > 128:
+            raise ValueError("Require ordered nonnegative cohomology bounds spanning at most 128 rows.")
+        if "v1_max" in request.args:
+            raise ValueError("The completed chart has no v1 cutoff: j = v1^4 D^(-1) is retained symbolically.")
+        result = build_bss_completed_chart(sector, **values,
+            projection=request.args.get("projection", "cohomology"))
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    return _computed_window_response(result)
+
+
+def _computed_window_response(result: dict):
+    """Compress repetitive chart data without changing its mathematical payload."""
+    body = app.json.dumps(result, separators=(",", ":")).encode("utf-8")
+    compressed = request.accept_encodings["gzip"] > 0
+    if compressed:
+        body = gzip.compress(body, compresslevel=5, mtime=0)
+    return _project_response(body, compressed)
+
+
+@app.get("/api/v2/c4/<sector>/window")
+def exact_c4_window(sector: str):
+    from domain.c4_chart import build_c4_window
+    if sector not in ("integer", "1-minus-sigma"):
+        return jsonify({"error": "Choose the integer or 1-minus-sigma C4 slice."}), 404
+    defaults = {"page": 2, "stem_min": -8, "stem_max": 40,
+                "filtration_min": 0, "filtration_max": 20}
+    try:
+        values = {key: int(request.args.get(key, default)) for key, default in defaults.items()}
+        if values["filtration_max"] > 64 or values["stem_max"] - values["stem_min"] > 128:
+            raise ValueError("Use at most 128 stems and cohomological filtration at most 64.")
+        result = build_c4_window(sector=sector, **values,
+                                 include_records=request.args.get("format") != "chart")
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    return _computed_window_response(result)
+
+
+@app.get("/api/v2/c4/<sector>/periodic-chart")
+def periodic_c4_chart(sector: str):
+    from domain.c4_chart import build_c4_periodic_chart
+    if sector not in ("integer", "1-minus-sigma"):
+        return jsonify({"error": "Choose the integer or 1-minus-sigma C4 slice."}), 404
+    defaults = {"page": 2, "filtration_min": 0, "filtration_max": 32}
+    try:
+        values = {key: int(request.args.get(key, default)) for key, default in defaults.items()}
+        if values["filtration_max"] - values["filtration_min"] > 256:
+            raise ValueError("Load at most 256 filtration rows at a time.")
+        result = build_c4_periodic_chart(sector=sector, **values)
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
+    return _computed_window_response(result)
+
+
+@app.get("/api/v2/c4/reduce-ro")
+def reduce_c4_ro_degree():
+    from domain.c4_integer import reduce_ro_degree
+    try:
+        coefficients = [int(request.args.get(key, 0)) for key in ("alpha", "beta", "gamma")]
+        if any(abs(value) > 1_000_000 for value in coefficients):
+            raise ValueError("Use RO coefficients of absolute value at most 1000000.")
+        return jsonify(reduce_ro_degree(*coefficients))
+    except (TypeError, ValueError) as error:
+        return jsonify({"error": str(error)}), 400
 
 
 @app.get("/api/v2/e2-presentations")

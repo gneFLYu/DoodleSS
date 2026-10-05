@@ -31,7 +31,7 @@ def is_accepted(status: str) -> bool:
 
 
 def workspace_sequence_kind(workspace: Workspace) -> str:
-    if workspace.spectral_sequence in {"hfpss", "tate"}:
+    if workspace.spectral_sequence in {"hfpss", "tate", "2-bss"}:
         return workspace.spectral_sequence
     searchable = f"{workspace.id} {workspace.name} {workspace.grading_label}".lower()
     return "tate" if "tate" in searchable else "hfpss"
@@ -106,8 +106,8 @@ def sync_differential_events(workspace: Workspace) -> None:
             source_refs = list(proposition.source_refs)
             if proposition.source_ref and proposition.source_ref not in source_refs:
                 source_refs.append(proposition.source_ref)
-        source_in_hfpss = source.grade.filtration >= 0
-        comparison_status = "transports_to_hfpss"
+        source_in_hfpss = sequence != "2-bss" and source.grade.filtration >= 0
+        comparison_status = "auxiliary_bockstein_only" if sequence == "2-bss" else "transports_to_hfpss"
         if sequence == "tate" and not source_in_hfpss:
             comparison_status = "tate_only_negative_source"
 
@@ -1158,6 +1158,12 @@ def derive_class_fate(workspace: Workspace, class_id: str, *, project: Project |
 def sync_workspace_fates(workspace: Workspace, *, project: Project | None = None) -> None:
     """Refresh fates; cross-workspace coefficients require an explicit project."""
     sync_differential_events(workspace)
+    if workspace.spectral_sequence == "2-bss" or workspace.settings.get("source_reference"):
+        # Source review diagrams record equations, not an exhaustive quotient.
+        # In particular a Bockstein boundary is not an HFPSS boundary.  Exact
+        # stage support, when available, belongs to the node's own sequence.
+        workspace.fates = []
+        return
     # Event migration above may create premises. Start memoization only once
     # all inputs are settled; nothing inside this phase changes those inputs.
     token = _CYCLE_PREMISE_CACHE.set({})
@@ -1185,6 +1191,10 @@ def sync_project_fates(project: Project) -> Project:
 
 def class_is_live_on_page(workspace: Workspace, class_id: str, page: int, *, project: Project | None = None) -> bool:
     """Query current death; linked coefficients without project context stay unresolved."""
+    if workspace.spectral_sequence == "2-bss" or workspace.settings.get("source_reference"):
+        node = next((item for item in workspace.classes if item.id == class_id), None)
+        return bool(node and not node.archived and node.page <= page
+                    and (node.style.get("last_page") is None or page <= int(node.style["last_page"])))
     fate = next((item for item in workspace.fates if item.class_id == class_id), None)
     # Assignments and affine/Frobenius declarations may change between syncs.
     # A cached fate must not keep killing a class after c+1 becomes zero.
